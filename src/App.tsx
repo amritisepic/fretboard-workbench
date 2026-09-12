@@ -4,6 +4,7 @@ import { ExplorerPanel } from './components/ExplorerPanel';
 import { SettingsPanel } from './components/SettingsPanel';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { UpdateNotice } from './components/UpdateNotice';
 import { useKeyboardShortcuts } from './components/useKeyboardShortcuts';
 import { Workspace } from './components/Workspace';
 import { useWorkbench } from './state/workbench';
@@ -49,6 +50,7 @@ export function App() {
       </div>
       {settingsOpen && <SettingsPanel onClose={closeSettings} />}
       {explorerOpen && <ExplorerPanel onClose={closeExplorer} />}
+      <UpdateNotice />
       {pendingDelete !== null && (
         <ConfirmDialog
           title="Delete this box?"

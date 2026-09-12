@@ -1427,6 +1427,37 @@ kbd {
   font-size: 12.5px;
 }
 
+/* ---- Offline and update notice --------------------------------------- */
+
+.update-notice {
+  position: fixed;
+  z-index: 40;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(440px, calc(100vw - 40px));
+  padding: 10px 10px 10px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+  font-size: 13.5px;
+}
+
+.update-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.button.is-primary,
+.button.is-primary:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
 /* ---- Dialog ---------------------------------------------------------- */
 
 .dialog-backdrop {
