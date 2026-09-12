@@ -1,7 +1,7 @@
 // Acceptance test 5: chord identification.
 import { describe, expect, it } from 'vitest';
 import { CHORD_ID_WEIGHTS } from '../../data/chordIdWeights';
-import { CHORD_TYPES, chordName, identifyChord, identifyChordPcs } from '../chords';
+import { CHORD_TYPES, chordName, identifyChord, identifyChordPcs, transposeChordCandidateKey } from '../chords';
 import { pcSet } from '../pitch';
 import { makeScaleRef, scaleRefContext, scaleRefPcSet } from '../scales';
 
@@ -71,6 +71,15 @@ describe('chord identification', () => {
   it('returns nothing for fewer than two pitch classes', () => {
     expect(identifyChord([])).toEqual([]);
     expect(identifyChord([48, 60])).toEqual([]);
+  });
+
+  it('moves a chosen reading to a transposed root', () => {
+    expect(transposeChordCandidateKey('9:min:', 3)).toBe('0:min:');
+    expect(transposeChordCandidateKey('0:6:5', -1)).toBe('11:6:5');
+    expect(transposeChordCandidateKey('5:maj7:root', 12)).toBe('5:maj7:root');
+    const [am] = identifyChord([57, 60, 64]);
+    const [bbm] = identifyChord([58, 61, 65]);
+    expect(transposeChordCandidateKey(am.key, 1)).toBe(bbm.key);
   });
 
   it('has no duplicate chord-type ids', () => {

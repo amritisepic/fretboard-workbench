@@ -105,6 +105,13 @@ export function chordCandidateKey(root: PitchClass, typeId: string, omitted: rea
   return `${mod12(root)}:${typeId}:${omitted.join('+')}`;
 }
 
+/** The same reading on a root moved by `semitones`, e.g. when the root box transposes a box. */
+export function transposeChordCandidateKey(key: string, semitones: number): string {
+  const [root, ...rest] = key.split(':');
+  const pc = Number(root);
+  return Number.isInteger(pc) && rest.length > 0 ? [mod12(pc + semitones), ...rest].join(':') : key;
+}
+
 /**
  * Every plausible name for a pitch-class set, best first. All 12 roots are tried so rootless
  * readings are found. Only the root and a perfect 5th may be omitted, and a rootless reading

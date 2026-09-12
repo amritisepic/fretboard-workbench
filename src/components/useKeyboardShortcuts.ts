@@ -15,9 +15,19 @@ const isTextEntry = (target: EventTarget | null): target is HTMLElement =>
 const isControl = (target: EventTarget | null) =>
   target instanceof Element && target.closest('button, [role="switch"], [role="radio"]') !== null;
 
+/** Arrow keys nudge the selected box's root by a semitone. */
+const ROOT_NUDGES: Readonly<Record<string, number>> = {
+  ArrowLeft: -1,
+  ArrowDown: -1,
+  ArrowRight: 1,
+  ArrowUp: 1,
+};
+
 /**
  * Esc closes the topmost layer (dialog, then settings), otherwise deselects the box.
- * Space turns the selected box's fill on or off. Delete or Backspace asks to remove the box.
+ * Space turns the selected box's fill on or off. Arrow keys nudge the root.
+ * Delete or Backspace asks to remove the box. Keys typed into form fields (including the
+ * mode slider and dropdowns) are left alone.
  */
 export function useKeyboardShortcuts({
   settingsOpen,
@@ -67,13 +77,16 @@ export function useKeyboardShortcuts({
       }
       if (event.metaKey || event.ctrlKey || event.altKey || isTextEntry(event.target)) return;
 
-      const { selectedBoxId, toggleFill } = useWorkbench.getState();
+      const { selectedBoxId, toggleFill, transposeBox } = useWorkbench.getState();
       if (selectedBoxId === null) return;
 
       if (event.key === ' ') {
         if (isControl(event.target) && reachedByKeyboard) return;
         event.preventDefault();
         toggleFill(selectedBoxId);
+      } else if (event.key in ROOT_NUDGES) {
+        event.preventDefault();
+        transposeBox(selectedBoxId, ROOT_NUDGES[event.key]);
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault();
         requestDelete(selectedBoxId);

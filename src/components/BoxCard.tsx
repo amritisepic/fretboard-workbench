@@ -1,14 +1,14 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useWorkbench, type Box } from '../state/workbench';
 import type { FretPosition } from '../theory';
-import { buildBoxView } from './boardModel';
+import { getBoxView } from './boardModel';
 import { Fretboard } from './Fretboard';
 
 export function BoxCard({ box, selected }: { readonly box: Box; readonly selected: boolean }) {
   const settings = useWorkbench((s) => s.settings);
   const selectBox = useWorkbench((s) => s.selectBox);
   const togglePosition = useWorkbench((s) => s.togglePosition);
-  const view = useMemo(() => buildBoxView(box, settings), [box, settings]);
+  const view = getBoxView(box, settings);
 
   const onToggle = useCallback(
     (position: FretPosition) => {

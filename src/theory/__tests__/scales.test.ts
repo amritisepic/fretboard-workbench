@@ -4,14 +4,19 @@ import { SCALE_FAMILIES } from '../../data/scales';
 import { positionsInSet, positionKey } from '../fretboard';
 import { transpose } from '../pitch';
 import {
+  canonicalMode,
+  distinctModes,
   makeScaleRef,
   modeIntervals,
   modeName,
+  sameScale,
   scaleRefIntervals,
   scaleRefName,
   scaleRefPcSet,
   transposeScaleRef,
+  withFamilyMode,
   withMode,
+  withTonic,
 } from '../scales';
 import { formatSpelled, pcOfSpelled } from '../spelling';
 
@@ -96,6 +101,35 @@ describe('mode slider', () => {
     // Neapolitan major mode 4 is 1 2 3 ♯4 5 ♭6 ♭7, which has a major 3rd, so it is not "Aeolian ♮3 ♯4".
     expect(modeName('neapolitanMajor', 3)).toBe('Mixolydian ♯4 ♭6');
     expect(modeName('neapolitanMajor', 4)).toBe('Mixolydian ♭5 ♭6');
+  });
+});
+
+describe('scale selector helpers', () => {
+  it('collapses repeated rotations of symmetric scales', () => {
+    expect(canonicalMode('wholeTone', 4)).toBe(0);
+    expect(canonicalMode('octatonic', 3)).toBe(1);
+    expect(canonicalMode('diatonic', 5)).toBe(5);
+    expect(distinctModes('wholeTone')).toEqual([0]);
+    expect(distinctModes('augmented')).toEqual([0, 1]);
+    expect(distinctModes('diatonic')).toHaveLength(7);
+  });
+
+  it('changes family or mode on the same tonic pitch and respells it', () => {
+    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 5, 'C♯'), 'diatonic', 0))).toBe('D♭ Ionian');
+    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 5, 'F♯'), 'diatonic', 0))).toBe('F♯ Ionian');
+    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 0, 'D'), 'melodicMinor', 6))).toBe('D Altered');
+  });
+
+  it('moves only the tonic', () => {
+    expect(scaleRefName(withTonic(makeScaleRef('diatonic', 1, 'D'), 3))).toBe('E♭ Dorian');
+    const dDorian = makeScaleRef('diatonic', 1, 'D');
+    expect(withTonic(dDorian, 2)).toBe(dDorian);
+  });
+
+  it('compares scales by pitch collection and tonic', () => {
+    expect(sameScale(makeScaleRef('diatonic', 0, 'C'), makeScaleRef('diatonic', 0, 'B♯'))).toBe(true);
+    expect(sameScale(makeScaleRef('diatonic', 0, 'C'), makeScaleRef('diatonic', 5, 'A'))).toBe(false);
+    expect(sameScale(makeScaleRef('wholeTone', 0, 'C'), makeScaleRef('wholeTone', 3, 'C'))).toBe(true);
   });
 });
 

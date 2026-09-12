@@ -64,6 +64,19 @@ describe('box view', () => {
     expect(buildBoxView(amOverC, settings).dots.filter((d) => d.kind === 'empty').every((d) => d.label === '')).toBe(true);
   });
 
+  it('lists every reading and names the box with the sidebar pick while it matches', () => {
+    const view = buildBoxView(amOverC, settings);
+    expect(view.candidates.length).toBeGreaterThan(2);
+    expect(view.chord?.key).toBe(view.candidates[0].key);
+
+    const picked = buildBoxView({ ...amOverC, chordOverride: '0:6:5' }, settings);
+    expect(picked.title).toBe('C6 (no 5)');
+    expect(picked.chord?.root).toBe(0);
+
+    const stale = buildBoxView({ ...amOverC, chordOverride: '4:maj:' }, settings);
+    expect(stale.title).toBe('Am/C');
+  });
+
   it('ignores positions that fall outside the current board', () => {
     const stray: Box = { ...amOverC, positions: [...amOverC.positions, { string: 7, fret: 2 }, { string: 0, fret: 29 }] };
     expect(buildBoxView(stray, settings).title).toBe('Am/C');

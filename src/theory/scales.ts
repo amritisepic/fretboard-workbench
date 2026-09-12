@@ -205,3 +205,38 @@ export function transposeScaleRef(ref: ScaleRef, semitones: number): ScaleRef {
   const tonic = chooseTonicSpelling(pcOfSpelled(ref.tonic) + semitones, scaleRefIntervals(ref), prefer);
   return { ...ref, tonic };
 }
+
+/** The lowest mode with the same interval structure (symmetric scales repeat themselves). */
+export function canonicalMode(familyId: string, mode: number): number {
+  const target = modeIntervals(familyId, mode).join(',');
+  const count = getScaleFamily(familyId).intervals.length;
+  for (let m = 0; m < count; m++) {
+    if (modeIntervals(familyId, m).join(',') === target) return m;
+  }
+  return normalizeMode(familyId, mode);
+}
+
+/** Modes of a family with distinct interval structures, for listing in a selector. */
+export function distinctModes(familyId: string): number[] {
+  return getScaleFamily(familyId)
+    .intervals.map((_, m) => m)
+    .filter((m) => canonicalMode(familyId, m) === m);
+}
+
+/** Scale selector: another family or mode on the same tonic pitch, respelled for the new scale. */
+export function withFamilyMode(ref: ScaleRef, familyId: string, mode: number): ScaleRef {
+  const m = normalizeMode(familyId, mode);
+  const prefer: EnharmonicPreference = ref.tonic.accidental > 0 ? 'sharp' : 'flat';
+  return { familyId, mode: m, tonic: chooseTonicSpelling(pcOfSpelled(ref.tonic), modeIntervals(familyId, m), prefer) };
+}
+
+/** Scale selector: the same scale on another tonic. Unlike the root box, nothing else moves. */
+export function withTonic(ref: ScaleRef, pc: PitchClass): ScaleRef {
+  if (mod12(pc) === pcOfSpelled(ref.tonic)) return ref;
+  return { ...ref, tonic: chooseTonicSpelling(pc, scaleRefIntervals(ref)) };
+}
+
+/** The same pitch collection on the same tonic pitch, however it is spelled or filed. */
+export function sameScale(a: ScaleRef, b: ScaleRef): boolean {
+  return scaleRefPcSet(a) === scaleRefPcSet(b) && pcOfSpelled(a.tonic) === pcOfSpelled(b.tonic);
+}

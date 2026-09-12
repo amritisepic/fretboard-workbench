@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { formatTuning } from '../../theory';
+import { formatSpelled, formatTuning, makeScaleRef, scaleRefName } from '../../theory';
 import { useWorkbench } from '../workbench';
 
 const initial = useWorkbench.getState();
@@ -77,6 +77,52 @@ describe('workbench store', () => {
     state().setFretCount(12);
     expect(state().settings.fretCount).toBe(12);
     expect(firstBox().positions).toEqual([{ string: 2, fret: 4 }]);
+  });
+
+  it('transposes notes, scale and chord override together from the root box', () => {
+    const id = state().addBox();
+    for (const p of [{ string: 1, fret: 3 }, { string: 2, fret: 2 }, { string: 3, fret: 2 }]) state().togglePosition(id, p);
+    state().setChordOverride(id, '0:6:5');
+    state().transposeBox(id, 1);
+    expect(firstBox().positions).toEqual([{ string: 1, fret: 4 }, { string: 2, fret: 3 }, { string: 3, fret: 3 }]);
+    expect(scaleRefName(firstBox().scale)).toBe('D♭ Ionian');
+    expect(firstBox().chordOverride).toBe('1:6:5');
+    state().transposeBox(id, -1);
+    state().transposeBox(id, -1);
+    expect(firstBox().positions).toEqual([{ string: 1, fret: 2 }, { string: 2, fret: 1 }, { string: 3, fret: 1 }]);
+    expect(scaleRefName(firstBox().scale)).toBe('B Ionian');
+    expect(firstBox().chordOverride).toBe('11:6:5');
+  });
+
+  it('wraps a shape at the nut up an octave instead of dropping notes', () => {
+    const id = state().addBox();
+    state().togglePosition(id, { string: 0, fret: 0 });
+    state().togglePosition(id, { string: 1, fret: 2 });
+    state().transposeBox(id, -1);
+    expect(firstBox().positions).toEqual([{ string: 0, fret: 11 }, { string: 1, fret: 13 }]);
+  });
+
+  it('edits the reference scale: tonic, family and mode', () => {
+    const id = state().addBox();
+    state().setScaleTonic(id, 2);
+    expect(scaleRefName(firstBox().scale)).toBe('D Ionian');
+    state().setScaleFamilyMode(id, 'harmonicMinor', 0);
+    expect(scaleRefName(firstBox().scale)).toBe('D Harmonic Minor');
+    state().setMode(id, 4);
+    expect(scaleRefName(firstBox().scale)).toBe('A Phrygian Dominant');
+    state().setScale(id, makeScaleRef('diatonic', 6, 'B'));
+    expect(scaleRefName(firstBox().scale)).toBe('B Locrian');
+    expect(formatSpelled(firstBox().scale.tonic)).toBe('B');
+  });
+
+  it('stores the chord-name pick and the dot color', () => {
+    const id = state().addBox();
+    state().setChordOverride(id, '9:min:');
+    expect(firstBox().chordOverride).toBe('9:min:');
+    state().setChordOverride(id, null);
+    expect(firstBox().chordOverride).toBeNull();
+    state().setColor(id, '#2F5FB3');
+    expect(firstBox().color).toBe('#2F5FB3');
   });
 
   it('removes the selected box and clears the selection', () => {

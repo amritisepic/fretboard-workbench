@@ -7,8 +7,15 @@ import {
   positionKey,
   resizeTuning,
   shiftStrings,
+  transposeChordCandidateKey,
+  transposePositions,
+  transposeScaleRef,
+  withFamilyMode,
+  withMode,
+  withTonic,
   type FretPosition,
   type Midi,
+  type PitchClass,
   type ScaleRef,
 } from '../theory';
 
@@ -29,6 +36,11 @@ export interface Box {
   readonly labelMode: LabelMode;
   readonly color: string;
   readonly fill: FillState;
+  /**
+   * Key of the chord name picked in the sidebar, or null for automatic. It stays stored when the
+   * notes change, and applies again whenever it matches the clicked notes.
+   */
+  readonly chordOverride: string | null;
 }
 
 export interface Settings {
@@ -50,6 +62,15 @@ export interface WorkbenchState {
   /** Moves the fill switch; choosing a fill also turns it on. */
   setFillMode(id: string, mode: FillMode): void;
   toggleFill(id: string): void;
+  /** Root box: moves the clicked shape, the scale and the chord override together. */
+  transposeBox(id: string, semitones: number): void;
+  setScale(id: string, scale: ScaleRef): void;
+  setScaleTonic(id: string, pc: PitchClass): void;
+  setScaleFamilyMode(id: string, familyId: string, mode: number): void;
+  /** Mode slider: same pitch collection, another degree as the root. */
+  setMode(id: string, mode: number): void;
+  setChordOverride(id: string, key: string | null): void;
+  setColor(id: string, color: string): void;
   /** Replaces the whole tuning; string-count changes are aligned at the high end. */
   applyTuning(tuning: readonly Midi[]): void;
   setStringCount(count: number): void;
@@ -74,6 +95,7 @@ export function createBox(): Box {
     labelMode: 'names',
     color: DEFAULT_BOX_COLOR,
     fill: { on: false, mode: 'inversion' },
+    chordOverride: null,
   };
 }
 
@@ -120,6 +142,28 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
     setFillOn: (id, on) => updateBox(id, (box) => ({ fill: { ...box.fill, on } })),
     setFillMode: (id, mode) => updateBox(id, () => ({ fill: { on: true, mode } })),
     toggleFill: (id) => updateBox(id, (box) => ({ fill: { ...box.fill, on: !box.fill.on } })),
+
+    transposeBox: (id, semitones) =>
+      set((state) => ({
+        boxes: state.boxes.map((box) =>
+          box.id === id
+            ? {
+                ...box,
+                positions: transposePositions(box.positions, semitones, state.settings.fretCount),
+                scale: transposeScaleRef(box.scale, semitones),
+                chordOverride:
+                  box.chordOverride === null ? null : transposeChordCandidateKey(box.chordOverride, semitones),
+              }
+            : box,
+        ),
+      })),
+    setScale: (id, scale) => updateBox(id, () => ({ scale })),
+    setScaleTonic: (id, pc) => updateBox(id, (box) => ({ scale: withTonic(box.scale, pc) })),
+    setScaleFamilyMode: (id, familyId, mode) =>
+      updateBox(id, (box) => ({ scale: withFamilyMode(box.scale, familyId, mode) })),
+    setMode: (id, mode) => updateBox(id, (box) => ({ scale: withMode(box.scale, mode) })),
+    setChordOverride: (id, chordOverride) => updateBox(id, () => ({ chordOverride })),
+    setColor: (id, color) => updateBox(id, () => ({ color })),
 
     applyTuning: (tuning) => set((state) => retune(state, tuning)),
     setStringCount: (count) => set((state) => retune(state, resizeTuning(state.settings.tuning, count))),

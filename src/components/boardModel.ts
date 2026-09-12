@@ -18,6 +18,7 @@ import {
   type ChordCandidate,
   type PcSet,
   type PitchClass,
+  type ScaleContext,
 } from '../theory';
 
 /** `strong` = full-saturation dot, `weak` = the duller map shade, `empty` = clickable but undrawn. */
@@ -36,7 +37,12 @@ export interface BoardDot {
 export interface BoxView {
   /** One entry per string × fret (open string included). */
   readonly dots: readonly BoardDot[];
+  /** Every plausible chord name, best first. */
+  readonly candidates: readonly ChordCandidate[];
+  /** The chord in use: the sidebar override while it matches, otherwise the best candidate. */
   readonly chord: ChordCandidate | null;
+  /** Spelling context: the reference scale plus the chord in use. */
+  readonly ctx: ScaleContext;
   readonly chordPcs: PcSet;
   readonly scalePcs: PcSet;
   /** Chord name, a single note name, or "" when nothing is clicked. */
@@ -50,7 +56,8 @@ export function buildBoxView(box: Box, settings: Settings): BoxView {
   const positions = box.positions.filter((p) => p.string < tuning.length && p.fret <= fretCount);
   const chordPcs = pcSetAt(tuning, positions);
   const scalePcs = scaleRefPcSet(box.scale);
-  const chord = identifyChord(pitchesAt(tuning, positions), { scale: scalePcs })[0] ?? null;
+  const candidates = identifyChord(pitchesAt(tuning, positions), { scale: scalePcs });
+  const chord = candidates.find((c) => c.key === box.chordOverride) ?? candidates[0] ?? null;
   const ctx = scaleRefContext(box.scale, chord ? chordSpellingHint(chord) : undefined);
 
   const labels = new Map<PitchClass, string>();
@@ -78,7 +85,7 @@ export function buildBoxView(box: Box, settings: Settings): BoxView {
   if (setSize(chordPcs) > 0) {
     title = chord ? chordName(chord, ctx) : pcsOf(chordPcs).map((pc) => spell(pc, ctx)).join(' ');
   }
-  return { dots, chord, chordPcs, scalePcs, title, scaleName: scaleRefName(box.scale) };
+  return { dots, candidates, chord, ctx, chordPcs, scalePcs, title, scaleName: scaleRefName(box.scale) };
 }
 
 function dotKind(box: Box, pc: PitchClass, selected: boolean, chordPcs: PcSet, scalePcs: PcSet): DotKind {
@@ -87,4 +94,15 @@ function dotKind(box: Box, pc: PitchClass, selected: boolean, chordPcs: PcSet, s
   // Fill inversion is an arpeggio map; fill scale keeps chord tones at full strength.
   if (hasPc(chordPcs, pc)) return box.fill.mode === 'inversion' ? 'weak' : 'strong';
   return box.fill.mode === 'scale' && hasPc(scalePcs, pc) ? 'weak' : 'empty';
+}
+
+const viewCache = new WeakMap<Box, { readonly settings: Settings; readonly view: BoxView }>();
+
+/** Memoised `buildBoxView`, shared by the box and its sidebar. Store updates replace changed objects. */
+export function getBoxView(box: Box, settings: Settings): BoxView {
+  const cached = viewCache.get(box);
+  if (cached && cached.settings === settings) return cached.view;
+  const view = buildBoxView(box, settings);
+  viewCache.set(box, { settings, view });
+  return view;
 }

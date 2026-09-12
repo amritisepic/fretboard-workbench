@@ -291,7 +291,7 @@ button:disabled {
   display: flex;
   flex: none;
   flex-direction: column;
-  width: 300px;
+  width: 344px;
   border-left: 1px solid var(--rule-strong);
   background: var(--paper);
   box-shadow: -8px 0 20px -18px rgba(58, 58, 58, 0.25);
@@ -353,6 +353,353 @@ button:disabled {
 .segmented button[aria-checked='true'] {
   background: var(--ink);
   color: var(--paper);
+}
+
+.select.full {
+  width: 100%;
+}
+
+.field-note {
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+/* ---- Root box -------------------------------------------------------- */
+
+.root-box {
+  display: grid;
+  grid-template-columns: 52px 1fr 52px;
+  height: 68px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 14px;
+}
+
+.root-step {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  transition: background-color 0.15s ease;
+}
+
+.root-step:first-child {
+  border-right: 1px solid var(--rule);
+  border-radius: 13px 0 0 13px;
+}
+
+.root-step:last-child {
+  border-left: 1px solid var(--rule);
+  border-radius: 0 13px 13px 0;
+}
+
+.root-step:hover {
+  background: var(--paper-sunk);
+}
+
+.root-step svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
+.root-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.root-label {
+  color: var(--ink-faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.root-name {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.root-box + .hint {
+  margin-top: 8px;
+}
+
+/* ---- Scale picker and mode slider ------------------------------------ */
+
+.scale-picker {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.scale-picker .select {
+  width: 100%;
+  min-width: 0;
+}
+
+.mode-slider {
+  margin-top: 18px;
+}
+
+.mode-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.mode-label {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mode-name {
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.mode-range {
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+}
+
+.mode-range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+
+.mode-range::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -7px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  appearance: none;
+}
+
+.mode-range::-moz-range-track {
+  height: 2px;
+  background: var(--ink);
+}
+
+.mode-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.mode-stops {
+  position: relative;
+  height: 20px;
+}
+
+.mode-stop {
+  position: absolute;
+  top: 0;
+  padding: 1px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 500;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.mode-stop:hover {
+  color: var(--ink);
+}
+
+.mode-stop.is-current {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ---- Color ----------------------------------------------------------- */
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.swatch {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+}
+
+.swatch[aria-checked='true'],
+.swatch-custom.is-active {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.swatch-custom {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1.5px dashed var(--ink-faint);
+  background: var(--paper);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.swatch-custom.is-active {
+  border: 0;
+}
+
+.swatch-custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ---- Scale ranking --------------------------------------------------- */
+
+.ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rank-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rank-count {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+.rank-rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rank-row {
+  display: grid;
+  width: 100%;
+  gap: 6px;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.rank-row:hover {
+  border-color: var(--rule-strong);
+}
+
+.rank-row.is-selected {
+  border-color: var(--ink);
+}
+
+.rank-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rank-missing {
+  color: var(--notice);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.rank-strip {
+  display: flex;
+  gap: 3px;
+}
+
+.rank-cell {
+  display: grid;
+  flex: 1 1 0;
+  place-items: center;
+  min-width: 0;
+  height: 22px;
+  overflow: hidden;
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rank-distant summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.rank-distant summary::-webkit-details-marker {
+  display: none;
+}
+
+.rank-distant summary::before {
+  content: '▸';
+  margin-right: 6px;
+  color: var(--ink-faint);
+}
+
+.rank-distant[open] summary::before {
+  content: '▾';
+}
+
+.rank-distant summary {
+  justify-content: flex-start;
+}
+
+.rank-distant .rank-count {
+  margin-left: auto;
+}
+
+.rank-distant .hint {
+  margin: 0 0 8px;
 }
 
 /* ---- Fill switch ----------------------------------------------------- */
