@@ -16,6 +16,8 @@ import {
   type Midi,
   type ScaleRef,
 } from '../theory';
+import { newId } from './ids';
+import type { PresetData } from './presetFormat';
 
 export type LabelMode = 'names' | 'degrees';
 export type FillMode = 'inversion' | 'scale';
@@ -57,6 +59,19 @@ export interface StripSettings {
   readonly compare: StripCompare;
 }
 
+/** Which preset the workbench is, and what it looked like when last saved. */
+export interface DocumentState {
+  /** null until the workbench is saved as a preset. */
+  readonly presetId: string | null;
+  readonly name: string;
+  /** `snapshotOf` the saved preset, for spotting unsaved edits; null when never saved. */
+  readonly savedSnapshot: string | null;
+}
+
+export interface LoadedDocument extends DocumentState {
+  readonly data: PresetData;
+}
+
 export interface WorkbenchState {
   readonly settings: Settings;
   /** The preset's key; boxes can move away from it (see planKeys). */
@@ -64,6 +79,7 @@ export interface WorkbenchState {
   readonly strips: StripSettings;
   readonly boxes: readonly Box[];
   readonly selectedBoxId: string | null;
+  readonly document: DocumentState;
   /** Appends a box in the key in effect after the last box and selects it. */
   addBox(): string;
   selectBox(id: string | null): void;
@@ -89,15 +105,18 @@ export interface WorkbenchState {
   setStringPitch(string: number, midi: Midi): void;
   /** Clamps to 12–30 and drops clicked notes above the new last fret. */
   setFretCount(count: number): void;
+  /** Ignores blank names. */
+  setPresetName(name: string): void;
+  /** Replaces everything the preset stores and deselects. */
+  loadDocument(document: LoadedDocument): void;
+  markSaved(presetId: string, name: string, snapshot: string): void;
+  /** The preset behind the workbench is gone; keep the work as an unsaved document. */
+  detachDocument(): void;
+  newDocument(): void;
 }
 
 export const DEFAULT_BOX_COLOR = '#C8372D';
-
-let fallbackId = 0;
-const newId = () =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `box-${++fallbackId}`;
+export const UNTITLED_PRESET = 'Untitled preset';
 
 export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): Box {
   return {
@@ -110,6 +129,13 @@ export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): B
     chordOverride: null,
   };
 }
+
+const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 'boxes'> => ({
+  settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT },
+  key: makeScaleRef('diatonic', 0, 'C'),
+  strips: { visible: true, labelMode: 'names', compare: 'chords' },
+  boxes: [],
+});
 
 export const useWorkbench = create<WorkbenchState>()((set) => {
   const updateBox = (id: string, update: (box: Box) => Partial<Box>) =>
@@ -127,11 +153,9 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
   };
 
   return {
-    settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT },
-    key: makeScaleRef('diatonic', 0, 'C'),
-    strips: { visible: true, labelMode: 'names', compare: 'chords' },
-    boxes: [],
+    ...defaultContent(),
     selectedBoxId: null,
+    document: { presetId: null, name: UNTITLED_PRESET, savedSnapshot: null },
 
     addBox: () => {
       let id = '';
@@ -197,6 +221,29 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
           settings: { ...state.settings, fretCount },
           boxes: state.boxes.map((box) => ({ ...box, positions: box.positions.filter((p) => p.fret <= fretCount) })),
         };
+      }),
+
+    setPresetName: (name) =>
+      set((state) => {
+        const trimmed = name.trim();
+        return trimmed && trimmed !== state.document.name ? { document: { ...state.document, name: trimmed } } : {};
+      }),
+    loadDocument: ({ presetId, name, savedSnapshot, data }) =>
+      set({
+        settings: data.settings,
+        key: data.key,
+        strips: data.strips,
+        boxes: data.boxes,
+        selectedBoxId: null,
+        document: { presetId, name, savedSnapshot },
+      }),
+    markSaved: (presetId, name, snapshot) => set({ document: { presetId, name, savedSnapshot: snapshot } }),
+    detachDocument: () => set((state) => ({ document: { ...state.document, presetId: null, savedSnapshot: null } })),
+    newDocument: () =>
+      set({
+        ...defaultContent(),
+        selectedBoxId: null,
+        document: { presetId: null, name: UNTITLED_PRESET, savedSnapshot: null },
       }),
   };
 });

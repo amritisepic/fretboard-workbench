@@ -150,6 +150,29 @@ describe('workbench store', () => {
     expect(firstBox().color).toBe('#2F5FB3');
   });
 
+  it('names, loads, marks, detaches and restarts the document', () => {
+    expect(state().document).toEqual({ presetId: null, name: 'Untitled preset', savedSnapshot: null });
+    state().setPresetName('  Blues in F  ');
+    expect(state().document.name).toBe('Blues in F');
+    state().setPresetName('   ');
+    expect(state().document.name).toBe('Blues in F');
+
+    state().addBox();
+    state().markSaved('p1', 'Blues in F', 'snapshot');
+    expect(state().document).toEqual({ presetId: 'p1', name: 'Blues in F', savedSnapshot: 'snapshot' });
+    state().detachDocument();
+    expect(state().document).toEqual({ presetId: null, name: 'Blues in F', savedSnapshot: null });
+
+    const { settings, key, strips, boxes } = state();
+    state().newDocument();
+    expect(state().boxes).toEqual([]);
+    expect(state().document.name).toBe('Untitled preset');
+    state().loadDocument({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's', data: { settings, key, strips, boxes } });
+    expect(state().boxes).toBe(boxes);
+    expect(state().selectedBoxId).toBeNull();
+    expect(state().document).toEqual({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's' });
+  });
+
   it('removes the selected box and clears the selection', () => {
     const id = state().addBox();
     state().removeBox(id);

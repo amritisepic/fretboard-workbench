@@ -26,7 +26,20 @@ export function ConfirmDialog({
         if (event.target === event.currentTarget) onCancel();
       }}
     >
-      <div className="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dialog-title" aria-describedby="dialog-body">
+      <div
+        className="dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+        aria-describedby="dialog-body"
+        onKeyDown={(event) => {
+          // The dialog is the top layer, so Esc stops here.
+          if (event.key === 'Escape') {
+            event.stopPropagation();
+            onCancel();
+          }
+        }}
+      >
         <h2 id="dialog-title">{title}</h2>
         <p id="dialog-body">{body}</p>
         <div className="dialog-actions">

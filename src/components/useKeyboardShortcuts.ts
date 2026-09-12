@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react';
+import { useLibrary } from '../state/library';
 import { useWorkbench } from '../state/workbench';
 
 interface ShortcutOptions {
   readonly settingsOpen: boolean;
+  readonly explorerOpen: boolean;
   readonly dialogOpen: boolean;
   readonly closeSettings: () => void;
+  readonly closeExplorer: () => void;
   readonly closeDialog: () => void;
   readonly requestDelete: (boxId: string) => void;
 }
@@ -24,15 +27,17 @@ const ROOT_NUDGES: Readonly<Record<string, number>> = {
 };
 
 /**
- * Esc closes the topmost layer (dialog, then settings), otherwise deselects the box.
- * Space turns the selected box's fill on or off. Arrow keys nudge the root.
- * Delete or Backspace asks to remove the box. Keys typed into form fields (including the
- * mode slider and dropdowns) are left alone.
+ * Ctrl/Cmd+S saves. Esc closes the topmost layer (dialog, explorer, settings), otherwise it
+ * deselects the box. With the explorer closed: Space turns the selected box's fill on or off,
+ * arrow keys nudge its root, and Delete or Backspace asks to remove it. Keys typed into form
+ * fields (including the mode slider and dropdowns) are left alone.
  */
 export function useKeyboardShortcuts({
   settingsOpen,
+  explorerOpen,
   dialogOpen,
   closeSettings,
+  closeExplorer,
   closeDialog,
   requestDelete,
 }: ShortcutOptions) {
@@ -69,13 +74,19 @@ export function useKeyboardShortcuts({
         }
         return;
       }
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void useLibrary.getState().requestSave();
+        return;
+      }
       if (event.key === 'Escape') {
-        if (settingsOpen) closeSettings();
+        if (explorerOpen) closeExplorer();
+        else if (settingsOpen) closeSettings();
         else if (isTextEntry(event.target)) event.target.blur();
         else useWorkbench.getState().selectBox(null);
         return;
       }
-      if (event.metaKey || event.ctrlKey || event.altKey || isTextEntry(event.target)) return;
+      if (explorerOpen || event.metaKey || event.ctrlKey || event.altKey || isTextEntry(event.target)) return;
 
       const { selectedBoxId, toggleFill, transposeBox } = useWorkbench.getState();
       if (selectedBoxId === null) return;
@@ -94,5 +105,5 @@ export function useKeyboardShortcuts({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [settingsOpen, dialogOpen, closeSettings, closeDialog, requestDelete]);
+  }, [settingsOpen, explorerOpen, dialogOpen, closeSettings, closeExplorer, closeDialog, requestDelete]);
 }
