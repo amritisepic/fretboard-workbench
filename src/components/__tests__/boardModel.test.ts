@@ -1,0 +1,71 @@
+import { describe, expect, it } from 'vitest';
+import { createBox, type Box, type FillMode, type Settings } from '../../state/workbench';
+import { buildBoxView } from '../boardModel';
+
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24 };
+
+// C3 on the A string, E3 on the D string, A3 on the G string: C E A with C lowest.
+const amOverC: Box = {
+  ...createBox(),
+  positions: [
+    { string: 1, fret: 3 },
+    { string: 2, fret: 2 },
+    { string: 3, fret: 2 },
+  ],
+};
+
+const withFill = (box: Box, mode: FillMode, on = true): Box => ({ ...box, fill: { on, mode } });
+const CHORD = [0, 4, 9];
+const C_MAJOR = [0, 2, 4, 5, 7, 9, 11];
+
+describe('box view', () => {
+  it('has one dot per string and fret, open strings included', () => {
+    expect(buildBoxView(amOverC, settings).dots).toHaveLength(6 * 25);
+  });
+
+  it('names the chord from the clicked notes', () => {
+    const view = buildBoxView(amOverC, settings);
+    expect(view.title).toBe('Am/C');
+    expect(view.scaleName).toBe('C Ionian');
+    expect(buildBoxView(createBox(), settings).title).toBe('');
+  });
+
+  it('draws only the clicked notes while the fill is off', () => {
+    const drawn = buildBoxView(amOverC, settings).dots.filter((d) => d.kind !== 'empty');
+    expect(drawn).toHaveLength(3);
+    expect(drawn.every((d) => d.selected && d.kind === 'strong')).toBe(true);
+  });
+
+  it('fill inversion draws an arpeggio map in the duller shade', () => {
+    for (const dot of buildBoxView(withFill(amOverC, 'inversion'), settings).dots) {
+      const expected = dot.selected ? 'strong' : CHORD.includes(dot.pc) ? 'weak' : 'empty';
+      expect(dot.kind, `${dot.string}:${dot.fret}`).toBe(expected);
+    }
+  });
+
+  it('fill scale keeps chord tones at full strength and dulls the other scale tones', () => {
+    for (const dot of buildBoxView(withFill(amOverC, 'scale'), settings).dots) {
+      const expected = CHORD.includes(dot.pc) ? 'strong' : C_MAJOR.includes(dot.pc) ? 'weak' : 'empty';
+      expect(dot.kind, `${dot.string}:${dot.fret}`).toBe(expected);
+    }
+  });
+
+  it('keeps the switch position while the fill is off', () => {
+    const drawn = buildBoxView(withFill(amOverC, 'scale', false), settings).dots.filter((d) => d.kind !== 'empty');
+    expect(drawn).toHaveLength(3);
+  });
+
+  it('labels dots by note name or scale degree', () => {
+    const labelOf = (box: Box, pc: number) =>
+      buildBoxView(withFill(box, 'scale'), settings).dots.find((d) => d.pc === pc && d.kind !== 'empty')?.label;
+    expect([0, 4, 9, 11].map((pc) => labelOf(amOverC, pc))).toEqual(['C', 'E', 'A', 'B']);
+    const degrees: Box = { ...amOverC, labelMode: 'degrees' };
+    expect([0, 4, 9, 11].map((pc) => labelOf(degrees, pc))).toEqual(['1', '3', '6', '7']);
+    expect(buildBoxView(amOverC, settings).dots.filter((d) => d.kind === 'empty').every((d) => d.label === '')).toBe(true);
+  });
+
+  it('ignores positions that fall outside the current board', () => {
+    const stray: Box = { ...amOverC, positions: [...amOverC.positions, { string: 7, fret: 2 }, { string: 0, fret: 29 }] };
+    expect(buildBoxView(stray, settings).title).toBe('Am/C');
+  });
+});
