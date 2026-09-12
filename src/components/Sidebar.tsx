@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useWorkbench, type Box, type LabelMode } from '../state/workbench';
-import { formatSpelled, scaleRefPcSet } from '../theory';
+import { formatSpelled, planKeys, scaleRefPcSet } from '../theory';
 import { getBoxView } from './boardModel';
 import { ChordNameField } from './ChordNameField';
 import { ColorField } from './ColorField';
@@ -18,10 +18,8 @@ const LABEL_OPTIONS: readonly SegmentedOption<LabelMode>[] = [
 
 export function Sidebar({ box }: { readonly box: Box }) {
   const settings = useWorkbench((s) => s.settings);
-  const previousScale = useWorkbench((s) => {
-    const index = s.boxes.findIndex((b) => b.id === box.id);
-    return index > 0 ? s.boxes[index - 1].scale : null;
-  });
+  const boxes = useWorkbench((s) => s.boxes);
+  const globalKey = useWorkbench((s) => s.key);
   const transposeBox = useWorkbench((s) => s.transposeBox);
   const setScale = useWorkbench((s) => s.setScale);
   const setLabelMode = useWorkbench((s) => s.setLabelMode);
@@ -29,12 +27,19 @@ export function Sidebar({ box }: { readonly box: Box }) {
   const setFillMode = useWorkbench((s) => s.setFillMode);
 
   const view = getBoxView(box, settings);
+  const index = boxes.findIndex((b) => b.id === box.id);
+  const previousScale = index > 0 ? boxes[index - 1].scale : null;
+  const keyHere = useMemo(
+    () => planKeys(globalKey, boxes.map((b) => b.scale)).keys[index],
+    [globalKey, boxes, index],
+  );
+
   const ranking = useMemo(
     () =>
       box.fill.mode === 'scale'
-        ? buildRankingView(box, view, previousScale ? scaleRefPcSet(previousScale) : undefined)
+        ? buildRankingView(box, view, previousScale ? scaleRefPcSet(previousScale) : undefined, keyHere)
         : null,
-    [box, view, previousScale],
+    [box, view, previousScale, keyHere],
   );
 
   return (

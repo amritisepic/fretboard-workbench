@@ -4,23 +4,22 @@ import {
   DEFAULT_FRET_COUNT,
   clampFretCount,
   makeScaleRef,
+  planKeys,
   positionKey,
   resizeTuning,
   shiftStrings,
   transposeChordCandidateKey,
   transposePositions,
   transposeScaleRef,
-  withFamilyMode,
   withMode,
-  withTonic,
   type FretPosition,
   type Midi,
-  type PitchClass,
   type ScaleRef,
 } from '../theory';
 
 export type LabelMode = 'names' | 'degrees';
 export type FillMode = 'inversion' | 'scale';
+export type StripCompare = 'chords' | 'scales';
 
 export interface FillState {
   readonly on: boolean;
@@ -49,10 +48,23 @@ export interface Settings {
   readonly fretCount: number;
 }
 
+/** Voice-leading strips between adjacent boxes. Global to the preset. */
+export interface StripSettings {
+  readonly visible: boolean;
+  /** Note names or scale degrees, independent of the boxes' own label modes. */
+  readonly labelMode: LabelMode;
+  /** Scales are compared only between two boxes that are both in scale mode; otherwise chords. */
+  readonly compare: StripCompare;
+}
+
 export interface WorkbenchState {
   readonly settings: Settings;
+  /** The preset's key; boxes can move away from it (see planKeys). */
+  readonly key: ScaleRef;
+  readonly strips: StripSettings;
   readonly boxes: readonly Box[];
   readonly selectedBoxId: string | null;
+  /** Appends a box in the key in effect after the last box and selects it. */
   addBox(): string;
   selectBox(id: string | null): void;
   removeBox(id: string): void;
@@ -65,12 +77,12 @@ export interface WorkbenchState {
   /** Root box: moves the clicked shape, the scale and the chord override together. */
   transposeBox(id: string, semitones: number): void;
   setScale(id: string, scale: ScaleRef): void;
-  setScaleTonic(id: string, pc: PitchClass): void;
-  setScaleFamilyMode(id: string, familyId: string, mode: number): void;
   /** Mode slider: same pitch collection, another degree as the root. */
   setMode(id: string, mode: number): void;
   setChordOverride(id: string, key: string | null): void;
   setColor(id: string, color: string): void;
+  setKey(key: ScaleRef): void;
+  setStrips(patch: Partial<StripSettings>): void;
   /** Replaces the whole tuning; string-count changes are aligned at the high end. */
   applyTuning(tuning: readonly Midi[]): void;
   setStringCount(count: number): void;
@@ -87,11 +99,11 @@ const newId = () =>
     ? crypto.randomUUID()
     : `box-${++fallbackId}`;
 
-export function createBox(): Box {
+export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): Box {
   return {
     id: newId(),
     positions: [],
-    scale: makeScaleRef('diatonic', 0, 'C'),
+    scale,
     labelMode: 'names',
     color: DEFAULT_BOX_COLOR,
     fill: { on: false, mode: 'inversion' },
@@ -116,13 +128,20 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
 
   return {
     settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT },
+    key: makeScaleRef('diatonic', 0, 'C'),
+    strips: { visible: true, labelMode: 'names', compare: 'chords' },
     boxes: [],
     selectedBoxId: null,
 
     addBox: () => {
-      const box = createBox();
-      set((state) => ({ boxes: [...state.boxes, box], selectedBoxId: box.id }));
-      return box.id;
+      let id = '';
+      set((state) => {
+        const { keys } = planKeys(state.key, state.boxes.map((box) => box.scale));
+        const box = createBox(keys.length > 0 ? keys[keys.length - 1] : state.key);
+        id = box.id;
+        return { boxes: [...state.boxes, box], selectedBoxId: box.id };
+      });
+      return id;
     },
     selectBox: (id) => set({ selectedBoxId: id }),
     removeBox: (id) =>
@@ -158,12 +177,12 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
         ),
       })),
     setScale: (id, scale) => updateBox(id, () => ({ scale })),
-    setScaleTonic: (id, pc) => updateBox(id, (box) => ({ scale: withTonic(box.scale, pc) })),
-    setScaleFamilyMode: (id, familyId, mode) =>
-      updateBox(id, (box) => ({ scale: withFamilyMode(box.scale, familyId, mode) })),
     setMode: (id, mode) => updateBox(id, (box) => ({ scale: withMode(box.scale, mode) })),
     setChordOverride: (id, chordOverride) => updateBox(id, () => ({ chordOverride })),
     setColor: (id, color) => updateBox(id, () => ({ color })),
+
+    setKey: (key) => set({ key }),
+    setStrips: (patch) => set((state) => ({ strips: { ...state.strips, ...patch } })),
 
     applyTuning: (tuning) => set((state) => retune(state, tuning)),
     setStringCount: (count) => set((state) => retune(state, resizeTuning(state.settings.tuning, count))),

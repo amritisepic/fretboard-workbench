@@ -12,6 +12,7 @@ import {
   type PcSet,
   type RankedScale,
   type ScaleContext,
+  type ScaleRef,
 } from '../theory';
 import type { BoxView } from './boardModel';
 
@@ -56,13 +57,19 @@ const SECTION_TITLES: Record<RankingSectionId, string> = {
 };
 
 /** The scale ranking list for a box in scale mode, or null when there is no chord to rank against. */
-export function buildRankingView(box: Box, view: BoxView, previousScale: PcSet | undefined): RankingView | null {
+export function buildRankingView(
+  box: Box,
+  view: BoxView,
+  previousScale: PcSet | undefined,
+  key?: ScaleRef,
+): RankingView | null {
   const { chord } = view;
   if (!chord) return null;
 
   const ranking = rankScales(view.chordPcs, chord, {
     rootSpelling: chordRootSpelling(chord, view.ctx),
     previousScale,
+    key,
   });
   const currentPcs = scaleRefPcSet(box.scale);
   const currentTonic = pcOfSpelled(box.scale.tonic);

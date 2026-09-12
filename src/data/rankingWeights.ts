@@ -19,8 +19,12 @@ export const RANKING_WEIGHTS = {
     /** A perfect 5th carries almost no harmonic information. */
     fifth: 1,
   },
-  /** A scale missing tones is tier 1 while its total missing penalty is at most this; otherwise tier 2. */
-  tier1MaxMissingPenalty: 10,
+  /**
+   * A scale missing tones is tier 1 while its total missing penalty is at most this, otherwise tier 2.
+   * At 8, a single missing 3rd, 7th or altered 5th stays in tier 1. A triad scale that shares only
+   * the root (missing 3rd + 5th = 9) drops to tier 2.
+   */
+  tier1MaxMissingPenalty: 8,
 
   /** w_fit. fitTerm = covered / |chord| − fitSizePenalty · (|scale| − |chord|) / 12. */
   fit: 20,

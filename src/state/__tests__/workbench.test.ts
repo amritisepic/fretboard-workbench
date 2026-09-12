@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { formatSpelled, formatTuning, makeScaleRef, scaleRefName } from '../../theory';
+import {
+  formatSpelled,
+  formatTuning,
+  keyName,
+  makeScaleRef,
+  scaleRefName,
+  withFamilyMode,
+  withTonic,
+} from '../../theory';
 import { useWorkbench } from '../workbench';
 
 const initial = useWorkbench.getState();
@@ -102,11 +110,28 @@ describe('workbench store', () => {
     expect(firstBox().positions).toEqual([{ string: 0, fret: 11 }, { string: 1, fret: 13 }]);
   });
 
+  it('keeps a preset key and strip settings, and starts new boxes in the key in effect at the end', () => {
+    expect(keyName(state().key)).toBe('C major');
+    expect(state().strips).toEqual({ visible: true, labelMode: 'names', compare: 'chords' });
+    state().setStrips({ labelMode: 'degrees' });
+    expect(state().strips).toEqual({ visible: true, labelMode: 'degrees', compare: 'chords' });
+
+    const first = state().addBox();
+    expect(scaleRefName(firstBox().scale)).toBe('C Ionian');
+    state().setScale(first, makeScaleRef('diatonic', 3, 'A♭'));
+    const second = state().addBox();
+    expect(scaleRefName(state().boxes[1].scale)).toBe('A♭ Lydian');
+    expect(state().selectedBoxId).toBe(second);
+
+    state().setKey(makeScaleRef('diatonic', 5, 'A'));
+    expect(keyName(state().key)).toBe('A minor');
+  });
+
   it('edits the reference scale: tonic, family and mode', () => {
     const id = state().addBox();
-    state().setScaleTonic(id, 2);
+    state().setScale(id, withTonic(firstBox().scale, 2));
     expect(scaleRefName(firstBox().scale)).toBe('D Ionian');
-    state().setScaleFamilyMode(id, 'harmonicMinor', 0);
+    state().setScale(id, withFamilyMode(firstBox().scale, 'harmonicMinor', 0));
     expect(scaleRefName(firstBox().scale)).toBe('D Harmonic Minor');
     state().setMode(id, 4);
     expect(scaleRefName(firstBox().scale)).toBe('A Phrygian Dominant');

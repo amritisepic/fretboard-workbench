@@ -1,5 +1,17 @@
 const PAPER = '#FAF9F7';
 
+/** Muted hues for key regions: light enough to sit behind dark text without fighting the dot colors. */
+export const KEY_REGION_COLORS: readonly string[] = [
+  '#E8E1CF',
+  '#D8E5DA',
+  '#DAE2EC',
+  '#ECDCE0',
+  '#E2DDED',
+  '#DDE8E6',
+  '#EDE3D6',
+  '#E3E7D3',
+];
+
 function parseHex(hex: string): [number, number, number] {
   const digits = hex.replace('#', '');
   const full = digits.length === 3 ? [...digits].map((c) => c + c).join('') : digits;

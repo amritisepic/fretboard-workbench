@@ -1,74 +1,26 @@
-import { SCALE_FAMILIES } from '../data/scales';
 import { useWorkbench, type Box } from '../state/workbench';
-import {
-  canonicalMode,
-  chooseTonicSpelling,
-  distinctModes,
-  formatSpelled,
-  getScaleFamily,
-  modeName,
-  pcOfSpelled,
-  scaleRefContext,
-  scaleRefIntervals,
-  scaleRefName,
-  spell,
-} from '../theory';
+import { getScaleFamily, pcOfSpelled, scaleRefContext, scaleRefName, spell } from '../theory';
+import { ScaleSelects } from './ScaleSelects';
 
-const PITCH_CLASSES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 const THUMB_RADIUS = 8;
 
 /** Reference scale: tonic and scale dropdowns, then the mode slider with one stop per degree. */
 export function ScalePicker({ box }: { readonly box: Box }) {
-  const setScaleTonic = useWorkbench((s) => s.setScaleTonic);
-  const setScaleFamilyMode = useWorkbench((s) => s.setScaleFamilyMode);
+  const setScale = useWorkbench((s) => s.setScale);
   const setMode = useWorkbench((s) => s.setMode);
 
   const { scale } = box;
   const family = getScaleFamily(scale.familyId);
-  const intervals = scaleRefIntervals(scale);
-  const tonicPc = pcOfSpelled(scale.tonic);
   const stops = family.intervals.length;
   const ctx = scaleRefContext(scale);
-  const parentRoot = tonicPc - family.intervals[scale.mode];
+  const parentRoot = pcOfSpelled(scale.tonic) - family.intervals[scale.mode];
   const stopNames = family.intervals.map((iv) => spell(parentRoot + iv, ctx));
   const name = scaleRefName(scale);
 
   return (
     <div className="field">
       <span className="field-label">Reference scale</span>
-      <div className="scale-picker">
-        <select
-          className="select"
-          aria-label="Scale root"
-          value={tonicPc}
-          onChange={(event) => setScaleTonic(box.id, Number(event.target.value))}
-        >
-          {PITCH_CLASSES.map((pc) => (
-            <option key={pc} value={pc}>
-              {formatSpelled(pc === tonicPc ? scale.tonic : chooseTonicSpelling(pc, intervals))}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          aria-label="Scale"
-          value={`${scale.familyId}:${canonicalMode(scale.familyId, scale.mode)}`}
-          onChange={(event) => {
-            const [familyId, mode] = event.target.value.split(':');
-            setScaleFamilyMode(box.id, familyId, Number(mode));
-          }}
-        >
-          {SCALE_FAMILIES.map((f) => (
-            <optgroup key={f.id} label={f.name}>
-              {distinctModes(f.id).map((m) => (
-                <option key={m} value={`${f.id}:${m}`}>
-                  {modeName(f.id, m)}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </div>
+      <ScaleSelects scale={scale} label="Scale" onChange={(next) => setScale(box.id, next)} />
 
       <div className="mode-slider">
         <div className="mode-head">

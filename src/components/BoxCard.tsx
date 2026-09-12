@@ -1,14 +1,27 @@
 import { useCallback } from 'react';
 import { useWorkbench, type Box } from '../state/workbench';
 import type { FretPosition } from '../theory';
-import { getBoxView } from './boardModel';
+import type { BoxView } from './boardModel';
 import { Fretboard } from './Fretboard';
 
-export function BoxCard({ box, selected }: { readonly box: Box; readonly selected: boolean }) {
-  const settings = useWorkbench((s) => s.settings);
+export function BoxCard({
+  box,
+  view,
+  numeral,
+  keyName,
+  selected,
+}: {
+  readonly box: Box;
+  readonly view: BoxView;
+  /** Roman numeral in the key in effect, or "" without a chord. */
+  readonly numeral: string;
+  readonly keyName: string;
+  readonly selected: boolean;
+}) {
+  const tuning = useWorkbench((s) => s.settings.tuning);
+  const fretCount = useWorkbench((s) => s.settings.fretCount);
   const selectBox = useWorkbench((s) => s.selectBox);
   const togglePosition = useWorkbench((s) => s.togglePosition);
-  const view = getBoxView(box, settings);
 
   const onToggle = useCallback(
     (position: FretPosition) => {
@@ -25,6 +38,11 @@ export function BoxCard({ box, selected }: { readonly box: Box; readonly selecte
       onClick={() => selectBox(box.id)}
     >
       <header className="box-header">
+        {numeral && (
+          <span className="box-numeral" title={`${numeral} in ${keyName}`}>
+            {numeral}
+          </span>
+        )}
         {view.title ? (
           <h2 className="box-title">{view.title}</h2>
         ) : (
@@ -33,8 +51,8 @@ export function BoxCard({ box, selected }: { readonly box: Box; readonly selecte
         {box.fill.mode === 'scale' && <p className="box-scale">{view.scaleName}</p>}
       </header>
       <Fretboard
-        tuning={settings.tuning}
-        fretCount={settings.fretCount}
+        tuning={tuning}
+        fretCount={fretCount}
         dots={view.dots}
         color={box.color}
         ringSelected={box.fill.on}

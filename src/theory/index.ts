@@ -5,3 +5,4 @@ export * from './chords';
 export * from './fretboard';
 export * from './voiceleading';
 export * from './ranking';
+export * from './keys';
