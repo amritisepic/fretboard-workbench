@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createBox, type Box, type FillMode, type Settings } from '../../state/workbench';
+import { makeScaleRef } from '../../theory';
 import { buildBoxView } from '../boardModel';
 
 const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
@@ -62,6 +63,17 @@ describe('box view', () => {
     const degrees: Box = { ...amOverC, labelMode: 'degrees' };
     expect([0, 4, 9, 11].map((pc) => labelOf(degrees, pc))).toEqual(['1', '3', '6', '7']);
     expect(buildBoxView(amOverC, settings).dots.filter((d) => d.kind === 'empty').every((d) => d.label === '')).toBe(true);
+  });
+
+  it('counts degrees from the key in effect, or from the reference scale when the box asks', () => {
+    const inAMinor: Box = { ...withFill(amOverC, 'scale'), labelMode: 'degrees', scale: makeScaleRef('diatonic', 5, 'A') };
+    const labels = (box: Box) => {
+      const view = buildBoxView(box, settings, makeScaleRef('diatonic', 0, 'C'));
+      return [9, 0, 4].map((pc) => view.dots.find((d) => d.pc === pc && d.kind !== 'empty')?.label);
+    };
+    expect(labels(inAMinor)).toEqual(['6', '1', '3']);
+    expect(labels({ ...inAMinor, degreeBasis: 'scale' })).toEqual(['1', '♭3', '5']);
+    expect(buildBoxView({ ...inAMinor, labelMode: 'names' }, settings, makeScaleRef('diatonic', 0, 'C')).dots.find((d) => d.pc === 9)?.label).toBe('A');
   });
 
   it('lists every reading and names the box with the sidebar pick while it matches', () => {

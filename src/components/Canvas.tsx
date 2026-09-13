@@ -3,15 +3,16 @@ import { useWorkbench } from '../state/workbench';
 import { BoxCard } from './BoxCard';
 import { buildCanvasModel } from './canvasModel';
 import { CanvasToolbar } from './CanvasToolbar';
-import { KEY_REGION_COLORS } from './color';
+import { KEY_REGION_COLORS, bandShade } from './color';
 import { buildStripView } from './stripModel';
 import { useRowStarts } from './useRowStarts';
 import { VoiceLeadingStrip } from './VoiceLeadingStrip';
 
 /**
  * Boxes flow left to right and wrap. Each box after the first is grouped with the strip that leads
- * into it, so a wrap never separates a strip from the box it leads into. The key band across the
- * top of each group joins into one bar per key region, with a seam where the key changes.
+ * into it, so a wrap never separates a strip from the box it leads into. Two bars run above the
+ * boxes: the key band across each group joins into one bar per key region, with a seam where the key
+ * changes, and under it each box shows its own reference scale.
  */
 export function Canvas() {
   const boxes = useWorkbench((s) => s.boxes);
@@ -71,13 +72,22 @@ export function Canvas() {
                   ) : (
                     <div className="box-spacer" />
                   ))}
-                <BoxCard
-                  box={entry.box}
-                  view={entry.view}
-                  numeral={entry.numeral}
-                  keyName={entry.keyName}
-                  selected={entry.box.id === selectedBoxId}
-                />
+                <div className="box-column">
+                  <div
+                    className="scale-band"
+                    style={{ backgroundColor: bandShade(entry.box.color) }}
+                    title={`Reference scale: ${entry.view.scaleName}`}
+                  >
+                    <span>{entry.view.scaleName}</span>
+                  </div>
+                  <BoxCard
+                    box={entry.box}
+                    view={entry.view}
+                    numeral={entry.numeral}
+                    keyName={entry.keyName}
+                    selected={entry.box.id === selectedBoxId}
+                  />
+                </div>
               </div>
             </div>
           );

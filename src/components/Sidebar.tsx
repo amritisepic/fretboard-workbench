@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { useWorkbench, type Box, type LabelMode } from '../state/workbench';
-import { formatSpelled, planKeys, scaleRefPcSet } from '../theory';
+import { keyPlanOf } from '../state/boxChords';
+import { useWorkbench, type Box, type DegreeBasis, type LabelMode } from '../state/workbench';
+import { formatSpelled, keyName, scaleRefName, scaleRefPcSet } from '../theory';
 import { getBoxView } from './boardModel';
 import { ChordNameField } from './ChordNameField';
 import { ColorField } from './ColorField';
@@ -16,6 +17,11 @@ const LABEL_OPTIONS: readonly SegmentedOption<LabelMode>[] = [
   { value: 'degrees', label: 'Scale degrees' },
 ];
 
+const BASIS_OPTIONS: readonly SegmentedOption<DegreeBasis>[] = [
+  { value: 'key', label: 'From key' },
+  { value: 'scale', label: 'From scale' },
+];
+
 export function Sidebar({ box }: { readonly box: Box }) {
   const settings = useWorkbench((s) => s.settings);
   const boxes = useWorkbench((s) => s.boxes);
@@ -23,16 +29,17 @@ export function Sidebar({ box }: { readonly box: Box }) {
   const transposeBox = useWorkbench((s) => s.transposeBox);
   const setScale = useWorkbench((s) => s.setScale);
   const setLabelMode = useWorkbench((s) => s.setLabelMode);
+  const setDegreeBasis = useWorkbench((s) => s.setDegreeBasis);
   const setFillOn = useWorkbench((s) => s.setFillOn);
   const setFillMode = useWorkbench((s) => s.setFillMode);
 
-  const view = getBoxView(box, settings);
   const index = boxes.findIndex((b) => b.id === box.id);
   const previousScale = index > 0 ? boxes[index - 1].scale : null;
   const keyHere = useMemo(
-    () => planKeys(globalKey, boxes.map((b) => b.scale)).keys[index],
-    [globalKey, boxes, index],
+    () => keyPlanOf(globalKey, boxes, settings).keys[index] ?? globalKey,
+    [globalKey, boxes, settings, index],
   );
+  const view = getBoxView(box, settings, keyHere);
 
   const ranking = useMemo(
     () =>
@@ -56,6 +63,19 @@ export function Sidebar({ box }: { readonly box: Box }) {
             value={box.labelMode}
             onChange={(mode) => setLabelMode(box.id, mode)}
           />
+          {box.labelMode === 'degrees' && (
+            <div className="degree-basis">
+              <Segmented
+                label="Count degrees from"
+                options={BASIS_OPTIONS}
+                value={box.degreeBasis}
+                onChange={(basis) => setDegreeBasis(box.id, basis)}
+              />
+              <p className="hint">
+                1 is the tonic of {box.degreeBasis === 'key' ? keyName(keyHere) : scaleRefName(box.scale)}.
+              </p>
+            </div>
+          )}
         </div>
         <ColorField box={box} />
         {box.fill.mode === 'scale' && (

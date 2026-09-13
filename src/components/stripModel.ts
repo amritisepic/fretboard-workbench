@@ -40,9 +40,10 @@ export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: Strip
   const setOf = (entry: CanvasEntry) => (compared === 'scales' ? entry.view.scalePcs : entry.view.chordPcs);
   const leading = voiceLeading(setOf(from), setOf(to));
 
-  // Each row is labelled in its own box's context, so a common tone can read "1 → 5".
+  // Each side is labelled in its own box's context: names from its scale, degrees counted the way its
+  // dots count them (from the key in effect or from its scale), so a common tone can read "1 → 5".
   const label = (entry: CanvasEntry, pc: PitchClass) =>
-    strips.labelMode === 'names' ? spell(pc, entry.view.ctx) : formatScaleDegree(pc, entry.view.ctx);
+    strips.labelMode === 'names' ? spell(pc, entry.view.ctx) : formatScaleDegree(pc, entry.view.degreeCtx);
   const reference =
     compared === 'chords' && from.view.chord ? from.view.chord.root : pcOfSpelled(from.box.scale.tonic);
   const height = (pc: PitchClass) => mod12(pc - reference);

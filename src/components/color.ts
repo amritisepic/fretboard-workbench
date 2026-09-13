@@ -34,6 +34,11 @@ export function mapShade(hex: string): string {
   return mix(hex, PAPER, 0.4);
 }
 
+/** A pale tint of a box's color, behind dark text in the scale bar. */
+export function bandShade(hex: string): string {
+  return mix(hex, PAPER, 0.16);
+}
+
 /** Dark ink or white, whichever contrasts more with `hex`. */
 export function labelInk(hex: string): string {
   const [r, g, b] = parseHex(hex).map((v) => {

@@ -1,5 +1,6 @@
+import { keyPlanOf } from '../state/boxChords';
 import type { Box, Settings } from '../state/workbench';
-import { keyName, planKeys, romanNumeral, type KeyRegion, type ScaleRef } from '../theory';
+import { keyName, romanNumeral, type KeyRegion, type ScaleRef } from '../theory';
 import { getBoxView, type BoxView } from './boardModel';
 
 export interface CanvasEntry {
@@ -20,15 +21,12 @@ export interface CanvasModel {
   readonly regions: readonly KeyRegion[];
 }
 
-/** Every box with its view, the key in effect at it, and its place in the key bar. */
+/** Every box with its view, the key in effect at it (see planKeys), and its place in the key bar. */
 export function buildCanvasModel(boxes: readonly Box[], settings: Settings, globalKey: ScaleRef): CanvasModel {
-  const plan = planKeys(
-    globalKey,
-    boxes.map((box) => box.scale),
-  );
+  const plan = keyPlanOf(globalKey, boxes, settings);
   const entries = boxes.map((box, i): CanvasEntry => {
-    const view = getBoxView(box, settings);
     const key = plan.keys[i];
+    const view = getBoxView(box, settings, key);
     const region = plan.regions[plan.regionOfBox[i]];
     return {
       box,

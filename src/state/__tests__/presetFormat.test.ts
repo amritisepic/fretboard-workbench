@@ -25,6 +25,7 @@ const sample = (): PresetData => ({
       ],
       color: '#2F5FB3',
       labelMode: 'degrees',
+      degreeBasis: 'scale',
       fill: { on: true, mode: 'scale' },
       chordOverride: '6:m7b5:',
     },
@@ -53,6 +54,7 @@ describe('preset data', () => {
     expect(parseEdited((json) => delete json.strips)).toThrow('preset.strips must be an object');
     expect(parseEdited((json) => (json.settings.capo = 12))).toThrow('preset.settings.capo must be a whole number from 0 to 11');
     expect(parseEdited((json) => (json.orientation = 'diagonal'))).toThrow('preset.orientation must be one of');
+    expect(parseEdited((json) => (json.boxes[0].degreeBasis = 'chord'))).toThrow('preset.boxes[0].degreeBasis must be one of');
   });
 
   it('clamps the fret count and drops notes that no longer fit the board', () => {
@@ -64,10 +66,11 @@ describe('preset data', () => {
     expect(behindCapo.boxes[0].positions).toEqual([{ string: 2, fret: 3 }]);
   });
 
-  it('reads presets saved before the capo, the neck orientation and the chord limits', () => {
+  it('reads presets saved before the capo, the neck orientation, degree counting and the chord limits', () => {
     const data = parseEdited((json) => {
       delete json.settings.capo;
       delete json.orientation;
+      delete json.boxes[0].degreeBasis;
       (json.strips as Record<string, unknown>).compare = 'scales';
       json.boxes[1].positions = [
         { string: 0, fret: 3 },
@@ -77,6 +80,7 @@ describe('preset data', () => {
     })();
     expect(data.settings.capo).toBe(0);
     expect(data.orientation).toBe('horizontal');
+    expect(data.boxes[0].degreeBasis).toBe('key');
     expect(data.strips).toEqual({ visible: false, labelMode: 'degrees' });
     expect(data.boxes[1].positions).toEqual([1, 2, 3, 4, 5, 6].map((string) => ({ string, fret: 2 })));
   });

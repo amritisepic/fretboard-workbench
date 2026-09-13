@@ -100,7 +100,10 @@
 - **Voice-leading strips** compare scales when both boxes are set to fill scale; the chords/scales switch was removed.
 - **Ranking** rows all start on the chord root. Tier-0 modes of the key in effect are pinned first.
 - **The tier-1 limit is 8.**
-- **A new key region** starts only when a box's scale uses a different set of notes; modes of the key stay in it.
+- **Key bar** (`planKeys`, weights in `data/keyPlanWeights.ts`): the cheapest sequence of keys from the preset key. A scale that alters the key changes it but keeps the tonic (G Mixolydian ♭2 in C minor → C Harmonic Major; A♭ Lydian in C major → C minor). A passing chord whose scale lacks the tonic stays in the key as chromatic (F♯7 in C minor is ♯IV). The tonic moves only for about three such chords in a row, or two at the end. This replaced the old "new region per new note collection" rule, and test 10 was amended to match.
+- **Two bars** above the boxes: key regions, then each box's reference scale. Numerals count from the key bar.
+- **Degree labels** count from the key in effect by default; each box can switch to its reference scale, and the strips follow that choice.
+- **Find key** runs the same planner on the chords alone (free start), sets the preset key to the key covering most boxes, and picks each scale against the key at that box.
 
 ## Spec errors found (the code uses the correct theory)
 - F♯ natural minor's 7th is E; E♯ belongs to harmonic or melodic minor.
@@ -114,7 +117,7 @@
 - **Settings panel** opens from a tab at top right. Highest string is on top, frets are evenly spaced, and a clicked note gets a ring while fill is on.
 - **Sidebar** is on the right. The root box shows the scale's tonic. The chord-name choice is kept per box.
 - **Strips:** settings are global and live in a toolbar next to the key picker. Each strip is grouped with the box it leads into, so wrapping never separates them. Scales are compared only when both boxes are in scale mode.
-- **Numerals** count accidentals from the key's own degrees (C in A minor is III). Returning to an earlier set of notes brings back that key's name. New boxes start in the key in effect.
+- **Numerals** count accidentals from the key's own degrees (C in A minor is III). New boxes start in the key in effect at the last box.
 - **Saving:** the session autosaves (300 ms after changes). Save or Ctrl+S overwrites the open preset or creates a new one.
   - Folders nest. Deleting one takes its contents, after a confirmation with counts.
   - Names are unique within a folder.

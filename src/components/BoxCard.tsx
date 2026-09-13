@@ -61,7 +61,6 @@ export function BoxCard({
         ) : (
           <h2 className="box-title is-placeholder">Click the fretboard to add notes</h2>
         )}
-        {box.fill.mode === 'scale' && <p className="box-scale">{view.scaleName}</p>}
         {refusedAt !== null && (
           <p className="box-notice" role="status">
             A chord has {MAX_CHORD_NOTES} notes at most. Click one to remove it first.

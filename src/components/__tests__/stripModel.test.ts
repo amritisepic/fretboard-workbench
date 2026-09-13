@@ -39,8 +39,16 @@ describe('voice-leading strip', () => {
     expect(view.description).toContain('C stays');
   });
 
-  it('labels each row by degree in its own box, independently of the boxes', () => {
-    const view = strip(box(C_E_G, C_IONIAN), box(F_A_C, F_LYDIAN), { ...names, labelMode: 'degrees' });
+  it('labels degrees the way each box counts them: from the key in effect, or from its own scale', () => {
+    const degrees = { ...names, labelMode: 'degrees' as const };
+    const fromKey = strip(box(C_E_G, C_IONIAN), box(F_A_C, F_LYDIAN), degrees);
+    expect(fromKey.voices.map((v) => [v.from, v.to])).toEqual([
+      ['5', '6'],
+      ['3', '4'],
+      ['1', '1'],
+    ]);
+    const fromScale = (b: Box): Box => ({ ...b, degreeBasis: 'scale' });
+    const view = strip(fromScale(box(C_E_G, C_IONIAN)), fromScale(box(F_A_C, F_LYDIAN)), degrees);
     expect(view.voices.map((v) => [v.from, v.to])).toEqual([
       ['5', '3'],
       ['3', '1'],

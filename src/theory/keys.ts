@@ -1,8 +1,9 @@
-/** Keys, key regions across a progression of boxes, roman numerals (spec §6), and finding the key. */
+/** Keys, the key in effect across a progression of boxes, roman numerals (spec §6), and finding the key. */
 
 import type { ChordQuality } from '../data/chords';
-import { KEY_FINDING_WEIGHTS } from '../data/keyFindingWeights';
+import { KEY_PLAN_WEIGHTS } from '../data/keyPlanWeights';
 import { RANKING_WEIGHTS } from '../data/rankingWeights';
+import { SCALE_FAMILIES } from '../data/scales';
 import { chordRootSpelling, chordSpellingHint, type ChordCandidate } from './chords';
 import {
   MAJOR_SCALE_SEMITONES,
@@ -10,16 +11,16 @@ import {
   formatAccidental,
   hasPc,
   intersect,
+  isSubset,
   mod12,
-  pcSetFromIntervals,
   setSize,
   type PcSet,
   type PitchClass,
 } from './pitch';
 import { rankScales, toneRole } from './ranking';
 import {
+  distinctModes,
   makeScaleRef,
-  modeIntervals,
   scaleRefContext,
   scaleRefIntervals,
   scaleRefName,
@@ -36,10 +37,7 @@ export function keyName(key: ScaleRef): string {
   return scaleRefName(key);
 }
 
-/**
- * Whether a box's reference scale takes the music out of `key`. Only a different pitch collection
- * does; modes of the key (D Dorian or F Lydian in C major) stay in it.
- */
+/** Whether a scale uses another pitch collection than `key`. Modes of the key (D Dorian in C major) don't. */
 export function changesKey(key: ScaleRef, scale: ScaleRef): boolean {
   return scaleRefPcSet(key) !== scaleRefPcSet(scale);
 }
@@ -49,7 +47,7 @@ export interface KeyRegion {
   /** First and last box index in the region, inclusive. */
   readonly first: number;
   readonly last: number;
-  /** One index per distinct key collection, in order of first appearance; adjacent regions always differ. */
+  /** One index per distinct key, in order of first appearance; adjacent regions always differ. */
   readonly colorIndex: number;
 }
 
@@ -61,38 +59,19 @@ export interface KeyPlan {
   readonly regions: readonly KeyRegion[];
 }
 
-/**
- * Walks the boxes from the preset's key. A box whose scale uses another collection changes the key
- * from there on. Returning to a collection heard before reuses that key, so a later D Dorian box
- * brings back "C major" rather than a "D Dorian" key. A new collection is named by the box's scale.
- */
-export function planKeys(globalKey: ScaleRef, scales: readonly ScaleRef[]): KeyPlan {
-  const known = new Map<PcSet, ScaleRef>([[scaleRefPcSet(globalKey), globalKey]]);
-  const colors = new Map<PcSet, number>();
-  const keys: ScaleRef[] = [];
-  const regionOfBox: number[] = [];
-  const regions: { key: ScaleRef; first: number; last: number; colorIndex: number }[] = [];
+export interface ChordEvidence {
+  /** The chord's name in use. */
+  readonly chord: ChordCandidate;
+  /** The pitch classes that sound. */
+  readonly pcs: PcSet;
+}
 
-  let current = globalKey;
-  scales.forEach((scale, i) => {
-    const moves = changesKey(current, scale);
-    if (moves) {
-      const collection = scaleRefPcSet(scale);
-      current = known.get(collection) ?? scale;
-      known.set(collection, current);
-    }
-    if (i === 0 || moves) {
-      const collection = scaleRefPcSet(current);
-      if (!colors.has(collection)) colors.set(collection, colors.size);
-      regions.push({ key: current, first: i, last: i, colorIndex: colors.get(collection) ?? 0 });
-    } else {
-      regions[regions.length - 1].last = i;
-    }
-    keys.push(current);
-    regionOfBox.push(regions.length - 1);
-  });
-
-  return { keys, regionOfBox, regions };
+/** What the key plan knows about one box. */
+export interface KeyPlanBox {
+  /** The box's reference scale; left out while finding the key, before any scale is chosen. */
+  readonly scale?: ScaleRef;
+  /** The box's chord, or null without one. */
+  readonly chord: ChordEvidence | null;
 }
 
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -122,14 +101,41 @@ export function romanNumeral(chord: ChordCandidate, key: ScaleRef): string {
 }
 
 // ---------------------------------------------------------------------------
-// Finding the key
+// Keys across a progression
 // ---------------------------------------------------------------------------
 
-export interface ChordEvidence {
-  /** The chord's name in use. */
-  readonly chord: ChordCandidate;
-  /** The pitch classes that sound. */
+interface KeyState {
+  readonly ref: ScaleRef;
   readonly pcs: PcSet;
+  readonly tonic: PitchClass;
+  /** Not major, minor, harmonic minor or melodic minor, nor the preset's own key. */
+  readonly modal: boolean;
+  readonly majorThird: boolean;
+  /** A minor key, whose raised 7th counts on V and vii while finding the key. */
+  readonly aeolian: boolean;
+}
+
+/** Keys musicians name without a mode: major, and natural, harmonic and melodic minor. */
+const COMMON_KEYS: ReadonlySet<string> = new Set(['diatonic:0', 'diatonic:5', 'harmonicMinor:0', 'melodicMinor:0']);
+
+function keyState(ref: ScaleRef, home = false): KeyState {
+  const pcs = scaleRefPcSet(ref);
+  const tonic = pcOfSpelled(ref.tonic);
+  const aeolian = ref.familyId === 'diatonic' && ref.mode === 5;
+  const common = COMMON_KEYS.has(`${ref.familyId}:${ref.mode}`);
+  return { ref, pcs, tonic, modal: !home && !common, majorThird: hasPc(pcs, tonic + 4), aeolian };
+}
+
+let libraryKeys: readonly KeyState[] | null = null;
+
+/** Every 7-note library mode on every tonic: the keys a progression can move through. */
+function keyStates(): readonly KeyState[] {
+  libraryKeys ??= SCALE_FAMILIES.filter((family) => family.intervals.length === 7).flatMap((family) =>
+    distinctModes(family.id).flatMap((mode) =>
+      Array.from({ length: 12 }, (_, tonic) => keyState(makeScaleRef(family.id, mode, tonic))),
+    ),
+  );
+  return libraryKeys;
 }
 
 const MAJOR_TONIC_QUALITIES: readonly ChordQuality[] = ['major', 'dominant', 'suspended', 'power'];
@@ -156,41 +162,158 @@ function keyFit({ chord, pcs }: ChordEvidence, keyPcs: PcSet, minorTonic: PitchC
   return total === 0 ? 0 : inKey / total;
 }
 
-/**
- * The major or minor key that best explains a progression, or null without chords. Each key scores
- * how well every chord's tones fit it, plus bonuses for tonic chords (more at the start, most at the
- * end) and for dominants that resolve to the tonic. Exact ties go to the major key.
- */
-export function findKey(progression: readonly ChordEvidence[]): ScaleRef | null {
-  const w = KEY_FINDING_WEIGHTS;
-  let best: ScaleRef | null = null;
-  let bestScore = -Infinity;
-  for (const mode of [0, 5]) {
-    const minor = mode === 5;
-    const tonicQualities = minor ? MINOR_TONIC_QUALITIES : MAJOR_TONIC_QUALITIES;
-    for (let tonic = 0; tonic < 12; tonic++) {
-      const keyPcs = pcSetFromIntervals(modeIntervals('diatonic', mode), tonic);
-      const isTonic = (chord: ChordCandidate) =>
-        mod12(chord.root) === tonic && tonicQualities.includes(chord.type.quality);
-      const isDominant = (chord: ChordCandidate) =>
-        mod12(chord.root - tonic) === 7 && DOMINANT_QUALITIES.includes(chord.type.quality);
+/** The bonus a box's chord gives a key: a tonic chord, more at either end or when a dominant leads into it. */
+function tonicEvidence(boxes: readonly KeyPlanBox[], i: number, key: KeyState): number {
+  const w = KEY_PLAN_WEIGHTS;
+  const chord = boxes[i].chord?.chord;
+  const qualities = key.majorThird ? MAJOR_TONIC_QUALITIES : MINOR_TONIC_QUALITIES;
+  if (!chord || mod12(chord.root) !== key.tonic || !qualities.includes(chord.type.quality)) return 0;
+  const previous = i > 0 ? boxes[i - 1].chord?.chord : undefined;
+  const cadence =
+    previous !== undefined &&
+    mod12(previous.root - key.tonic) === 7 &&
+    DOMINANT_QUALITIES.includes(previous.type.quality);
+  return (
+    w.tonicChord +
+    (i === 0 ? w.firstChord : 0) +
+    (i === boxes.length - 1 ? w.lastChord : 0) +
+    (cadence ? w.cadence : 0)
+  );
+}
 
-      let score = 0;
-      progression.forEach((evidence, i) => {
-        score += w.fit * keyFit(evidence, keyPcs, minor ? tonic : null);
-        if (!isTonic(evidence.chord)) return;
-        score += w.tonicChord;
-        if (i === 0) score += w.firstChord;
-        if (i === progression.length - 1) score += w.lastChord;
-        if (i > 0 && isDominant(progression[i - 1].chord)) score += w.cadence;
-      });
-      if (progression.length > 0 && score > bestScore + 1e-9) {
-        best = makeScaleRef('diatonic', mode, tonic);
-        bestScore = score;
-      }
+const EPSILON = 1e-9;
+
+/**
+ * Index into `keys` for each box along the cheapest sequence of keys (weights in
+ * data/keyPlanWeights.ts). With a `home`, the progression starts from that key; otherwise anywhere.
+ * On equal costs a box stays in the key before it, and earlier keys in `keys` win.
+ */
+function cheapestKeys(boxes: readonly KeyPlanBox[], keys: readonly KeyState[], home: number | null): number[] {
+  if (boxes.length === 0) return [];
+  const w = KEY_PLAN_WEIGHTS;
+  const scales = boxes.map((box) => (box.scale ? scaleRefPcSet(box.scale) : null));
+  const emission = (i: number, k: number) => {
+    const key = keys[k];
+    const { chord } = boxes[i];
+    const scale = scales[i];
+    let cost = (key.modal ? w.modalKey : 0) + (home !== null && k !== home ? w.awayFromHome : 0);
+    if (scale !== null) {
+      if (!isSubset(scale, key.pcs)) cost += w.chromaticScale;
+    } else if (chord) {
+      cost += w.chordMisfit * (1 - keyFit(chord, key.pcs, key.aeolian ? key.tonic : null));
     }
+    return cost - tonicEvidence(boxes, i, key);
+  };
+  const change = (from: number, to: number) =>
+    from === to ? 0 : keys[from].tonic === keys[to].tonic ? w.sameTonicChange : w.tonicChange;
+
+  let costs = keys.map((_, k) => (home === null ? 0 : change(home, k)) + emission(0, k));
+  const origins: number[][] = [];
+  for (let i = 1; i < boxes.length; i++) {
+    const previous = costs;
+    let cheapest = 0;
+    const cheapestOnTonic = new Array<number>(12).fill(-1);
+    previous.forEach((cost, k) => {
+      if (cost < previous[cheapest] - EPSILON) cheapest = k;
+      const best = cheapestOnTonic[keys[k].tonic];
+      if (best === -1 || cost < previous[best] - EPSILON) cheapestOnTonic[keys[k].tonic] = k;
+    });
+    const from: number[] = [];
+    costs = keys.map((key, k) => {
+      let origin = k;
+      let cost = previous[k];
+      const sameTonic = cheapestOnTonic[key.tonic];
+      if (previous[sameTonic] + w.sameTonicChange < cost - EPSILON) {
+        origin = sameTonic;
+        cost = previous[sameTonic] + w.sameTonicChange;
+      }
+      if (previous[cheapest] + w.tonicChange < cost - EPSILON) {
+        origin = cheapest;
+        cost = previous[cheapest] + w.tonicChange;
+      }
+      from.push(origin);
+      return cost + emission(i, k);
+    });
+    origins.push(from);
   }
-  return best;
+
+  let last = 0;
+  costs.forEach((cost, k) => {
+    if (cost < costs[last] - EPSILON) last = k;
+  });
+  const path = [last];
+  for (let i = origins.length - 1; i >= 0; i--) path.unshift(origins[i][path[0]]);
+  return path;
+}
+
+/**
+ * The key in effect at each box, starting from the preset's key and changing as rarely as possible.
+ * A key can be any 7-note library mode on any tonic, and the cheapest sequence wins:
+ *
+ * - A box whose reference scale has notes outside the key is a chromatic chord there. That costs
+ *   more than moving to a key on the same tonic and back, so a scale that alters the key changes it
+ *   but keeps the tonic: G Mixolydian ♭2 in C minor gives C Harmonic Major, and an A♭ Lydian box in
+ *   C major gives C minor. It costs less than two changes of tonic, so a passing chord whose scale
+ *   lacks the tonic (F♯7 in C minor) stays in the key. The tonic moves only for a run of such chords.
+ * - Tonic chords, especially at the start or end or after their dominant, count for a key.
+ * - Keys other than major and the three minors (C Lydian, C Harmonic Major) cost a little more, and
+ *   each box away from the preset's key costs a little, which settles ties.
+ */
+export function planKeys(globalKey: ScaleRef, boxes: readonly KeyPlanBox[]): KeyPlan {
+  const home = keyState(globalKey, true);
+  const candidates = [home, ...keyStates().filter((k) => k.pcs !== home.pcs || k.tonic !== home.tonic)];
+  const path = cheapestKeys(boxes, candidates, 0);
+
+  const colors = new Map<number, number>();
+  const keys: ScaleRef[] = [];
+  const regionOfBox: number[] = [];
+  const regions: { key: ScaleRef; first: number; last: number; colorIndex: number }[] = [];
+  path.forEach((k, i) => {
+    const { ref, pcs, tonic } = candidates[k];
+    if (i === 0 || k !== path[i - 1]) {
+      const identity = pcs * 12 + tonic;
+      if (!colors.has(identity)) colors.set(identity, colors.size);
+      regions.push({ key: ref, first: i, last: i, colorIndex: colors.get(identity) ?? 0 });
+    } else {
+      regions[regions.length - 1].last = i;
+    }
+    keys.push(ref);
+    regionOfBox.push(regions.length - 1);
+  });
+  return { keys, regionOfBox, regions };
+}
+
+export interface FoundKeys {
+  /** The progression's key: the one it spends the most boxes in, the earliest on a tie. */
+  readonly key: ScaleRef;
+  /** The key at each box, for choosing that box's reference scale. */
+  readonly keys: readonly ScaleRef[];
+}
+
+let commonKeys: readonly KeyState[] | null = null;
+
+/**
+ * The keys a progression moves through, judged from its chords alone; null without chords. The same
+ * costs as planKeys apply, except that the boxes' scales aren't known yet: each chord instead costs
+ * the weighted share of its tones outside the key, and the progression may start in any key.
+ *
+ * Only major and the three minors are candidates. Rarer keys (C Harmonic Major, C Lydian ♯2 ♯6) name
+ * the alterations a chosen scale makes in the key bar; one chord alone is no reason to pick one, and
+ * doing so would pull that chord's scale toward the rare key.
+ */
+export function findKey(progression: readonly (ChordEvidence | null)[]): FoundKeys | null {
+  if (!progression.some((chord) => chord !== null)) return null;
+  commonKeys ??= keyStates().filter((key) => !key.modal);
+  const keys = commonKeys;
+  const path = cheapestKeys(
+    progression.map((chord) => ({ chord })),
+    keys,
+    null,
+  );
+  const boxesIn = new Map<number, number>();
+  for (const k of path) boxesIn.set(k, (boxesIn.get(k) ?? 0) + 1);
+  const home = path.reduce((best, k) => ((boxesIn.get(k) ?? 0) > (boxesIn.get(best) ?? 0) ? k : best), path[0]);
+  return { key: keys[home].ref, keys: path.map((k) => keys[k].ref) };
 }
 
 /**

@@ -30,7 +30,12 @@ describe('workbench store', () => {
   it('adds and selects a box with a red, unfilled, C Ionian default', () => {
     const id = state().addBox();
     expect(state().selectedBoxId).toBe(id);
-    expect(firstBox()).toMatchObject({ color: '#C8372D', labelMode: 'names', fill: { on: false, mode: 'inversion' } });
+    expect(firstBox()).toMatchObject({
+      color: '#C8372D',
+      labelMode: 'names',
+      degreeBasis: 'key',
+      fill: { on: false, mode: 'inversion' },
+    });
     state().selectBox(null);
     expect(state().selectedBoxId).toBeNull();
   });
@@ -182,9 +187,9 @@ describe('workbench store', () => {
 
     const first = state().addBox();
     expect(scaleRefName(firstBox().scale)).toBe('C Ionian');
-    state().setScale(first, makeScaleRef('diatonic', 3, 'A♭'));
+    state().setScale(first, makeScaleRef('diatonic', 3, 'A♭')); // alters C major into C minor
     const second = state().addBox();
-    expect(scaleRefName(state().boxes[1].scale)).toBe('A♭ Lydian');
+    expect(scaleRefName(state().boxes[1].scale)).toBe('C Aeolian');
     expect(state().selectedBoxId).toBe(second);
 
     state().setKey(makeScaleRef('diatonic', 5, 'A'));
@@ -212,6 +217,8 @@ describe('workbench store', () => {
     expect(firstBox().chordOverride).toBeNull();
     state().setColor(id, '#2F5FB3');
     expect(firstBox().color).toBe('#2F5FB3');
+    state().setDegreeBasis(id, 'scale');
+    expect(firstBox().degreeBasis).toBe('scale');
   });
 
   it('names, loads, marks, detaches and restarts the document', () => {

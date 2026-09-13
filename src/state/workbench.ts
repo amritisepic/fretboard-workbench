@@ -5,7 +5,6 @@ import {
   clampCapo,
   clampFretCount,
   makeScaleRef,
-  planKeys,
   resizeTuning,
   shiftStrings,
   toggleChordPosition,
@@ -17,10 +16,13 @@ import {
   type Midi,
   type ScaleRef,
 } from '../theory';
+import { keyPlanOf } from './boxChords';
 import { newId } from './ids';
 import type { PresetData } from './presetFormat';
 
 export type LabelMode = 'names' | 'degrees';
+/** What scale-degree labels count from: the key in effect at the box, or the box's reference scale. */
+export type DegreeBasis = 'key' | 'scale';
 export type FillMode = 'inversion' | 'scale';
 /** How each box draws its neck: frets across the page, or strings down it like a chord chart. */
 export type Orientation = 'horizontal' | 'vertical';
@@ -37,6 +39,7 @@ export interface Box {
   readonly positions: readonly FretPosition[];
   readonly scale: ScaleRef;
   readonly labelMode: LabelMode;
+  readonly degreeBasis: DegreeBasis;
   readonly color: string;
   readonly fill: FillState;
   /**
@@ -97,6 +100,7 @@ export interface WorkbenchState {
   /** A fretboard click (see toggleChordPosition). False when the chord is full and nothing changed. */
   togglePosition(id: string, position: FretPosition): boolean;
   setLabelMode(id: string, mode: LabelMode): void;
+  setDegreeBasis(id: string, basis: DegreeBasis): void;
   setFillOn(id: string, on: boolean): void;
   /** Moves the fill switch; choosing a fill also turns it on. */
   setFillMode(id: string, mode: FillMode): void;
@@ -145,6 +149,7 @@ export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): B
     positions: [],
     scale,
     labelMode: 'names',
+    degreeBasis: 'key',
     color: DEFAULT_BOX_COLOR,
     fill: { on: false, mode: 'inversion' },
     chordOverride: null,
@@ -192,7 +197,7 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
     addBox: () => {
       let id = '';
       set((state) => {
-        const { keys } = planKeys(state.key, state.boxes.map((box) => box.scale));
+        const { keys } = keyPlanOf(state.key, state.boxes, state.settings);
         const box = createBox(keys.length > 0 ? keys[keys.length - 1] : state.key);
         id = box.id;
         return { boxes: [...state.boxes, box], selectedBoxId: box.id };
@@ -213,6 +218,7 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
       return true;
     },
     setLabelMode: (id, labelMode) => updateBox(id, () => ({ labelMode })),
+    setDegreeBasis: (id, degreeBasis) => updateBox(id, () => ({ degreeBasis })),
     setFillOn: (id, on) => updateBox(id, (box) => ({ fill: { ...box.fill, on } })),
     setFillMode: (id, mode) => updateBox(id, () => ({ fill: { on: true, mode } })),
     toggleFill: (id) => updateBox(id, (box) => ({ fill: { ...box.fill, on: !box.fill.on } })),

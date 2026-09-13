@@ -1,6 +1,6 @@
+import { boxChord } from '../state/boxChords';
 import { useWorkbench, type LabelMode, type Orientation } from '../state/workbench';
 import { keyName } from '../theory';
-import { getBoxView } from './boardModel';
 import { planFoundKey } from './findKeyModel';
 import { ScaleSelects } from './ScaleSelects';
 import { Segmented, type SegmentedOption } from './Segmented';
@@ -25,7 +25,7 @@ export function CanvasToolbar() {
   const setOrientation = useWorkbench((s) => s.setOrientation);
   const strips = useWorkbench((s) => s.strips);
   const setStrips = useWorkbench((s) => s.setStrips);
-  const hasChord = useWorkbench((s) => s.boxes.some((box) => getBoxView(box, s.settings).chord !== null));
+  const hasChord = useWorkbench((s) => s.boxes.some((box) => boxChord(box, s.settings).chord !== null));
 
   const findKey = () => {
     const { boxes, settings } = useWorkbench.getState();
@@ -95,12 +95,14 @@ export function CanvasToolbar() {
         >
           <span className="toggle-knob" />
         </button>
-        <Segmented
-          label="Voice-leading labels"
-          options={LABEL_OPTIONS}
-          value={strips.labelMode}
-          onChange={(labelMode) => setStrips({ labelMode })}
-        />
+        {strips.visible && (
+          <Segmented
+            label="Voice-leading labels"
+            options={LABEL_OPTIONS}
+            value={strips.labelMode}
+            onChange={(labelMode) => setStrips({ labelMode })}
+          />
+        )}
       </div>
     </div>
   );

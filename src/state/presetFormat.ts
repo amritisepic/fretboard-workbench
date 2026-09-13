@@ -15,7 +15,7 @@ import {
   type ScaleRef,
 } from '../theory';
 import { newId } from './ids';
-import type { Box, FillMode, LabelMode, Orientation, Settings, StripSettings } from './workbench';
+import type { Box, DegreeBasis, FillMode, LabelMode, Orientation, Settings, StripSettings } from './workbench';
 
 export const FILE_FORMAT = 'fretboard-workbench';
 export const FILE_VERSION = 1;
@@ -25,11 +25,12 @@ const MAX_FOLDER_DEPTH = 32;
 const LABEL_MODES: readonly LabelMode[] = ['names', 'degrees'];
 const FILL_MODES: readonly FillMode[] = ['inversion', 'scale'];
 const ORIENTATIONS: readonly Orientation[] = ['horizontal', 'vertical'];
+const DEGREE_BASES: readonly DegreeBasis[] = ['key', 'scale'];
 
 /**
  * Everything a preset stores (spec §7). Its name is kept alongside. Fields added after version 1
- * (the capo and the orientation) are optional when reading, and fields since removed (the strips'
- * chords/scales choice) are ignored, so older files still load.
+ * (the capo, the orientation and each box's degree basis) are optional when reading, and fields since
+ * removed (the strips' chords/scales choice) are ignored, so older files still load.
  */
 export interface PresetData {
   readonly settings: Settings;
@@ -166,6 +167,8 @@ function parseBox(value: unknown, path: string, settings: Settings): Box {
     positions,
     scale: parseScaleRef(box.scale, `${path}.scale`),
     labelMode: choice(box.labelMode, `${path}.labelMode`, LABEL_MODES),
+    degreeBasis:
+      box.degreeBasis === undefined ? 'key' : choice(box.degreeBasis, `${path}.degreeBasis`, DEGREE_BASES),
     color: color.toUpperCase(),
     fill: { on: flag(fill.on, `${path}.fill.on`), mode: choice(fill.mode, `${path}.fill.mode`, FILL_MODES) },
     chordOverride: override,
