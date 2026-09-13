@@ -19,10 +19,12 @@ describe('workbench store', () => {
     useWorkbench.setState(initial, true);
   });
 
-  it('starts empty with standard tuning and 24 frets', () => {
+  it('starts empty with standard tuning, 24 frets, no capo and horizontal necks', () => {
     expect(state().boxes).toEqual([]);
     expect(formatTuning(state().settings.tuning)).toBe('E2 A2 D3 G3 B3 E4');
     expect(state().settings.fretCount).toBe(24);
+    expect(state().settings.capo).toBe(0);
+    expect(state().orientation).toBe('horizontal');
   });
 
   it('adds and selects a box with a red, unfilled, C Ionian default', () => {
@@ -33,14 +35,25 @@ describe('workbench store', () => {
     expect(state().selectedBoxId).toBeNull();
   });
 
-  it('toggles clicked positions with no limit, including several on one string', () => {
+  it('keeps one clicked note per string, moving it along the string', () => {
     const id = state().addBox();
-    state().togglePosition(id, { string: 0, fret: 3 });
+    expect(state().togglePosition(id, { string: 0, fret: 3 })).toBe(true);
+    expect(state().togglePosition(id, { string: 1, fret: 2 })).toBe(true);
+    expect(state().togglePosition(id, { string: 0, fret: 5 })).toBe(true);
+    expect(firstBox().positions).toEqual([{ string: 1, fret: 2 }, { string: 0, fret: 5 }]);
     state().togglePosition(id, { string: 0, fret: 5 });
-    state().togglePosition(id, { string: 0, fret: 7 });
-    expect(firstBox().positions).toHaveLength(3);
-    state().togglePosition(id, { string: 0, fret: 5 });
-    expect(firstBox().positions).toEqual([{ string: 0, fret: 3 }, { string: 0, fret: 7 }]);
+    expect(firstBox().positions).toEqual([{ string: 1, fret: 2 }]);
+  });
+
+  it('refuses a seventh note on an instrument with more strings', () => {
+    state().setStringCount(8);
+    const id = state().addBox();
+    for (let string = 0; string < 6; string++) expect(state().togglePosition(id, { string, fret: 2 })).toBe(true);
+    expect(state().togglePosition(id, { string: 6, fret: 2 })).toBe(false);
+    expect(firstBox().positions).toHaveLength(6);
+    expect(state().togglePosition(id, { string: 5, fret: 4 })).toBe(true);
+    state().togglePosition(id, { string: 5, fret: 4 });
+    expect(state().togglePosition(id, { string: 6, fret: 2 })).toBe(true);
   });
 
   it('moves the fill switch, turns the fill on when a mode is chosen, and toggles', () => {
@@ -79,12 +92,63 @@ describe('workbench store', () => {
   it('clamps the fret count and drops notes above the last fret', () => {
     const id = state().addBox();
     state().togglePosition(id, { string: 2, fret: 15 });
-    state().togglePosition(id, { string: 2, fret: 4 });
+    state().togglePosition(id, { string: 3, fret: 4 });
     state().setFretCount(40);
     expect(state().settings.fretCount).toBe(30);
     state().setFretCount(12);
     expect(state().settings.fretCount).toBe(12);
-    expect(firstBox().positions).toEqual([{ string: 2, fret: 4 }]);
+    expect(firstBox().positions).toEqual([{ string: 3, fret: 4 }]);
+  });
+
+  it('moves shapes, scales, chord picks and the key with the capo, keeping the tuning', () => {
+    const id = state().addBox();
+    for (const p of [{ string: 1, fret: 3 }, { string: 2, fret: 2 }, { string: 3, fret: 0 }]) state().togglePosition(id, p);
+    state().setChordOverride(id, '0:maj:');
+    state().setCapo(2);
+    expect(state().settings.capo).toBe(2);
+    expect(state().settings.tuning).toEqual(initial.settings.tuning);
+    expect(firstBox().positions).toEqual([{ string: 1, fret: 5 }, { string: 2, fret: 4 }, { string: 3, fret: 2 }]);
+    expect(scaleRefName(firstBox().scale)).toBe('D Ionian');
+    expect(firstBox().chordOverride).toBe('2:maj:');
+    expect(keyName(state().key)).toBe('D major');
+    state().setCapo(0);
+    expect(firstBox().positions).toEqual([{ string: 1, fret: 3 }, { string: 2, fret: 2 }, { string: 3, fret: 0 }]);
+    expect(keyName(state().key)).toBe('C major');
+    state().setCapo(40);
+    expect(state().settings.capo).toBe(11);
+    expect(firstBox().positions.every((p) => p.fret >= 11)).toBe(true);
+  });
+
+  it('shifts every box and the key together, keeping shapes above the capo', () => {
+    const a = state().addBox();
+    const b = state().addBox();
+    state().togglePosition(a, { string: 0, fret: 3 });
+    state().togglePosition(b, { string: 1, fret: 0 });
+    state().transposeAll(-2);
+    expect(state().boxes.map((box) => box.positions)).toEqual([[{ string: 0, fret: 1 }], [{ string: 1, fret: 10 }]]);
+    expect(state().boxes.map((box) => scaleRefName(box.scale))).toEqual(['B♭ Ionian', 'B♭ Ionian']);
+    expect(keyName(state().key)).toBe('B♭ major');
+    state().setCapo(1);
+    expect(state().boxes.map((box) => box.positions)).toEqual([[{ string: 0, fret: 2 }], [{ string: 1, fret: 11 }]]);
+    state().transposeAll(-2); // fret 0 would sit behind the capo, so that shape goes up an octave instead
+    expect(state().boxes.map((box) => box.positions)).toEqual([[{ string: 0, fret: 12 }], [{ string: 1, fret: 9 }]]);
+  });
+
+  it('switches the neck orientation', () => {
+    state().setOrientation('vertical');
+    expect(state().orientation).toBe('vertical');
+  });
+
+  it('sets the key and the found scales and chord picks in one change', () => {
+    const a = state().addBox();
+    const b = state().addBox();
+    state().setChordOverride(b, '9:min:');
+    state().setKeyAndScales(makeScaleRef('diatonic', 5, 'C'), [{ id: a, scale: makeScaleRef('diatonic', 1, 'D'), chordOverride: '2:m7:' }]);
+    expect(keyName(state().key)).toBe('C minor');
+    expect(scaleRefName(firstBox().scale)).toBe('D Dorian');
+    expect(firstBox().chordOverride).toBe('2:m7:');
+    expect(state().boxes[1]).toMatchObject({ chordOverride: '9:min:' });
+    expect(scaleRefName(state().boxes[1].scale)).toBe('C Ionian');
   });
 
   it('transposes notes, scale and chord override together from the root box', () => {
@@ -112,9 +176,9 @@ describe('workbench store', () => {
 
   it('keeps a preset key and strip settings, and starts new boxes in the key in effect at the end', () => {
     expect(keyName(state().key)).toBe('C major');
-    expect(state().strips).toEqual({ visible: true, labelMode: 'names', compare: 'chords' });
+    expect(state().strips).toEqual({ visible: true, labelMode: 'names' });
     state().setStrips({ labelMode: 'degrees' });
-    expect(state().strips).toEqual({ visible: true, labelMode: 'degrees', compare: 'chords' });
+    expect(state().strips).toEqual({ visible: true, labelMode: 'degrees' });
 
     const first = state().addBox();
     expect(scaleRefName(firstBox().scale)).toBe('C Ionian');
@@ -163,11 +227,19 @@ describe('workbench store', () => {
     state().detachDocument();
     expect(state().document).toEqual({ presetId: null, name: 'Blues in F', savedSnapshot: null });
 
-    const { settings, key, strips, boxes } = state();
+    state().setOrientation('vertical');
+    const { settings, key, strips, orientation, boxes } = state();
     state().newDocument();
     expect(state().boxes).toEqual([]);
+    expect(state().orientation).toBe('horizontal');
     expect(state().document.name).toBe('Untitled preset');
-    state().loadDocument({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's', data: { settings, key, strips, boxes } });
+    state().loadDocument({
+      presetId: 'p2',
+      name: 'Loaded',
+      savedSnapshot: 's',
+      data: { settings, key, strips, orientation, boxes },
+    });
+    expect(state().orientation).toBe('vertical');
     expect(state().boxes).toBe(boxes);
     expect(state().selectedBoxId).toBeNull();
     expect(state().document).toEqual({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's' });

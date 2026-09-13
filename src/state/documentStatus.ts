@@ -8,6 +8,7 @@ let memo: {
   readonly settings: WorkbenchState['settings'];
   readonly key: WorkbenchState['key'];
   readonly strips: WorkbenchState['strips'];
+  readonly orientation: WorkbenchState['orientation'];
   readonly boxes: WorkbenchState['boxes'];
   readonly name: string;
   readonly snapshot: string;
@@ -20,13 +21,22 @@ function currentSnapshot(state: WorkbenchState): string {
     memo.settings === state.settings &&
     memo.key === state.key &&
     memo.strips === state.strips &&
+    memo.orientation === state.orientation &&
     memo.boxes === state.boxes &&
     memo.name === state.document.name
   ) {
     return memo.snapshot;
   }
   const snapshot = snapshotOf(state.document.name, presetDataOf(state));
-  memo = { settings: state.settings, key: state.key, strips: state.strips, boxes: state.boxes, name: state.document.name, snapshot };
+  memo = {
+    settings: state.settings,
+    key: state.key,
+    strips: state.strips,
+    orientation: state.orientation,
+    boxes: state.boxes,
+    name: state.document.name,
+    snapshot,
+  };
   return snapshot;
 }
 

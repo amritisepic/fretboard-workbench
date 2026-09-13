@@ -16,6 +16,7 @@ import {
   setSize,
   spell,
   type ChordCandidate,
+  type FretPosition,
   type PcSet,
   type PitchClass,
   type ScaleContext,
@@ -35,7 +36,7 @@ export interface BoardDot {
 }
 
 export interface BoxView {
-  /** One entry per string × fret (open string included). */
+  /** One entry per string × playable fret: from the capo (or the open string) to the last fret. */
   readonly dots: readonly BoardDot[];
   /** Every plausible chord name, best first. */
   readonly candidates: readonly ChordCandidate[];
@@ -50,14 +51,25 @@ export interface BoxView {
   readonly scaleName: string;
 }
 
+/** The clicked positions playable on the current board: an existing string, from the capo to the last fret. */
+export function playablePositions(box: Box, settings: Settings): FretPosition[] {
+  const { tuning, fretCount, capo } = settings;
+  return box.positions.filter((p) => p.string < tuning.length && p.fret >= capo && p.fret <= fretCount);
+}
+
+/** The chord in use: the sidebar pick while it matches, otherwise the best reading. */
+export function chordInUse(candidates: readonly ChordCandidate[], override: string | null): ChordCandidate | null {
+  return candidates.find((c) => c.key === override) ?? candidates[0] ?? null;
+}
+
 /** Everything a box renders, derived from its state and the global settings. */
 export function buildBoxView(box: Box, settings: Settings): BoxView {
-  const { tuning, fretCount } = settings;
-  const positions = box.positions.filter((p) => p.string < tuning.length && p.fret <= fretCount);
+  const { tuning, fretCount, capo } = settings;
+  const positions = playablePositions(box, settings);
   const chordPcs = pcSetAt(tuning, positions);
   const scalePcs = scaleRefPcSet(box.scale);
   const candidates = identifyChord(pitchesAt(tuning, positions), { scale: scalePcs });
-  const chord = candidates.find((c) => c.key === box.chordOverride) ?? candidates[0] ?? null;
+  const chord = chordInUse(candidates, box.chordOverride);
   const ctx = scaleRefContext(box.scale, chord ? chordSpellingHint(chord) : undefined);
 
   const labels = new Map<PitchClass, string>();
@@ -73,7 +85,7 @@ export function buildBoxView(box: Box, settings: Settings): BoxView {
   const clicked = new Set(positions.map(positionKey));
   const dots: BoardDot[] = [];
   for (let string = 0; string < tuning.length; string++) {
-    for (let fret = 0; fret <= fretCount; fret++) {
+    for (let fret = capo; fret <= fretCount; fret++) {
       const pc = pcAt(tuning, string, fret);
       const selected = clicked.has(positionKey({ string, fret }));
       const kind = dotKind(box, pc, selected, chordPcs, scalePcs);

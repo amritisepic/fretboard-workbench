@@ -1,7 +1,8 @@
-import type { StripCompare, StripSettings } from '../state/workbench';
+import type { StripSettings } from '../state/workbench';
 import { formatScaleDegree, mod12, pcOfSpelled, spell, voiceLeading, type PitchClass } from '../theory';
 import type { CanvasEntry } from './canvasModel';
 
+export type StripCompare = 'chords' | 'scales';
 export type StripVoiceKind = 'common' | 'step' | 'leap' | 'added' | 'dropped';
 
 export interface StripVoice {
@@ -30,10 +31,12 @@ export interface StripView {
 
 const signed = (n: number) => `${n > 0 ? '+' : '−'}${Math.abs(n)}`;
 
-/** The voice-leading strip between two adjacent boxes (spec §4.6). */
+/**
+ * The voice-leading strip between two adjacent boxes (spec §4.6). The boxes' fill switches choose
+ * what is compared: scales when both are set to fill scale, chords otherwise.
+ */
 export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: StripSettings): StripView {
-  const compared: StripCompare =
-    strips.compare === 'scales' && from.box.fill.mode === 'scale' && to.box.fill.mode === 'scale' ? 'scales' : 'chords';
+  const compared: StripCompare = from.box.fill.mode === 'scale' && to.box.fill.mode === 'scale' ? 'scales' : 'chords';
   const setOf = (entry: CanvasEntry) => (compared === 'scales' ? entry.view.scalePcs : entry.view.chordPcs);
   const leading = voiceLeading(setOf(from), setOf(to));
 

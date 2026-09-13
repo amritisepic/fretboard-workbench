@@ -11,8 +11,10 @@ import {
   pitchAt,
   pitchName,
   positionsInSet,
+  limitChordPositions,
   resizeTuning,
   shiftStrings,
+  toggleChordPosition,
   transposePositions,
 } from '../fretboard';
 import { hasPc, pcSet } from '../pitch';
@@ -49,6 +51,25 @@ describe('fretboard', () => {
     expect(transposePositions(shape, -1, 24)).toEqual([{ string: 0, fret: 11 }, { string: 1, fret: 13 }, { string: 2, fret: 13 }]);
     const high = [{ string: 3, fret: 23 }, { string: 4, fret: 24 }];
     expect(transposePositions(high, 1, 24)).toEqual([{ string: 3, fret: 12 }, { string: 4, fret: 13 }]);
+  });
+
+  it('keeps a moved shape at or above the capo, dropping notes with no room', () => {
+    const shape = [{ string: 0, fret: 2 }, { string: 1, fret: 4 }];
+    expect(transposePositions(shape, -1, 24, 2)).toEqual([{ string: 0, fret: 13 }, { string: 1, fret: 15 }]);
+    expect(transposePositions([{ string: 0, fret: 11 }, { string: 1, fret: 12 }], 3, 12, 11)).toEqual([]);
+  });
+
+  it('keeps one clicked note per string and six at most', () => {
+    const six = [0, 1, 2, 3, 4, 5].map((string) => ({ string, fret: 2 }));
+    expect(toggleChordPosition(six, { string: 6, fret: 2 })).toBeNull();
+    expect(toggleChordPosition(six, { string: 2, fret: 5 })).toEqual([...six.filter((p) => p.string !== 2), { string: 2, fret: 5 }]);
+    expect(toggleChordPosition(six, { string: 2, fret: 2 })).toEqual(six.filter((p) => p.string !== 2));
+    const old = [{ string: 0, fret: 1 }, { string: 0, fret: 3 }, ...[1, 2, 3, 4, 5, 6].map((string) => ({ string, fret: 2 }))];
+    expect(limitChordPositions(old)).toEqual([1, 2, 3, 4, 5, 6].map((string) => ({ string, fret: 2 })));
+    expect(limitChordPositions([{ string: 2, fret: 1 }, { string: 1, fret: 1 }, { string: 2, fret: 3 }])).toEqual([
+      { string: 1, fret: 1 },
+      { string: 2, fret: 3 },
+    ]);
   });
 });
 

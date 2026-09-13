@@ -21,6 +21,10 @@ export const MAX_STRINGS = 9;
 export const MIN_FRETS = 12;
 export const MAX_FRETS = 30;
 export const DEFAULT_FRET_COUNT = 24;
+/** Below MIN_FRETS, so a capo always leaves frets to play. */
+export const MAX_CAPO = 11;
+/** A chord holds one note per string, and this many notes at most. */
+export const MAX_CHORD_NOTES = 6;
 
 const clampInt = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(n)));
 
@@ -30,6 +34,10 @@ export function clampStringCount(count: number): number {
 
 export function clampFretCount(count: number): number {
   return clampInt(count, MIN_FRETS, MAX_FRETS);
+}
+
+export function clampCapo(capo: number): number {
+  return clampInt(capo, 0, MAX_CAPO);
 }
 
 /** Tuning pitches use sharps. A tuning belongs to no key, so there is no context to derive a spelling from. */
@@ -90,6 +98,24 @@ export function positionKey(position: FretPosition): string {
   return `${position.string}:${position.fret}`;
 }
 
+/**
+ * A click on the fretboard: removes a clicked note, moves the note on that string if it has one, and
+ * otherwise adds the note. Returns null when the chord already has MAX_CHORD_NOTES notes.
+ */
+export function toggleChordPosition(positions: readonly FretPosition[], position: FretPosition): FretPosition[] | null {
+  const key = positionKey(position);
+  if (positions.some((p) => positionKey(p) === key)) return positions.filter((p) => positionKey(p) !== key);
+  const others = positions.filter((p) => p.string !== position.string);
+  if (others.length >= MAX_CHORD_NOTES) return null;
+  return [...others, position];
+}
+
+/** Applies the chord limits to positions saved without them: the last click on each string, then the last six clicks. */
+export function limitChordPositions(positions: readonly FretPosition[]): FretPosition[] {
+  const lastOnString = positions.filter((p, i) => !positions.slice(i + 1).some((later) => later.string === p.string));
+  return lastOnString.slice(-MAX_CHORD_NOTES);
+}
+
 /** Every position from the open string to `fretCount` whose pitch class is in `set`, by string then fret. */
 export function positionsInSet(tuning: Tuning, fretCount: number, set: PcSet): FretPosition[] {
   const out: FretPosition[] = [];
@@ -110,26 +136,29 @@ export function pcSetAt(tuning: Tuning, positions: readonly FretPosition[]): PcS
 }
 
 /**
- * Moves a clicked shape by `semitones`. The shape moves as a rigid block: first by the exact
- * amount, otherwise by the nearest octave-equivalent shift that keeps every note on the board.
- * Only a shape too wide for any such shift has notes wrapped one at a time.
+ * Moves a clicked shape by `semitones`, keeping it between `lowestFret` (the capo) and `fretCount`.
+ * The shape moves as a rigid block: first by the exact amount, otherwise by the nearest
+ * octave-equivalent shift that keeps every note on the board. Only a shape too wide for any such
+ * shift has notes wrapped one at a time, and a note with no room left on its string is dropped.
  */
 export function transposePositions(
   positions: readonly FretPosition[],
   semitones: number,
   fretCount: number,
+  lowestFret = 0,
 ): FretPosition[] {
-  const fits = (shift: number) => positions.every((p) => p.fret + shift >= 0 && p.fret + shift <= fretCount);
+  const fits = (shift: number) =>
+    positions.every((p) => p.fret + shift >= lowestFret && p.fret + shift <= fretCount);
   const alternatives = [semitones - 12, semitones + 12, semitones - 24, semitones + 24].sort(
     (a, b) => Math.abs(a) - Math.abs(b),
   );
   for (const shift of [semitones, ...alternatives]) {
     if (fits(shift)) return positions.map((p) => ({ string: p.string, fret: p.fret + shift }));
   }
-  return positions.map((p) => {
+  return positions.flatMap((p) => {
     let fret = p.fret + semitones;
     while (fret > fretCount) fret -= 12;
-    while (fret < 0) fret += 12;
-    return { string: p.string, fret };
+    while (fret < lowestFret) fret += 12;
+    return fret <= fretCount ? [{ string: p.string, fret }] : [];
   });
 }

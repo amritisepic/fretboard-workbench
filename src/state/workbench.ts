@@ -2,12 +2,13 @@ import { create } from 'zustand';
 import { TUNING_PRESETS } from '../data/tunings';
 import {
   DEFAULT_FRET_COUNT,
+  clampCapo,
   clampFretCount,
   makeScaleRef,
   planKeys,
-  positionKey,
   resizeTuning,
   shiftStrings,
+  toggleChordPosition,
   transposeChordCandidateKey,
   transposePositions,
   transposeScaleRef,
@@ -21,7 +22,8 @@ import type { PresetData } from './presetFormat';
 
 export type LabelMode = 'names' | 'degrees';
 export type FillMode = 'inversion' | 'scale';
-export type StripCompare = 'chords' | 'scales';
+/** How each box draws its neck: frets across the page, or strings down it like a chord chart. */
+export type Orientation = 'horizontal' | 'vertical';
 
 export interface FillState {
   readonly on: boolean;
@@ -31,7 +33,7 @@ export interface FillState {
 
 export interface Box {
   readonly id: string;
-  /** Clicked positions in click order. */
+  /** Clicked positions in click order: one per string, at most MAX_CHORD_NOTES. */
   readonly positions: readonly FretPosition[];
   readonly scale: ScaleRef;
   readonly labelMode: LabelMode;
@@ -48,6 +50,8 @@ export interface Settings {
   /** Open-string MIDI pitches, lowest string first. */
   readonly tuning: readonly Midi[];
   readonly fretCount: number;
+  /** Fret the capo sits at, 0 for none. Frets below it can't be played; positions stay absolute. */
+  readonly capo: number;
 }
 
 /** Voice-leading strips between adjacent boxes. Global to the preset. */
@@ -55,8 +59,13 @@ export interface StripSettings {
   readonly visible: boolean;
   /** Note names or scale degrees, independent of the boxes' own label modes. */
   readonly labelMode: LabelMode;
-  /** Scales are compared only between two boxes that are both in scale mode; otherwise chords. */
-  readonly compare: StripCompare;
+}
+
+/** What "Find key" sets on one box. */
+export interface BoxScaleUpdate {
+  readonly id: string;
+  readonly scale: ScaleRef;
+  readonly chordOverride: string | null;
 }
 
 /** Which preset the workbench is, and what it looked like when last saved. */
@@ -77,6 +86,7 @@ export interface WorkbenchState {
   /** The preset's key; boxes can move away from it (see planKeys). */
   readonly key: ScaleRef;
   readonly strips: StripSettings;
+  readonly orientation: Orientation;
   readonly boxes: readonly Box[];
   readonly selectedBoxId: string | null;
   readonly document: DocumentState;
@@ -84,7 +94,8 @@ export interface WorkbenchState {
   addBox(): string;
   selectBox(id: string | null): void;
   removeBox(id: string): void;
-  togglePosition(id: string, position: FretPosition): void;
+  /** A fretboard click (see toggleChordPosition). False when the chord is full and nothing changed. */
+  togglePosition(id: string, position: FretPosition): boolean;
   setLabelMode(id: string, mode: LabelMode): void;
   setFillOn(id: string, on: boolean): void;
   /** Moves the fill switch; choosing a fill also turns it on. */
@@ -92,19 +103,29 @@ export interface WorkbenchState {
   toggleFill(id: string): void;
   /** Root box: moves the clicked shape, the scale and the chord override together. */
   transposeBox(id: string, semitones: number): void;
+  /** Global shift: transposes every box as the root box does, and the key with them. */
+  transposeAll(semitones: number): void;
   setScale(id: string, scale: ScaleRef): void;
   /** Mode slider: same pitch collection, another degree as the root. */
   setMode(id: string, mode: number): void;
   setChordOverride(id: string, key: string | null): void;
   setColor(id: string, color: string): void;
   setKey(key: ScaleRef): void;
+  /** Find key: the key and each listed box's scale and chord pick, as one change. */
+  setKeyAndScales(key: ScaleRef, updates: readonly BoxScaleUpdate[]): void;
   setStrips(patch: Partial<StripSettings>): void;
+  setOrientation(orientation: Orientation): void;
   /** Replaces the whole tuning; string-count changes are aligned at the high end. */
   applyTuning(tuning: readonly Midi[]): void;
   setStringCount(count: number): void;
   setStringPitch(string: number, midi: Midi): void;
   /** Clamps to 12–30 and drops clicked notes above the new last fret. */
   setFretCount(count: number): void;
+  /**
+   * Clamps to 0–MAX_CAPO. Shapes keep their fingering relative to the capo, so every box, scale and
+   * the key move by the same number of semitones as the capo.
+   */
+  setCapo(capo: number): void;
   /** Ignores blank names. */
   setPresetName(name: string): void;
   /** Replaces everything the preset stores and deselects. */
@@ -130,14 +151,25 @@ export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): B
   };
 }
 
-const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 'boxes'> => ({
-  settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT },
+const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 'orientation' | 'boxes'> => ({
+  settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0 },
   key: makeScaleRef('diatonic', 0, 'C'),
-  strips: { visible: true, labelMode: 'names', compare: 'chords' },
+  strips: { visible: true, labelMode: 'names' },
+  orientation: 'horizontal',
   boxes: [],
 });
 
-export const useWorkbench = create<WorkbenchState>()((set) => {
+/** A box moved by `semitones`: shape (kept between the capo and the last fret), scale and chord pick. */
+function transposed(box: Box, semitones: number, settings: Settings): Box {
+  return {
+    ...box,
+    positions: transposePositions(box.positions, semitones, settings.fretCount, settings.capo),
+    scale: transposeScaleRef(box.scale, semitones),
+    chordOverride: box.chordOverride === null ? null : transposeChordCandidateKey(box.chordOverride, semitones),
+  };
+}
+
+export const useWorkbench = create<WorkbenchState>()((set, get) => {
   const updateBox = (id: string, update: (box: Box) => Partial<Box>) =>
     set((state) => ({ boxes: state.boxes.map((box) => (box.id === id ? { ...box, ...update(box) } : box)) }));
 
@@ -173,14 +205,13 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
         boxes: state.boxes.filter((box) => box.id !== id),
         selectedBoxId: state.selectedBoxId === id ? null : state.selectedBoxId,
       })),
-    togglePosition: (id, position) =>
-      updateBox(id, (box) => {
-        const key = positionKey(position);
-        const present = box.positions.some((p) => positionKey(p) === key);
-        return {
-          positions: present ? box.positions.filter((p) => positionKey(p) !== key) : [...box.positions, position],
-        };
-      }),
+    togglePosition: (id, position) => {
+      const box = get().boxes.find((b) => b.id === id);
+      const positions = box ? toggleChordPosition(box.positions, position) : null;
+      if (positions === null) return false;
+      updateBox(id, () => ({ positions }));
+      return true;
+    },
     setLabelMode: (id, labelMode) => updateBox(id, () => ({ labelMode })),
     setFillOn: (id, on) => updateBox(id, (box) => ({ fill: { ...box.fill, on } })),
     setFillMode: (id, mode) => updateBox(id, () => ({ fill: { on: true, mode } })),
@@ -188,17 +219,12 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
 
     transposeBox: (id, semitones) =>
       set((state) => ({
-        boxes: state.boxes.map((box) =>
-          box.id === id
-            ? {
-                ...box,
-                positions: transposePositions(box.positions, semitones, state.settings.fretCount),
-                scale: transposeScaleRef(box.scale, semitones),
-                chordOverride:
-                  box.chordOverride === null ? null : transposeChordCandidateKey(box.chordOverride, semitones),
-              }
-            : box,
-        ),
+        boxes: state.boxes.map((box) => (box.id === id ? transposed(box, semitones, state.settings) : box)),
+      })),
+    transposeAll: (semitones) =>
+      set((state) => ({
+        key: transposeScaleRef(state.key, semitones),
+        boxes: state.boxes.map((box) => transposed(box, semitones, state.settings)),
       })),
     setScale: (id, scale) => updateBox(id, () => ({ scale })),
     setMode: (id, mode) => updateBox(id, (box) => ({ scale: withMode(box.scale, mode) })),
@@ -206,7 +232,16 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
     setColor: (id, color) => updateBox(id, () => ({ color })),
 
     setKey: (key) => set({ key }),
+    setKeyAndScales: (key, updates) =>
+      set((state) => ({
+        key,
+        boxes: state.boxes.map((box) => {
+          const update = updates.find((u) => u.id === box.id);
+          return update ? { ...box, scale: update.scale, chordOverride: update.chordOverride } : box;
+        }),
+      })),
     setStrips: (patch) => set((state) => ({ strips: { ...state.strips, ...patch } })),
+    setOrientation: (orientation) => set({ orientation }),
 
     applyTuning: (tuning) => set((state) => retune(state, tuning)),
     setStringCount: (count) => set((state) => retune(state, resizeTuning(state.settings.tuning, count))),
@@ -222,6 +257,18 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
           boxes: state.boxes.map((box) => ({ ...box, positions: box.positions.filter((p) => p.fret <= fretCount) })),
         };
       }),
+    setCapo: (value) =>
+      set((state) => {
+        const capo = clampCapo(value);
+        const delta = capo - state.settings.capo;
+        if (delta === 0) return {};
+        const settings = { ...state.settings, capo };
+        return {
+          settings,
+          key: transposeScaleRef(state.key, delta),
+          boxes: state.boxes.map((box) => transposed(box, delta, settings)),
+        };
+      }),
 
     setPresetName: (name) =>
       set((state) => {
@@ -233,6 +280,7 @@ export const useWorkbench = create<WorkbenchState>()((set) => {
         settings: data.settings,
         key: data.key,
         strips: data.strips,
+        orientation: data.orientation,
         boxes: data.boxes,
         selectedBoxId: null,
         document: { presetId, name, savedSnapshot },

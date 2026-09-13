@@ -4,8 +4,8 @@ import { makeScaleRef, type FretPosition, type ScaleRef } from '../../theory';
 import { buildCanvasModel } from '../canvasModel';
 import { buildStripView } from '../stripModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24 };
-const names: StripSettings = { visible: true, labelMode: 'names', compare: 'chords' };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
+const names: StripSettings = { visible: true, labelMode: 'names' };
 const box = (positions: FretPosition[], scale: ScaleRef, scaleMode = false): Box => ({
   ...createBox(scale),
   positions,
@@ -61,12 +61,11 @@ describe('voice-leading strip', () => {
     expect(view.voices.filter((v) => v.kind === 'added').map((v) => v.to)).toEqual(['D']);
   });
 
-  it('compares scales only when both boxes are in scale mode', () => {
-    const scales = { ...names, compare: 'scales' as const };
-    const mixed = strip(box(C_E_G, C_IONIAN, true), box(F_A_C, makeScaleRef('diatonic', 0, 'F')), scales);
+  it('compares scales when both boxes are set to fill scale, and chords otherwise', () => {
+    const mixed = strip(box(C_E_G, C_IONIAN, true), box(F_A_C, makeScaleRef('diatonic', 0, 'F')));
     expect(mixed.compared).toBe('chords');
 
-    const both = strip(box(C_E_G, C_IONIAN, true), box(F_A_C, makeScaleRef('diatonic', 0, 'F'), true), scales);
+    const both = strip(box(C_E_G, C_IONIAN, true), box(F_A_C, makeScaleRef('diatonic', 0, 'F'), true));
     expect(both.compared).toBe('scales');
     expect(both.fromTitle).toBe('C Ionian');
     expect(both.toTitle).toBe('F Ionian');

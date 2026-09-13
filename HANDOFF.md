@@ -15,7 +15,7 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 144 tests in 16 files, about 19 s.
+- `npm.cmd test`: 169 tests in 17 files, about 6 s.
 - `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json`.
 - `npm.cmd run build`, then `npm.cmd run preview`: http://localhost:4173.
 - `npm.cmd run verify:pwa`: builds, then checks every `dist` file is precached and the manifest is installable.
@@ -91,7 +91,13 @@
 - **Out-of-scale spelling ties** are chord-aware (letters stacked from the chord root), then fall back to ♭2 ♭3 ♯4 ♭6 ♭7.
 - **In non-7-note scales,** a perfect 5th always keeps the 5th letter.
 - **Unnamed blues rotations** are called "Blues mode n".
-- **Chord ID** prefers the closest complete triad or diatonic chord, with slash names (C E A over C is Am/C).
+- **Chord ID** prefers the closest complete triad or diatonic chord, with slash names (C E A over C is Am/C). From four sounding notes up, an omitted 5th is cheap, so the bass decides (C E♭ F B♭ over C is Cm7(11), not F7sus4/C). Five-plus-tone chords don't print "(no 5)".
+- **Tension chords:** seventh chords with added tensions are generated from `TENSION_BASES` in `data/chords.ts`: F♯7(11), G7(13), m9♭5, 9(♯11).
+- **Workflow:** fill in the chords, press Find key (global major/minor key, then the scale closest to it for each chord), then adjust.
+- **Chords** have one note per string and six notes at most.
+- **Capo** keeps the tuning. Shapes move with it, so chords, scales and the key transpose. Toolbar Shift transposes everything by a semitone.
+- **Orientation switch** rotates the fretboards (vertical = chord-chart style), not the box layout.
+- **Voice-leading strips** compare scales when both boxes are set to fill scale; the chords/scales switch was removed.
 - **Ranking** rows all start on the chord root. Tier-0 modes of the key in effect are pinned first.
 - **The tier-1 limit is 8.**
 - **A new key region** starts only when a box's scale uses a different set of notes; modes of the key stay in it.

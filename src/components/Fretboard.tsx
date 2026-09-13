@@ -1,19 +1,30 @@
 import { memo } from 'react';
+import type { Orientation } from '../state/workbench';
 import { pitchName, type FretPosition, type Tuning } from '../theory';
 import type { BoardDot } from './boardModel';
 import { labelInk, mapShade } from './color';
 
-const FRET_WIDTH = 38;
+/** Along the neck: space per fret and for the open strings. */
+const FRET_LENGTH = 38;
+const OPEN_LENGTH = 34;
+/** Across the neck. */
 const STRING_GAP = 26;
-const OPEN_WIDTH = 34;
-const NAME_WIDTH = 30;
 const DOT_RADIUS = 11;
-const PAD_RIGHT = 10;
+const PAD_END = 10;
 const MARKER_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24, 27];
+
+/** Space for the string names before the open strings, and for the fret numbers beside the neck. */
+const MARGINS: Readonly<Record<Orientation, { readonly names: number; readonly numbers: number }>> = {
+  horizontal: { names: 30, numbers: 24 },
+  vertical: { names: 22, numbers: 24 },
+};
 
 export interface FretboardProps {
   readonly tuning: Tuning;
   readonly fretCount: number;
+  /** Fret the capo sits at, 0 for none. */
+  readonly capo: number;
+  readonly orientation: Orientation;
   readonly dots: readonly BoardDot[];
   readonly color: string;
   /** Outline clicked notes so they stay distinguishable from filled-in map notes. */
@@ -21,28 +32,49 @@ export interface FretboardProps {
   readonly onToggle: (position: FretPosition) => void;
 }
 
+/**
+ * Horizontal boards run the frets across the page with the highest string on top, as in tab.
+ * Vertical boards run them down the page with the lowest string on the left, as in a chord chart.
+ * Geometry is worked out along and across the neck, then mapped to x and y.
+ */
 export const Fretboard = memo(function Fretboard({
   tuning,
   fretCount,
+  capo,
+  orientation,
   dots,
   color,
   ringSelected,
   onToggle,
 }: FretboardProps) {
+  const vertical = orientation === 'vertical';
   const stringCount = tuning.length;
-  const nutX = NAME_WIDTH + OPEN_WIDTH;
-  const top = DOT_RADIUS + 3;
-  const bottom = top + (stringCount - 1) * STRING_GAP;
-  const width = nutX + fretCount * FRET_WIDTH + PAD_RIGHT;
-  const height = bottom + DOT_RADIUS + 24;
+  const margins = MARGINS[orientation];
+  const nut = margins.names + OPEN_LENGTH;
+  const neckEnd = nut + fretCount * FRET_LENGTH;
+  const firstString = vertical ? margins.numbers + DOT_RADIUS : DOT_RADIUS + 3;
+  const lastString = firstString + (stringCount - 1) * STRING_GAP;
+  const width = vertical ? lastString + DOT_RADIUS + 3 : neckEnd + PAD_END;
+  const height = vertical ? neckEnd + PAD_END : lastString + DOT_RADIUS + margins.numbers;
 
-  const xOf = (fret: number) => (fret === 0 ? nutX - OPEN_WIDTH / 2 : nutX + (fret - 0.5) * FRET_WIDTH);
-  // Highest string on top, as in tab.
-  const yOf = (string: number) => top + (stringCount - 1 - string) * STRING_GAP;
+  const alongOf = (fret: number) => (fret === 0 ? nut - OPEN_LENGTH / 2 : nut + (fret - 0.5) * FRET_LENGTH);
+  const acrossOf = (string: number) => firstString + (vertical ? string : stringCount - 1 - string) * STRING_GAP;
+  const point = (along: number, across: number) => (vertical ? { x: across, y: along } : { x: along, y: across });
+  const segment = (along1: number, across1: number, along2: number, across2: number) => {
+    const a = point(along1, across1);
+    const b = point(along2, across2);
+    return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
+  };
+  const area = (along1: number, along2: number, across1: number, across2: number) => {
+    const a = point(along1, across1);
+    const b = point(along2, across2);
+    return { x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y };
+  };
 
   const weak = mapShade(color);
   const strongInk = labelInk(color);
   const weakInk = labelInk(weak);
+  const capoWire = nut + capo * FRET_LENGTH;
 
   return (
     <svg
@@ -51,42 +83,65 @@ export const Fretboard = memo(function Fretboard({
       width={width}
       height={height}
       role="group"
-      aria-label={`Fretboard, ${stringCount} strings, ${fretCount} frets`}
+      aria-label={`Fretboard, ${stringCount} strings, ${fretCount} frets${capo > 0 ? `, capo at fret ${capo}` : ''}`}
     >
+      {capo > 0 && (
+        <rect
+          className="capo-covered"
+          {...area(nut - OPEN_LENGTH, capoWire - FRET_LENGTH, firstString - DOT_RADIUS, lastString + DOT_RADIUS)}
+          rx={6}
+        />
+      )}
+
       {tuning.map((midi, string) => {
-        const y = yOf(string);
+        const across = acrossOf(string);
         const weight = 1 + 0.8 * (1 - string / Math.max(1, stringCount - 1));
+        const name = vertical ? point(margins.names / 2 - 1, across) : point(margins.names - 4, across);
         return (
           <g key={`string-${string}`}>
-            <text className="string-name" x={NAME_WIDTH - 4} y={y} textAnchor="end" dominantBaseline="central">
+            <text
+              className="string-name"
+              x={name.x}
+              y={name.y}
+              textAnchor={vertical ? 'middle' : 'end'}
+              dominantBaseline="central"
+            >
               {pitchName(midi)}
             </text>
-            <line className="string-stub" x1={NAME_WIDTH + 2} x2={nutX} y1={y} y2={y} strokeWidth={weight} />
-            <line className="string" x1={nutX} x2={nutX + fretCount * FRET_WIDTH} y1={y} y2={y} strokeWidth={weight} />
+            <line className="string-stub" {...segment(margins.names + 2, across, nut, across)} strokeWidth={weight} />
+            <line className="string" {...segment(nut, across, neckEnd, across)} strokeWidth={weight} />
           </g>
         );
       })}
 
-      {Array.from({ length: fretCount }, (_, i) => i + 1).map((fret) => (
-        <line key={`wire-${fret}`} className="wire" x1={nutX + fret * FRET_WIDTH} x2={nutX + fret * FRET_WIDTH} y1={top} y2={bottom} />
-      ))}
-      <line className="nut" x1={nutX} x2={nutX} y1={top} y2={bottom} />
+      {Array.from({ length: fretCount }, (_, i) => i + 1).map((fret) => {
+        const along = nut + fret * FRET_LENGTH;
+        return <line key={`wire-${fret}`} className="wire" {...segment(along, firstString, along, lastString)} />;
+      })}
+      <line className="nut" {...segment(nut, firstString, nut, lastString)} />
 
-      {MARKER_FRETS.filter((fret) => fret <= fretCount).map((fret) => (
-        <text
-          key={`marker-${fret}`}
-          className={fret % 12 === 0 ? 'fret-number is-octave' : 'fret-number'}
-          x={xOf(fret)}
-          y={bottom + DOT_RADIUS + 14}
-          textAnchor="middle"
-        >
-          {fret}
-        </text>
-      ))}
+      {MARKER_FRETS.filter((fret) => fret <= fretCount).map((fret) => {
+        const at = vertical
+          ? point(alongOf(fret), margins.numbers - 6)
+          : point(alongOf(fret), lastString + DOT_RADIUS + 14);
+        return (
+          <text
+            key={`marker-${fret}`}
+            className={fret % 12 === 0 ? 'fret-number is-octave' : 'fret-number'}
+            x={at.x}
+            y={at.y}
+            textAnchor={vertical ? 'end' : 'middle'}
+            dominantBaseline={vertical ? 'central' : undefined}
+          >
+            {fret}
+          </text>
+        );
+      })}
+
+      {capo > 0 && <rect className="capo" {...area(capoWire - 8, capoWire - 2, firstString - 8, lastString + 8)} rx={3} />}
 
       {dots.map((dot) => {
-        const cx = xOf(dot.fret);
-        const cy = yOf(dot.string);
+        const { x: cx, y: cy } = point(alongOf(dot.fret), acrossOf(dot.string));
         return (
           <g key={`${dot.string}:${dot.fret}`} className={`position position-${dot.kind}`}>
             <circle

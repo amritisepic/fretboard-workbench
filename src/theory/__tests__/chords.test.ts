@@ -1,7 +1,14 @@
 // Acceptance test 5: chord identification.
 import { describe, expect, it } from 'vitest';
 import { CHORD_ID_WEIGHTS } from '../../data/chordIdWeights';
-import { CHORD_TYPES, chordName, identifyChord, identifyChordPcs, transposeChordCandidateKey } from '../chords';
+import {
+  CHORD_TYPES,
+  chordName,
+  identifyChord,
+  identifyChordPcs,
+  tensionSuffix,
+  transposeChordCandidateKey,
+} from '../chords';
 import { pcSet } from '../pitch';
 import { makeScaleRef, scaleRefContext, scaleRefPcSet } from '../scales';
 
@@ -42,6 +49,41 @@ describe('chord identification', () => {
     expect(names([48, 51, 54, 58])[0]).toBe('Cm7♭5');
     expect(names([43, 47, 50, 53])[0]).toBe('G7');
     expect(names([40, 47])[0]).toBe('E5');
+  });
+
+  it('names seventh chords with an added tension and no 9th', () => {
+    expect(names([42, 49, 52, 58, 59, 64])[0]).toBe('F♯7(11)'); // F♯ C♯ E A♯ B E
+    expect(names([43, 50, 53, 59, 59, 64])[0]).toBe('G7(13)'); // G D F B B E
+  });
+
+  it('reads four or more notes over the bass as a voicing without its 5th', () => {
+    const readings = names([48, 58, 63, 65]); // C B♭ E♭ F
+    expect(readings[0]).toBe('Cm7(11)');
+    expect(readings).toContain('F7sus4/C');
+    expect(names([48, 52, 58, 57])[0]).toBe('C7(13)'); // C E B♭ A
+    expect(names([48, 52, 58, 62])[0]).toBe('C9'); // C E B♭ D
+  });
+
+  it('marks an omitted 5th only on chords of fewer than five tones', () => {
+    expect(names([48, 52, 58])[0]).toBe('C7 (no 5)');
+    expect(names([48, 51, 58, 65])[0]).toBe('Cm7(11)');
+  });
+
+  it('stacks natural 9ths into the symbol and puts other tensions in parentheses', () => {
+    expect(tensionSuffix('7', ['11'])).toBe('7(11)');
+    expect(tensionSuffix('m7', ['9', '13'])).toBe('m13');
+    expect(tensionSuffix('7', ['9', '♯11'])).toBe('9(♯11)');
+    expect(tensionSuffix('7', ['♭9', '13'])).toBe('7(♭9,13)');
+    expect(tensionSuffix('m7♭5', ['9'])).toBe('m9♭5');
+    expect(names([48, 52, 58, 62, 66])[0]).toBe('C9(♯11)'); // C E B♭ D F♯
+    expect(names([47, 50, 53, 57, 61])[0]).toBe('Bm9♭5'); // B D F A C♯
+  });
+
+  it('adds tension types only where no named type has the same notes', () => {
+    const masks = CHORD_TYPES.map((t) => t.mask);
+    expect(new Set(masks).size).toBe(masks.length);
+    expect(CHORD_TYPES.find((t) => t.id === '7+11')?.suffix).toBe('7(11)');
+    expect(CHORD_TYPES.some((t) => t.id === '7+9')).toBe(false); // that is the named dominant ninth
   });
 
   it('spells slash basses from the chord', () => {

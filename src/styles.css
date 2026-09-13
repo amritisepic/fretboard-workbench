@@ -224,13 +224,20 @@ button:disabled {
 
 /* ---- Canvas ---------------------------------------------------------- */
 
+/* Stays at the top of the workspace while the boxes scroll under it. */
 .canvas-toolbar {
+  position: sticky;
+  z-index: 5;
+  top: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px 28px;
-  margin-bottom: 22px;
+  margin: -28px -28px 22px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
 }
 
 .toolbar-group {
@@ -253,13 +260,20 @@ button:disabled {
   gap: 6px;
 }
 
-.canvas-toolbar .scale-selects .select:last-child {
-  width: 190px;
+/* Sized to the chosen name, so long scale names show in full. */
+.canvas-toolbar .scale-selects .select {
+  width: auto;
+  field-sizing: content;
 }
 
 .canvas-toolbar .segmented button {
   padding: 5px 11px;
   font-size: 12.5px;
+}
+
+.canvas-toolbar .stepper button {
+  width: 30px;
+  height: 30px;
 }
 
 .canvas {
@@ -459,6 +473,7 @@ button:disabled {
   box-shadow: inset 0 0 0 0.5px var(--ink);
 }
 
+/* The fretboard sets the box width; header text wraps rather than widening the box. */
 .box-header {
   display: flex;
   flex-wrap: wrap;
@@ -466,6 +481,13 @@ button:disabled {
   gap: 4px 14px;
   min-height: 30px;
   margin: 0 0 10px 2px;
+  contain: inline-size;
+}
+
+.box-notice {
+  flex-basis: 100%;
+  color: var(--notice);
+  font-size: 12.5px;
 }
 
 .box-numeral {
@@ -527,6 +549,14 @@ button:disabled {
 .fretboard .string-stub {
   stroke: var(--ink);
   stroke-opacity: 0.2;
+}
+
+.fretboard .capo-covered {
+  fill: var(--paper-sunk);
+}
+
+.fretboard .capo {
+  fill: var(--ink);
 }
 
 .fretboard .string-name,
@@ -1191,6 +1221,7 @@ kbd {
 
 .stepper output {
   min-width: 24px;
+  padding: 0 4px;
   font-weight: 600;
   text-align: center;
 }
@@ -1517,6 +1548,11 @@ kbd {
 @media (max-width: 760px) {
   .workspace {
     padding: 16px;
+  }
+
+  .canvas-toolbar {
+    margin: -16px -16px 16px;
+    padding: 12px 16px;
   }
 
   .sidebar {

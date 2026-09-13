@@ -1,12 +1,17 @@
 import { useLibrary } from './library';
-import { parsePresetData, presetDataOf } from './presetFormat';
+import { parsePresetData, presetDataOf, upgradeSnapshot } from './presetFormat';
 import { openRepository, type LibraryRepository, type SessionRecord } from './repository';
 import { UNTITLED_PRESET, useWorkbench, type WorkbenchState } from './workbench';
 
 const SAVE_DELAY_MS = 300;
 
 const sessionChanged = (a: WorkbenchState, b: WorkbenchState) =>
-  a.settings !== b.settings || a.key !== b.key || a.strips !== b.strips || a.boxes !== b.boxes || a.document !== b.document;
+  a.settings !== b.settings ||
+  a.key !== b.key ||
+  a.strips !== b.strips ||
+  a.orientation !== b.orientation ||
+  a.boxes !== b.boxes ||
+  a.document !== b.document;
 
 const sessionOf = (state: WorkbenchState): SessionRecord => ({
   id: 'current',
@@ -24,7 +29,7 @@ function restoreSession(value: unknown): void {
     presetId: typeof session.presetId === 'string' ? session.presetId : null,
     name: typeof session.name === 'string' && session.name.trim() ? session.name.trim() : UNTITLED_PRESET,
     data: parsePresetData(session.data, 'session.data'),
-    savedSnapshot: typeof session.savedSnapshot === 'string' ? session.savedSnapshot : null,
+    savedSnapshot: typeof session.savedSnapshot === 'string' ? upgradeSnapshot(session.savedSnapshot) : null,
   });
 }
 

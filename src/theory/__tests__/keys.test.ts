@@ -1,8 +1,9 @@
-// Acceptance test 10 (engine level): key regions and roman numerals.
+// Acceptance test 10 (engine level): key regions and roman numerals. Also finding the key.
 import { describe, expect, it } from 'vitest';
 import { identifyChord } from '../chords';
-import { changesKey, keyName, planKeys, romanNumeral } from '../keys';
-import { makeScaleRef } from '../scales';
+import { changesKey, closestScale, findKey, keyName, planKeys, romanNumeral } from '../keys';
+import { pcOf, pcSet } from '../pitch';
+import { makeScaleRef, scaleRefName } from '../scales';
 
 const C_MAJOR = makeScaleRef('diatonic', 0, 'C');
 const numeral = (pitches: number[], key = C_MAJOR) => romanNumeral(identifyChord(pitches)[0], key);
@@ -80,5 +81,58 @@ describe('keys', () => {
     const plan = planKeys(C_MAJOR, [makeScaleRef('diatonic', 0, 'G')]);
     expect(plan.regions.map((r) => keyName(r.key))).toEqual(['G major']);
     expect(planKeys(C_MAJOR, []).regions).toEqual([]);
+  });
+});
+
+const evidence = (pitches: number[]) => ({ chord: identifyChord(pitches)[0], pcs: pcSet(pitches.map(pcOf)) });
+const found = (...progression: number[][]) => {
+  const key = findKey(progression.map(evidence));
+  return key ? keyName(key) : null;
+};
+
+const DM7 = [50, 53, 57, 60];
+const G7 = [43, 47, 50, 53];
+const CMAJ7 = [48, 52, 55, 59];
+const AM = [57, 60, 64];
+const DM = [50, 53, 57];
+const E7 = [52, 56, 59, 62];
+
+describe('finding the key', () => {
+  it('finds major keys from diatonic fit and the tonic', () => {
+    expect(found(DM7, G7, CMAJ7)).toBe('C major');
+    expect(found([48, 52, 55], AM, [53, 57, 60], [43, 47, 50])).toBe('C major'); // C Am F G
+  });
+
+  it('accepts the raised 7th of a minor key on its dominant', () => {
+    expect(found(AM, DM, E7, AM)).toBe('A minor');
+    expect(found([42, 49, 52, 58, 59, 64], [43, 50, 53, 59, 59, 64], [48, 58, 63, 65])).toBe('C minor'); // F♯7(11) G7(13) Cm7(11)
+  });
+
+  it('hears a blues that starts and ends on its tonic in that key', () => {
+    const A7 = [45, 49, 52, 55];
+    const D7 = [50, 54, 57, 60];
+    expect(found(A7, D7, A7, E7, D7, A7)).toBe('A major');
+  });
+
+  it('finds nothing without chords', () => {
+    expect(findKey([])).toBeNull();
+  });
+});
+
+describe('closest scale to the key', () => {
+  const closest = (pitches: number[], key: ReturnType<typeof makeScaleRef>) => {
+    const { chord, pcs } = evidence(pitches);
+    return scaleRefName(closestScale(pcs, chord, key));
+  };
+
+  it('uses the mode of the key when the chord fits it', () => {
+    expect(closest(DM7, C_MAJOR)).toBe('D Dorian');
+    expect(closest(G7, C_MAJOR)).toBe('G Mixolydian');
+  });
+
+  it('otherwise changes as few of the key’s notes as it can', () => {
+    expect(closest([45, 49, 52, 55], C_MAJOR)).toBe('A Mixolydian ♭6'); // A7 in C major: only C♯ is new
+    expect(closest(E7, makeScaleRef('diatonic', 5, 'A'))).toBe('E Phrygian Dominant');
+    expect(closest([43, 50, 53, 59, 64], makeScaleRef('diatonic', 5, 'C'))).toBe('G Mixolydian ♭2'); // G7(13) in C minor
   });
 });

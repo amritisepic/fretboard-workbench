@@ -4,7 +4,7 @@ import { makeScaleRef, scaleRefPcSet } from '../../theory';
 import { buildBoxView } from '../boardModel';
 import { buildRankingView } from '../rankingModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24 };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
 
 // A2, E3, A3, C4 with A lowest: Am.
 const am: Box = {

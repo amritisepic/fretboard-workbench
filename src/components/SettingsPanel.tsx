@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TUNING_PRESETS } from '../data/tunings';
 import { useWorkbench } from '../state/workbench';
 import {
+  MAX_CAPO,
   MAX_FRETS,
   MAX_STRINGS,
   MIN_FRETS,
@@ -128,8 +129,40 @@ export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
         </ol>
       </section>
 
+      <CapoField />
       <FretCountField />
     </div>
+  );
+}
+
+/** The capo raises every open string without changing the tuning; see setCapo for what moves with it. */
+function CapoField() {
+  const capo = useWorkbench((s) => s.settings.capo);
+  const setCapo = useWorkbench((s) => s.setCapo);
+
+  return (
+    <section className="settings-section">
+      <div className="settings-row">
+        <span className="field-label" id="capo-label">
+          Capo
+        </span>
+        <div className="stepper" role="group" aria-labelledby="capo-label">
+          <button type="button" aria-label="Move the capo down a fret" disabled={capo <= 0} onClick={() => setCapo(capo - 1)}>
+            −
+          </button>
+          <output aria-live="polite">{capo === 0 ? 'None' : capo}</output>
+          <button
+            type="button"
+            aria-label="Move the capo up a fret"
+            disabled={capo >= MAX_CAPO}
+            onClick={() => setCapo(capo + 1)}
+          >
+            +
+          </button>
+        </div>
+      </div>
+      <p className="hint">The tuning stays the same. Chord shapes move with the capo, so the chords, scales and key move with it.</p>
+    </section>
   );
 }
 

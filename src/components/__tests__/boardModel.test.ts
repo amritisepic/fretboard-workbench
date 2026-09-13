@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createBox, type Box, type FillMode, type Settings } from '../../state/workbench';
 import { buildBoxView } from '../boardModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24 };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
 
 // C3 on the A string, E3 on the D string, A3 on the G string: C E A with C lowest.
 const amOverC: Box = {
@@ -80,5 +80,15 @@ describe('box view', () => {
   it('ignores positions that fall outside the current board', () => {
     const stray: Box = { ...amOverC, positions: [...amOverC.positions, { string: 7, fret: 2 }, { string: 0, fret: 29 }] };
     expect(buildBoxView(stray, settings).title).toBe('Am/C');
+  });
+
+  it('has no dots behind the capo and ignores notes there', () => {
+    const capoed = { ...settings, capo: 2 };
+    const view = buildBoxView(amOverC, capoed);
+    expect(view.dots).toHaveLength(6 * 23);
+    expect(view.dots.every((d) => d.fret >= 2)).toBe(true);
+    expect(view.title).toBe('Am/C');
+    const behind: Box = { ...amOverC, positions: [...amOverC.positions, { string: 0, fret: 1 }] };
+    expect(buildBoxView(behind, capoed).title).toBe('Am/C');
   });
 });

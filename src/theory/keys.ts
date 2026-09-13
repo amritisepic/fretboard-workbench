@@ -1,9 +1,33 @@
-/** Keys, key regions across a progression of boxes, and roman numerals (spec §6). */
+/** Keys, key regions across a progression of boxes, roman numerals (spec §6), and finding the key. */
 
-import { chordSpellingHint, type ChordCandidate } from './chords';
-import { MAJOR_SCALE_SEMITONES, formatAccidental, mod12, type PcSet } from './pitch';
-import { scaleRefContext, scaleRefIntervals, scaleRefName, scaleRefPcSet, type ScaleRef } from './scales';
+import type { ChordQuality } from '../data/chords';
+import { KEY_FINDING_WEIGHTS } from '../data/keyFindingWeights';
+import { RANKING_WEIGHTS } from '../data/rankingWeights';
+import { chordRootSpelling, chordSpellingHint, type ChordCandidate } from './chords';
+import {
+  MAJOR_SCALE_SEMITONES,
+  difference,
+  formatAccidental,
+  hasPc,
+  intersect,
+  mod12,
+  pcSetFromIntervals,
+  setSize,
+  type PcSet,
+  type PitchClass,
+} from './pitch';
+import { rankScales, toneRole } from './ranking';
+import {
+  makeScaleRef,
+  modeIntervals,
+  scaleRefContext,
+  scaleRefIntervals,
+  scaleRefName,
+  scaleRefPcSet,
+  type ScaleRef,
+} from './scales';
 import { formatSpelled, pcOfSpelled, spellPc, spellScale } from './spelling';
+import { compareKeys } from './util';
 
 /** "C major", "A minor", otherwise the scale's own name ("A♭ Lydian"). */
 export function keyName(key: ScaleRef): string {
@@ -95,4 +119,97 @@ export function romanNumeral(chord: ChordCandidate, key: ScaleRef): string {
   const suffix =
     quality === 'diminished' ? '°' : quality === 'halfDiminished' ? 'ø' : quality === 'augmented' ? '+' : '';
   return formatAccidental(accidental) + (lower ? numeral.toLowerCase() : numeral) + suffix;
+}
+
+// ---------------------------------------------------------------------------
+// Finding the key
+// ---------------------------------------------------------------------------
+
+export interface ChordEvidence {
+  /** The chord's name in use. */
+  readonly chord: ChordCandidate;
+  /** The pitch classes that sound. */
+  readonly pcs: PcSet;
+}
+
+const MAJOR_TONIC_QUALITIES: readonly ChordQuality[] = ['major', 'dominant', 'suspended', 'power'];
+const MINOR_TONIC_QUALITIES: readonly ChordQuality[] = ['minor', 'suspended', 'power'];
+const DOMINANT_QUALITIES: readonly ChordQuality[] = ['major', 'dominant', 'suspended'];
+
+/**
+ * The share of a chord's sounding tones that lie in a key, each weighted by its role as in scale
+ * ranking. A minor key also accepts its raised 7th in chords on its 5th or 7th degree, where
+ * harmonic minor supplies it: G B D F in C minor fits completely.
+ */
+function keyFit({ chord, pcs }: ChordEvidence, keyPcs: PcSet, minorTonic: PitchClass | null): number {
+  let total = 0;
+  let inKey = 0;
+  for (const tone of chord.type.tones) {
+    const pc = mod12(chord.root + tone.interval);
+    if (!hasPc(pcs, pc)) continue;
+    const weight = RANKING_WEIGHTS.missingTone[toneRole(tone)];
+    const leadingTone =
+      minorTonic !== null && pc === mod12(minorTonic + 11) && [7, 11].includes(mod12(chord.root - minorTonic));
+    total += weight;
+    if (hasPc(keyPcs, pc) || leadingTone) inKey += weight;
+  }
+  return total === 0 ? 0 : inKey / total;
+}
+
+/**
+ * The major or minor key that best explains a progression, or null without chords. Each key scores
+ * how well every chord's tones fit it, plus bonuses for tonic chords (more at the start, most at the
+ * end) and for dominants that resolve to the tonic. Exact ties go to the major key.
+ */
+export function findKey(progression: readonly ChordEvidence[]): ScaleRef | null {
+  const w = KEY_FINDING_WEIGHTS;
+  let best: ScaleRef | null = null;
+  let bestScore = -Infinity;
+  for (const mode of [0, 5]) {
+    const minor = mode === 5;
+    const tonicQualities = minor ? MINOR_TONIC_QUALITIES : MAJOR_TONIC_QUALITIES;
+    for (let tonic = 0; tonic < 12; tonic++) {
+      const keyPcs = pcSetFromIntervals(modeIntervals('diatonic', mode), tonic);
+      const isTonic = (chord: ChordCandidate) =>
+        mod12(chord.root) === tonic && tonicQualities.includes(chord.type.quality);
+      const isDominant = (chord: ChordCandidate) =>
+        mod12(chord.root - tonic) === 7 && DOMINANT_QUALITIES.includes(chord.type.quality);
+
+      let score = 0;
+      progression.forEach((evidence, i) => {
+        score += w.fit * keyFit(evidence, keyPcs, minor ? tonic : null);
+        if (!isTonic(evidence.chord)) return;
+        score += w.tonicChord;
+        if (i === 0) score += w.firstChord;
+        if (i === progression.length - 1) score += w.lastChord;
+        if (i > 0 && isDominant(progression[i - 1].chord)) score += w.cadence;
+      });
+      if (progression.length > 0 && score > bestScore + 1e-9) {
+        best = makeScaleRef('diatonic', mode, tonic);
+        bestScore = score;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * The reference scale for a chord that strays least from `key`. The candidates are the ranking's
+ * rows for the chord in its best tier, normally every scale on the chord root that holds all the
+ * sounding chord tones. Fewest notes outside the key wins, then most notes shared with it, then the
+ * ranking's own order. A chord that fits the key gets the key's own mode (Dm7 in C major: D Dorian);
+ * G7(13) in C minor gets G Mixolydian ♭2, keeping the key's A♭ beside the chord's B and E.
+ */
+export function closestScale(chordPcs: PcSet, chord: ChordCandidate, key: ScaleRef): ScaleRef {
+  const keyPcs = scaleRefPcSet(key);
+  const { rows } = rankScales(chordPcs, chord, { key, rootSpelling: chordRootSpelling(chord, scaleRefContext(key)) });
+  const tier = Math.min(...rows.map((row) => row.tier));
+  const [closest] = rows
+    .filter((row) => row.tier === tier)
+    .map((row, order) => ({
+      row,
+      sortKey: [setSize(difference(row.pcs, keyPcs)), -setSize(intersect(row.pcs, keyPcs)), order],
+    }))
+    .sort((a, b) => compareKeys(a.sortKey, b.sortKey));
+  return closest.row.ref;
 }

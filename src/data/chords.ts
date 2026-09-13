@@ -16,7 +16,7 @@ export interface ChordTypeDef {
   /** Chord tones as degree labels above the root; intervals are derived from these. */
   readonly degrees: readonly string[];
   readonly quality: ChordQuality;
-  /** 1 = plain triad … 6 = upper-structure chord. Lower is simpler. */
+  /** 1 = plain triad … 6 = upper-structure chord; each added tension adds more. Lower is simpler. */
   readonly complexity: number;
   /** Curated 0–100 prior for how commonly the symbol is used. */
   readonly usage: number;
@@ -64,3 +64,23 @@ export const CHORD_TYPE_DEFS: readonly ChordTypeDef[] = [
   { id: 'maj13', name: 'major thirteenth', suffix: 'maj13', degrees: ['1', '3', '5', '7', '9', '13'], quality: 'major', complexity: 6, usage: 15 },
   { id: 'm13', name: 'minor thirteenth', suffix: 'm13', degrees: ['1', '♭3', '5', '♭7', '9', '11', '13'], quality: 'minor', complexity: 6, usage: 15 },
 ];
+
+/**
+ * Seventh chords that take added tensions, with the tensions idiomatic to each. Every combination of
+ * at most one 9th, one 11th and one 13th becomes a chord type, unless a type above already has those
+ * notes. A natural 9th stacks into the symbol (m7♭5 with a 9 is m9♭5, and a 9 with an 11 or 13 gives
+ * 11 or 13). Other tensions go in parentheses: 7(11), m7(13), 7(♭9,13).
+ */
+export const TENSION_BASES: readonly { readonly id: string; readonly tensions: readonly string[] }[] = [
+  { id: '7', tensions: ['♭9', '9', '♯9', '11', '♯11', '♭13', '13'] },
+  { id: 'maj7', tensions: ['9', '♯11', '13'] },
+  { id: 'm7', tensions: ['9', '11', '13'] },
+  { id: 'mMaj7', tensions: ['9', '11', '13'] },
+  { id: 'm7b5', tensions: ['9', '11', '♭13'] },
+  { id: '7sus4', tensions: ['♭9', '9', '13'] },
+  { id: '7s5', tensions: ['♭9', '9', '♯9'] },
+  { id: '7b5', tensions: ['♭9', '9', '♯9'] },
+];
+
+/** Priors for a chord built from a base and added tensions: complexity added and usage multiplied, per tension. */
+export const ADDED_TENSION = { complexity: 1, usageFactor: 0.3 } as const;

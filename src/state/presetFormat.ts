@@ -5,9 +5,17 @@
  */
 
 import { SCALE_FAMILIES } from '../data/scales';
-import { MAX_FRETS, MAX_STRINGS, MIN_STRINGS, clampFretCount, type ScaleRef } from '../theory';
+import {
+  MAX_CAPO,
+  MAX_FRETS,
+  MAX_STRINGS,
+  MIN_STRINGS,
+  clampFretCount,
+  limitChordPositions,
+  type ScaleRef,
+} from '../theory';
 import { newId } from './ids';
-import type { Box, FillMode, LabelMode, Settings, StripCompare, StripSettings } from './workbench';
+import type { Box, FillMode, LabelMode, Orientation, Settings, StripSettings } from './workbench';
 
 export const FILE_FORMAT = 'fretboard-workbench';
 export const FILE_VERSION = 1;
@@ -16,13 +24,18 @@ const MAX_NAME_LENGTH = 120;
 const MAX_FOLDER_DEPTH = 32;
 const LABEL_MODES: readonly LabelMode[] = ['names', 'degrees'];
 const FILL_MODES: readonly FillMode[] = ['inversion', 'scale'];
-const COMPARE_MODES: readonly StripCompare[] = ['chords', 'scales'];
+const ORIENTATIONS: readonly Orientation[] = ['horizontal', 'vertical'];
 
-/** Everything a preset stores (spec §7). Its name is kept alongside. */
+/**
+ * Everything a preset stores (spec §7). Its name is kept alongside. Fields added after version 1
+ * (the capo and the orientation) are optional when reading, and fields since removed (the strips'
+ * chords/scales choice) are ignored, so older files still load.
+ */
 export interface PresetData {
   readonly settings: Settings;
   readonly key: ScaleRef;
   readonly strips: StripSettings;
+  readonly orientation: Orientation;
   readonly boxes: readonly Box[];
 }
 
@@ -124,20 +137,23 @@ function parseSettings(value: unknown, path: string): Settings {
   return {
     tuning: strings.map((midi, i) => whole(midi, `${path}.tuning[${i}]`, 0, 127)),
     fretCount: clampFretCount(fretCount),
+    capo: settings.capo === undefined ? 0 : whole(settings.capo, `${path}.capo`, 0, MAX_CAPO),
   };
 }
 
 function parseBox(value: unknown, path: string, settings: Settings): Box {
   const box = fields(value, path);
-  const positions = list(box.positions, `${path}.positions`)
-    .map((item, i) => {
-      const position = fields(item, `${path}.positions[${i}]`);
-      return {
-        string: whole(position.string, `${path}.positions[${i}].string`, 0, MAX_STRINGS - 1),
-        fret: whole(position.fret, `${path}.positions[${i}].fret`, 0, MAX_FRETS),
-      };
-    })
-    .filter((p) => p.string < settings.tuning.length && p.fret <= settings.fretCount);
+  const positions = limitChordPositions(
+    list(box.positions, `${path}.positions`)
+      .map((item, i) => {
+        const position = fields(item, `${path}.positions[${i}]`);
+        return {
+          string: whole(position.string, `${path}.positions[${i}].string`, 0, MAX_STRINGS - 1),
+          fret: whole(position.fret, `${path}.positions[${i}].fret`, 0, MAX_FRETS),
+        };
+      })
+      .filter((p) => p.string < settings.tuning.length && p.fret >= settings.capo && p.fret <= settings.fretCount),
+  );
   const color = text(box.color, `${path}.color`);
   if (!/^#[0-9a-f]{6}$/i.test(color)) throw new PresetFormatError(`${path}.color`, 'must be a color like #C8372D');
   const fill = fields(box.fill, `${path}.fill`);
@@ -166,8 +182,9 @@ export function parsePresetData(value: unknown, path = 'preset'): PresetData {
     strips: {
       visible: flag(strips.visible, `${path}.strips.visible`),
       labelMode: choice(strips.labelMode, `${path}.strips.labelMode`, LABEL_MODES),
-      compare: choice(strips.compare, `${path}.strips.compare`, COMPARE_MODES),
     },
+    orientation:
+      data.orientation === undefined ? 'horizontal' : choice(data.orientation, `${path}.orientation`, ORIENTATIONS),
     boxes: list(data.boxes, `${path}.boxes`).map((box, i) => parseBox(box, `${path}.boxes[${i}]`, settings)),
   };
 }
@@ -215,18 +232,33 @@ export function parseExportFile(source: string): ExportFile {
 // Writing
 // ---------------------------------------------------------------------------
 
-export function presetDataOf(source: {
-  readonly settings: Settings;
-  readonly key: ScaleRef;
-  readonly strips: StripSettings;
-  readonly boxes: readonly Box[];
-}): PresetData {
-  return { settings: source.settings, key: source.key, strips: source.strips, boxes: source.boxes };
+export function presetDataOf(source: PresetData): PresetData {
+  return {
+    settings: source.settings,
+    key: source.key,
+    strips: source.strips,
+    orientation: source.orientation,
+    boxes: source.boxes,
+  };
 }
 
 /** A canonical string for comparing a document with what was last saved. */
 export function snapshotOf(name: string, data: PresetData): string {
   return JSON.stringify({ name, data });
+}
+
+/**
+ * A snapshot written by an older version, rewritten as this version writes it, so a saved preset
+ * doesn't read as edited just because the format gained or lost a field. Unreadable snapshots are
+ * returned unchanged.
+ */
+export function upgradeSnapshot(snapshot: string): string {
+  try {
+    const saved = fields(JSON.parse(snapshot), 'snapshot');
+    return snapshotOf(text(saved.name, 'snapshot.name'), parsePresetData(saved.data, 'snapshot.data'));
+  } catch {
+    return snapshot;
+  }
 }
 
 export function withFreshBoxIds(data: PresetData): PresetData {
