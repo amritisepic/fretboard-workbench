@@ -19,8 +19,8 @@ export const SCALE_FAMILIES: readonly ScaleFamilyDef[] = [
     id: 'diatonic',
     name: 'Major',
     intervals: [0, 2, 4, 5, 7, 9, 11],
-    modeNames: ['Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian', 'Locrian'],
-    aliases: { 0: ['Major'], 5: ['Natural Minor'] },
+    modeNames: ['Major', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Minor', 'Locrian'],
+    aliases: { 0: ['Ionian'], 5: ['Aeolian', 'Natural Minor'] },
   },
   {
     id: 'melodicMinor',
@@ -44,13 +44,13 @@ export const SCALE_FAMILIES: readonly ScaleFamilyDef[] = [
     modeNames: [
       'Harmonic Minor',
       'Locrian ♮6',
-      'Ionian ♯5',
+      'Major ♯5',
       'Dorian ♯4',
       'Phrygian Dominant',
       'Lydian ♯2',
       'Altered ♭♭7',
     ],
-    aliases: { 2: ['Ionian Augmented'], 3: ['Ukrainian Dorian'], 6: ['Ultralocrian'] },
+    aliases: { 2: ['Ionian ♯5', 'Ionian Augmented'], 3: ['Ukrainian Dorian'], 6: ['Ultralocrian'] },
   },
   {
     id: 'harmonicMajor',

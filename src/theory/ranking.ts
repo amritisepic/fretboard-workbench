@@ -13,8 +13,8 @@ import { RANKING_WEIGHTS, SCALE_COMMONNESS } from '../data/rankingWeights';
 import { SCALE_FAMILIES } from '../data/scales';
 import type { ChordCandidate, ChordTone } from './chords';
 import { hasPc, intersect, mod12, pcSetFromIntervals, setSize, union, type PcSet, type PitchClass } from './pitch';
-import { modeIntervals, modeName, scaleRefPcSet, type ScaleRef } from './scales';
-import { chooseTonicSpelling, formatSpelled, type SpelledPc } from './spelling';
+import { modeIntervals, scaleRefName, scaleRefPcSet, type ScaleRef } from './scales';
+import { chooseTonicSpelling, type SpelledPc } from './spelling';
 import { minTotalMotion } from './voiceleading';
 
 export type ToneRole = keyof typeof RANKING_WEIGHTS.missingTone;
@@ -126,10 +126,11 @@ export function rankScales(chordPcs: PcSet, chord: ChordCandidate, options: Rank
       const vl = options.previousScale === undefined ? 0 : voiceLeadingTerm(pcs, options.previousScale);
       const score = w.fit * fitTerm - w.missing * missingPenalty + w.common * commonness + w.voiceLeading * vl;
       const tonic = options.rootSpelling ?? chooseTonicSpelling(root, intervals);
+      const ref: ScaleRef = { familyId: family.id, mode, tonic };
 
       rows.push({
-        ref: { familyId: family.id, mode, tonic },
-        name: `${formatSpelled(tonic)} ${modeName(family.id, mode)}`,
+        ref,
+        name: scaleRefName(ref),
         pcs,
         size: intervals.length,
         tier,

@@ -2,6 +2,14 @@ import { documentStatus } from '../state/documentStatus';
 import { useLibrary } from '../state/library';
 import { useWorkbench } from '../state/workbench';
 import { PresetNameField } from './PresetNameField';
+import { Segmented, type SegmentedOption } from './Segmented';
+
+type WorkbenchMode = 'edit' | 'view';
+
+const MODE_OPTIONS: readonly SegmentedOption<WorkbenchMode>[] = [
+  { value: 'edit', label: 'Edit' },
+  { value: 'view', label: 'View' },
+];
 
 export function TopBar({
   settingsOpen,
@@ -29,7 +37,7 @@ export function TopBar({
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden="true">
             <path d="M2 4.5v8h12V6H7.5L6 4.5z" />
           </svg>
-          Presets
+          <span className="topbar-tab-label">Presets</span>
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M2.5 4l2.5 2.5L7.5 4" />
           </svg>
@@ -37,6 +45,7 @@ export function TopBar({
       </div>
       <PresetNameField />
       <div className="topbar-right">
+        <ModeSwitch />
         <button
           type="button"
           className={settingsOpen ? 'topbar-tab is-open' : 'topbar-tab'}
@@ -50,10 +59,26 @@ export function TopBar({
             <circle cx="10.5" cy="4" r="1.5" />
             <circle cx="5.5" cy="12" r="1.5" />
           </svg>
-          Settings
+          <span className="topbar-tab-label">Settings</span>
         </button>
       </div>
     </header>
+  );
+}
+
+/** Edit, or view: the canvas scaled to fit the screen with the editing controls put away. */
+function ModeSwitch() {
+  const viewing = useWorkbench((s) => s.viewing);
+  const setViewing = useWorkbench((s) => s.setViewing);
+  return (
+    <div className="mode-switch">
+      <Segmented
+        label="Mode"
+        options={MODE_OPTIONS}
+        value={viewing ? 'view' : 'edit'}
+        onChange={(mode) => setViewing(mode === 'view')}
+      />
+    </div>
   );
 }
 

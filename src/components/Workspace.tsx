@@ -1,14 +1,19 @@
 import { useWorkbench } from '../state/workbench';
 import { Canvas } from './Canvas';
 
-export function Workspace() {
+export function Workspace({ onRequestRemove }: { readonly onRequestRemove: (boxId: string) => void }) {
   const hasBoxes = useWorkbench((s) => s.boxes.length > 0);
+  const viewing = useWorkbench((s) => s.viewing);
   const addBox = useWorkbench((s) => s.addBox);
 
   return (
-    <main className="workspace">
+    <main className={viewing ? 'workspace is-viewing' : 'workspace'}>
       {hasBoxes ? (
-        <Canvas />
+        <Canvas onRequestRemove={onRequestRemove} />
+      ) : viewing ? (
+        <div className="empty-state">
+          <p className="empty-note">Nothing to show yet. Switch to Edit to add a chord.</p>
+        </div>
       ) : (
         <div className="empty-state">
           <button type="button" className="add-button" aria-label="Add a box" onClick={() => addBox()}>

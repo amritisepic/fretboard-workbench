@@ -29,6 +29,7 @@ export function Sidebar({ box }: { readonly box: Box }) {
   const transposeBox = useWorkbench((s) => s.transposeBox);
   const setScale = useWorkbench((s) => s.setScale);
   const setLabelMode = useWorkbench((s) => s.setLabelMode);
+  const selectBox = useWorkbench((s) => s.selectBox);
   const setDegreeBasis = useWorkbench((s) => s.setDegreeBasis);
   const setFillOn = useWorkbench((s) => s.setFillOn);
   const setFillMode = useWorkbench((s) => s.setFillMode);
@@ -52,6 +53,10 @@ export function Sidebar({ box }: { readonly box: Box }) {
   return (
     <aside className="sidebar" aria-label="Box settings">
       <div className="sidebar-body">
+        {/* Shown where the sidebar covers the canvas (tablets and phones). */}
+        <button type="button" className="button is-compact sidebar-close" onClick={() => selectBox(null)}>
+          Done
+        </button>
         <RootBox root={formatSpelled(box.scale.tonic)} onStep={(semitones) => transposeBox(box.id, semitones)} />
         <ScalePicker box={box} />
         <ChordNameField box={box} view={view} />

@@ -11,6 +11,7 @@ import { useWorkbench } from './state/workbench';
 
 export function App() {
   const selectedBox = useWorkbench((s) => s.boxes.find((box) => box.id === s.selectedBoxId));
+  const viewing = useWorkbench((s) => s.viewing);
   const removeBox = useWorkbench((s) => s.removeBox);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
@@ -45,8 +46,8 @@ export function App() {
         }}
       />
       <div className="main">
-        <Workspace />
-        {selectedBox && <Sidebar box={selectedBox} />}
+        <Workspace onRequestRemove={setPendingDelete} />
+        {selectedBox && !viewing && <Sidebar box={selectedBox} />}
       </div>
       {settingsOpen && <SettingsPanel onClose={closeSettings} />}
       {explorerOpen && <ExplorerPanel onClose={closeExplorer} />}

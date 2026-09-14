@@ -20,7 +20,7 @@ export const MIN_STRINGS = 4;
 export const MAX_STRINGS = 9;
 export const MIN_FRETS = 12;
 export const MAX_FRETS = 30;
-export const DEFAULT_FRET_COUNT = 24;
+export const DEFAULT_FRET_COUNT = 12;
 /** Below MIN_FRETS, so a capo always leaves frets to play. */
 export const MAX_CAPO = 11;
 /** A chord holds one note per string, and this many notes at most. */

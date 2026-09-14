@@ -27,13 +27,11 @@ import {
   scaleRefPcSet,
   type ScaleRef,
 } from './scales';
-import { formatSpelled, pcOfSpelled, spellPc, spellScale } from './spelling';
+import { pcOfSpelled, spellPc, spellScale } from './spelling';
 import { compareKeys } from './util';
 
-/** "C major", "A minor", otherwise the scale's own name ("A♭ Lydian"). */
+/** "C major", "A minor", "A♭ Lydian": a key is named like its scale. */
 export function keyName(key: ScaleRef): string {
-  if (key.familyId === 'diatonic' && key.mode === 0) return `${formatSpelled(key.tonic)} major`;
-  if (key.familyId === 'diatonic' && key.mode === 5) return `${formatSpelled(key.tonic)} minor`;
   return scaleRefName(key);
 }
 

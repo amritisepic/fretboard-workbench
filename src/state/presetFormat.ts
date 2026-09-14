@@ -32,8 +32,9 @@ const DEGREE_BASES: readonly DegreeBasis[] = ['key', 'scale'];
 
 /**
  * Everything a preset stores (spec §7). Its name is kept alongside. Fields added after version 1
- * (the capo, the orientation and each box's degree basis) are optional when reading, and fields since
- * removed (the strips' chords/scales choice) are ignored, so older files still load.
+ * (the capo, the orientation, each box's degree basis, and separate common-tone and voice-leading
+ * switches) are optional when reading, and fields since removed (the strips' chords/scales choice, and
+ * their single visibility switch, which now sets both parts) are handled, so older files still load.
  */
 export interface PresetData {
   readonly settings: Settings;
@@ -189,11 +190,16 @@ export function parsePresetData(value: unknown, path = 'preset'): PresetData {
   const data = fields(value, path);
   const settings = parseSettings(data.settings, `${path}.settings`);
   const strips = fields(data.strips, `${path}.strips`);
+  // Before common tones and voice leading had separate switches, one "visible" switch covered both.
+  const legacyVisible = strips.visible === undefined ? true : flag(strips.visible, `${path}.strips.visible`);
+  const part = (name: 'commonTones' | 'voiceLeading') =>
+    strips[name] === undefined ? legacyVisible : flag(strips[name], `${path}.strips.${name}`);
   return {
     settings,
     key: parseScaleRef(data.key, `${path}.key`),
     strips: {
-      visible: flag(strips.visible, `${path}.strips.visible`),
+      commonTones: part('commonTones'),
+      voiceLeading: part('voiceLeading'),
       labelMode: choice(strips.labelMode, `${path}.strips.labelMode`, LABEL_MODES),
     },
     orientation:

@@ -80,7 +80,7 @@ describe('scale ranking', () => {
     const byName = (name: string) => rows.find((r) => r.name === name);
     expect(byName('C Locrian')?.tier).toBe(0);
     expect(byName('C Dorian')?.tier).toBe(1); // only the ♭5 is missing (penalty 8)
-    expect(byName('C Ionian')?.tier).toBe(2); // ♭3, ♭5 and ♭7 missing
+    expect(byName('C major')?.tier).toBe(2); // ♭3, ♭5 and ♭7 missing
     const tiers = rows.map((r) => r.tier);
     expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
     const tier2 = rows.filter((r) => r.tier === 2).map((r) => r.intersection);
@@ -127,10 +127,10 @@ describe('key pinning', () => {
     expect(rows.some((r) => r.pinned)).toBe(false);
   });
 
-  it('pins D Dorian for Dm7 in C major even though D Aeolian and D minor pentatonic score higher', () => {
+  it('pins D Dorian for Dm7 in C major even though D minor and D minor pentatonic score higher', () => {
     const dm7 = chordOf([50, 53, 57, 60]);
     const unpinned = rankScales(dm7.set, dm7.candidate).rows.map((r) => r.name);
-    expect(unpinned.indexOf('D Aeolian')).toBeLessThan(unpinned.indexOf('D Dorian'));
+    expect(unpinned.indexOf('D minor')).toBeLessThan(unpinned.indexOf('D Dorian'));
     const { rows } = rankScales(dm7.set, dm7.candidate, { key: makeScaleRef('diatonic', 0, 'C') });
     expect(rows[0]).toMatchObject({ name: 'D Dorian', pinned: true });
   });

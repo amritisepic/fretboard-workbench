@@ -29,7 +29,7 @@ export function VoiceLeadingStrip({ strip, wrapped }: { readonly strip: StripVie
         <span>{strip.toTitle}</span>
       </p>
       {strip.voices.length === 0 ? (
-        <p className="strip-empty">No notes to compare</p>
+        <p className="strip-empty">{strip.emptyText}</p>
       ) : (
         <svg
           className="strip-svg"
@@ -73,9 +73,7 @@ export function VoiceLeadingStrip({ strip, wrapped }: { readonly strip: StripVie
           })}
         </svg>
       )}
-      <p className="strip-summary">
-        {strip.totalMotion} {strip.totalMotion === 1 ? 'semitone' : 'semitones'} · {strip.commonTones} common
-      </p>
+      <p className="strip-summary">{strip.summary}</p>
     </div>
   );
 }

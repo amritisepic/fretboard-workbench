@@ -88,8 +88,8 @@ export function useKeyboardShortcuts({
       }
       if (explorerOpen || event.metaKey || event.ctrlKey || event.altKey || isTextEntry(event.target)) return;
 
-      const { selectedBoxId, toggleFill, transposeBox } = useWorkbench.getState();
-      if (selectedBoxId === null) return;
+      const { selectedBoxId, viewing, toggleFill, transposeBox } = useWorkbench.getState();
+      if (viewing || selectedBoxId === null) return;
 
       if (event.key === ' ') {
         if (isControl(event.target) && reachedByKeyboard) return;

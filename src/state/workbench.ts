@@ -57,9 +57,12 @@ export interface Settings {
   readonly capo: number;
 }
 
-/** Voice-leading strips between adjacent boxes. Global to the preset. */
+/** Strips between adjacent boxes. Global to the preset; a strip shows while either part is on. */
 export interface StripSettings {
-  readonly visible: boolean;
+  /** Lines for the tones the two chords share. */
+  readonly commonTones: boolean;
+  /** Lines for the voices that move, and for tones added or dropped. */
+  readonly voiceLeading: boolean;
   /** Note names or scale degrees, independent of the boxes' own label modes. */
   readonly labelMode: LabelMode;
 }
@@ -92,10 +95,14 @@ export interface WorkbenchState {
   readonly orientation: Orientation;
   readonly boxes: readonly Box[];
   readonly selectedBoxId: string | null;
+  /** View mode: the canvas as a read-only presentation, scaled to fit. Not saved. */
+  readonly viewing: boolean;
   readonly document: DocumentState;
   /** Appends a box in the key in effect after the last box and selects it. */
   addBox(): string;
   selectBox(id: string | null): void;
+  /** Entering view mode deselects the box. */
+  setViewing(viewing: boolean): void;
   removeBox(id: string): void;
   /** A fretboard click (see toggleChordPosition). False when the chord is full and nothing changed. */
   togglePosition(id: string, position: FretPosition): boolean;
@@ -159,7 +166,7 @@ export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): B
 const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 'orientation' | 'boxes'> => ({
   settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0 },
   key: makeScaleRef('diatonic', 0, 'C'),
-  strips: { visible: true, labelMode: 'names' },
+  strips: { commonTones: true, voiceLeading: true, labelMode: 'names' },
   orientation: 'horizontal',
   boxes: [],
 });
@@ -192,6 +199,7 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
   return {
     ...defaultContent(),
     selectedBoxId: null,
+    viewing: false,
     document: { presetId: null, name: UNTITLED_PRESET, savedSnapshot: null },
 
     addBox: () => {
@@ -205,6 +213,7 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
       return id;
     },
     selectBox: (id) => set({ selectedBoxId: id }),
+    setViewing: (viewing) => set((state) => ({ viewing, selectedBoxId: viewing ? null : state.selectedBoxId })),
     removeBox: (id) =>
       set((state) => ({
         boxes: state.boxes.filter((box) => box.id !== id),

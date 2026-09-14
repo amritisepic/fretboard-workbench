@@ -69,11 +69,21 @@ button:disabled {
 
 /* ---- Layout ---------------------------------------------------------- */
 
+/* The column may shrink below its content, so wide necks and the toolbar scroll inside the page
+   rather than widening it (which made phones zoom out). */
 .app {
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   height: 100%;
+}
+
+/* Mobile browsers' toolbars come and go; the dynamic viewport height follows them. */
+@supports (height: 100dvh) {
+  .app {
+    height: 100dvh;
+  }
 }
 
 .topbar {
@@ -95,7 +105,19 @@ button:disabled {
 
 .topbar-right {
   display: flex;
+  align-items: flex-end;
   justify-content: flex-end;
+  gap: 14px;
+  height: 100%;
+}
+
+.mode-switch {
+  align-self: center;
+}
+
+.mode-switch .segmented button {
+  padding: 4px 12px;
+  font-size: 12.5px;
 }
 
 .save-button {
@@ -488,6 +510,7 @@ button:disabled {
 /* ---- Boxes ----------------------------------------------------------- */
 
 .box {
+  position: relative;
   max-width: 100%;
   padding: 18px 22px 10px;
   border: 1px solid var(--rule-strong);
@@ -508,7 +531,51 @@ button:disabled {
   gap: 4px 14px;
   min-height: 30px;
   margin: 0 0 10px 2px;
+  padding-right: 26px;
   contain: inline-size;
+}
+
+.box.is-viewing .box-header {
+  padding-right: 0;
+}
+
+.box-remove {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-faint);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.box-remove svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
+.box-remove:hover,
+.box-remove:focus-visible {
+  border-color: var(--danger);
+  background: var(--paper);
+  color: var(--danger);
+}
+
+.fretboard-scroll {
+  max-width: 100%;
 }
 
 .box-notice {
@@ -549,6 +616,62 @@ button:disabled {
 
 .degree-basis .hint {
   margin-top: 8px;
+}
+
+.sidebar-close {
+  display: none;
+  align-self: flex-end;
+  margin-bottom: -14px;
+}
+
+/* ---- Toolbar switches and view mode ---------------------------------- */
+
+.toolbar-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace.is-viewing {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workspace.is-viewing .canvas-toolbar {
+  flex: none;
+}
+
+.canvas-frame.is-viewing {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas-frame.is-viewing > .canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* View mode lays everything out at natural size and scales the whole canvas, so nothing is capped
+   to the frame's width first (which squeezed boxes while their necks kept full size). */
+.canvas-frame.is-viewing .box-group,
+.canvas-frame.is-viewing .box,
+.canvas-frame.is-viewing .fretboard-scroll,
+.canvas-frame.is-viewing .fretboard {
+  max-width: none;
+}
+
+.canvas-frame.is-viewing .box-group {
+  flex-shrink: 0;
+}
+
+.empty-note {
+  color: var(--ink-faint);
+  font-size: 15px;
 }
 
 /* ---- Fretboard ------------------------------------------------------- */
@@ -606,19 +729,92 @@ button:disabled {
   transition: fill 0.12s ease;
 }
 
+.fretboard.is-static .position circle {
+  cursor: default;
+}
+
 .fretboard .position-empty circle {
   fill: transparent;
 }
 
-.fretboard .position-empty:hover circle {
-  stroke: var(--ink);
-  stroke-dasharray: 2.5 2.5;
-  stroke-opacity: 0.45;
+@media (hover: hover) {
+  .fretboard:not(.is-static) .position-empty:hover circle {
+    stroke: var(--ink);
+    stroke-dasharray: 2.5 2.5;
+    stroke-opacity: 0.45;
+  }
 }
 
-.fretboard circle[data-ring] {
-  stroke: var(--ink);
-  stroke-width: 2;
+/* Clicked notes: a lit core, a crisp ring, a slow pulse and a highlight travelling round the ring. */
+.fretboard .is-clicked .dot-halo,
+.fretboard .is-clicked .dot-ring,
+.fretboard .is-clicked .dot-orbit {
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.fretboard .dot-halo {
+  opacity: 0;
+  animation: dot-pulse 3s ease-out infinite;
+  animation-delay: var(--dot-delay, 0s);
+}
+
+.fretboard .dot-ring {
+  fill: none;
+  stroke-width: 1.75;
+}
+
+.fretboard .dot-orbit {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 2.25;
+  animation: dot-orbit 3.2s linear infinite;
+  animation-delay: var(--dot-delay, 0s);
+}
+
+.fretboard .dot-core {
+  stroke: var(--paper);
+  stroke-width: 1.25;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+@media (hover: hover) {
+  .fretboard:not(.is-static) .is-clicked:hover .dot-core {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes dot-pulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@keyframes dot-orbit {
+  to {
+    transform: rotate(-1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fretboard .dot-halo,
+  .fretboard .dot-orbit {
+    animation: none;
+  }
+
+  .fretboard .dot-halo {
+    display: none;
+  }
 }
 
 .fretboard .dot-label {
@@ -1575,21 +1771,130 @@ kbd {
   color: #fff;
 }
 
-@media (max-width: 760px) {
-  .workspace {
-    padding: 16px;
-  }
+/* ---- Tablets: the sidebar slides over the canvas ------------------------ */
 
-  .canvas-toolbar {
-    margin: -16px -16px 16px;
-    padding: 12px 16px;
-  }
-
+@media (max-width: 1024px) {
   .sidebar {
     position: absolute;
     z-index: 10;
     top: 56px;
     right: 0;
     bottom: 0;
+    width: min(360px, 100%);
+  }
+
+  .sidebar-close {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .canvas-toolbar {
+    gap: 10px 22px;
+  }
+}
+
+/* ---- Phones ------------------------------------------------------------ */
+
+@media (max-width: 760px) {
+  /* The name takes whatever width the buttons leave. */
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .preset-name {
+    justify-content: center;
+  }
+
+  .topbar-tab {
+    padding: 9px 10px 11px;
+  }
+
+  .topbar-tab-label,
+  .preset-status {
+    display: none;
+  }
+
+  .preset-name-input {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    font-size: 14px;
+  }
+
+  .topbar-right {
+    gap: 6px;
+  }
+
+  .mode-switch .segmented button {
+    padding: 4px 8px;
+  }
+
+  .workspace {
+    padding: 16px;
+  }
+
+  /* One scrolling row, so the sticky toolbar stays short. */
+  .canvas-toolbar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 18px;
+    margin: -16px -16px 16px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .toolbar-group {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+
+  /* Strips sit above their box instead of beside it. */
+  .box-group-body {
+    flex-direction: column;
+  }
+
+  .strip {
+    width: auto;
+    padding: 4px 0 12px;
+  }
+
+  .box-spacer {
+    display: none;
+  }
+
+  .box {
+    padding: 14px 14px 8px;
+  }
+
+  /* Notes keep a finger-sized target: a wide neck scrolls sideways instead of shrinking. */
+  .fretboard-scroll {
+    overflow-x: auto;
+  }
+
+  .fretboard-scroll .fretboard {
+    max-width: none;
+  }
+
+  .canvas-frame.is-viewing .fretboard-scroll {
+    overflow: visible;
+  }
+
+  .add-slot {
+    padding: 12px 0 0;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .settings-panel,
+  .explorer-panel {
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
   }
 }

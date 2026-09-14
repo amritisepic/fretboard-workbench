@@ -27,7 +27,7 @@ describe('box view', () => {
   it('names the chord from the clicked notes', () => {
     const view = buildBoxView(amOverC, settings);
     expect(view.title).toBe('Am/C');
-    expect(view.scaleName).toBe('C Ionian');
+    expect(view.scaleName).toBe('C major');
     expect(buildBoxView(createBox(), settings).title).toBe('');
   });
 

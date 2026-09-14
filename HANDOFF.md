@@ -15,7 +15,7 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 169 tests in 17 files, about 6 s.
+- `npm.cmd test`: 178 tests in 17 files, about 16 s (most of it the exhaustive pitch-set tests).
 - `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json`.
 - `npm.cmd run build`, then `npm.cmd run preview`: http://localhost:4173.
 - `npm.cmd run verify:pwa`: builds, then checks every `dist` file is precached and the manifest is installable.
@@ -106,6 +106,14 @@
 - **Voice-leading strips** compare scales when both boxes are set to fill scale; the chords/scales switch was removed.
 - **Ranking** rows all start on the chord root. Tier-0 modes of the key in effect are pinned first.
 - **The tier-1 limit is 8.**
+- **Names:** Ionian and Aeolian read "Major" and "Minor" everywhere; after a tonic they are lower case, like key names ("C major", "A minor").
+- **Default fret count is 12.**
+- **Strips** have separate Common tones and Voice leading switches; either one on shows a strip. Old presets' single "visible" switch sets both.
+- **Edit / View** switch in the top bar. View mode hides the sidebar, the add button, each box's remove button and the Key/Find key/Shift controls, disables note clicks and shortcuts, and scales the whole canvas to fit (`useFitToFrame`: tries layout widths up to a single row, enlarges at most 1.5×). It isn't saved.
+- **Each box has an "x"** that removes it after the same confirmation as the Delete key.
+- **Clicked notes** have a gradient core, a crisp ring, a slow pulse and an orbiting highlight, all in the box color (the user asked for this despite the no-gradients design rule); reduced motion turns the animation off.
+- **Responsive:** at 1024px and below the sidebar slides over the canvas with a Done button. At 760px and below the top bar uses icons, the toolbar is one scrolling row, strips sit above their box, and wide necks scroll sideways so notes stay finger-sized.
+- **Harmonic analysis** is scoped in `docs/harmonic-analysis-plan.md`, with open decisions. Nothing there is built yet.
 - **Key bar** (`planKeys`, weights in `data/keyPlanWeights.ts`): the cheapest sequence of keys from the preset key. A scale that alters the key changes it but keeps the tonic (G Mixolydian ♭2 in C minor → C Harmonic Major; A♭ Lydian in C major → C minor). A passing chord whose scale lacks the tonic stays in the key as chromatic (F♯7 in C minor is ♯IV). The tonic moves only for about three such chords in a row, or two at the end. This replaced the old "new region per new note collection" rule, and test 10 was amended to match.
 - **Two bars** above the boxes: key regions, then each box's reference scale. Numerals count from the key bar.
 - **Degree labels** count from the key in effect by default; each box can switch to its reference scale, and the strips follow that choice.

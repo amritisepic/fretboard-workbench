@@ -42,11 +42,11 @@ describe('ranking view', () => {
   });
 
   it('draws one strip cell per degree and highlights chord tones', () => {
-    const aeolian = allRows(am).find((row) => row.scale.name === 'A Aeolian');
+    const aeolian = allRows(am).find((row) => row.scale.name === 'A minor');
     expect(aeolian?.cells.map((c) => c.label)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
     expect(aeolian?.cells.filter((c) => c.chordTone).map((c) => c.label)).toEqual(['A', 'C', 'E']);
 
-    const degrees = allRows({ ...am, labelMode: 'degrees' }).find((row) => row.scale.name === 'A Aeolian');
+    const degrees = allRows({ ...am, labelMode: 'degrees' }).find((row) => row.scale.name === 'A minor');
     expect(degrees?.cells.map((c) => c.label)).toEqual(['1', '2', '♭3', '4', '5', '♭6', '♭7']);
 
     const octatonic = allRows(am).find((row) => row.scale.name === 'A Half-Whole Diminished');
@@ -54,9 +54,9 @@ describe('ranking view', () => {
   });
 
   it('marks the row matching the reference scale by collection and tonic', () => {
-    expect(allRows(am).some((row) => row.selected)).toBe(false); // C Ionian: right notes, wrong tonic
+    expect(allRows(am).some((row) => row.selected)).toBe(false); // C major: right notes, wrong tonic
     const selected = allRows({ ...am, scale: makeScaleRef('diatonic', 5, 'A') }).filter((row) => row.selected);
-    expect(selected.map((row) => row.scale.name)).toEqual(['A Aeolian']);
+    expect(selected.map((row) => row.scale.name)).toEqual(['A minor']);
   });
 
   it('names the missing tones of tier-1 scales', () => {
@@ -81,7 +81,7 @@ describe('ranking view', () => {
   it('pins the key-in-effect mode that contains the chord', () => {
     const inCMajor = buildRankingView(am, buildBoxView(am, settings), undefined, makeScaleRef('diatonic', 0, 'C'));
     expect(inCMajor?.sections[0].id).toBe('pinned');
-    expect(inCMajor?.sections[0].rows.map((row) => row.scale.name)).toEqual(['A Aeolian']);
+    expect(inCMajor?.sections[0].rows.map((row) => row.scale.name)).toEqual(['A minor']);
   });
 
   it('has nothing to rank without a chord', () => {

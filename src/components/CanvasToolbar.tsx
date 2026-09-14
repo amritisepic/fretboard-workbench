@@ -15,7 +15,10 @@ const ORIENTATION_OPTIONS: readonly SegmentedOption<Orientation>[] = [
   { value: 'vertical', label: 'Vertical' },
 ];
 
-/** Preset-wide controls above the boxes: the key, shifting everything, the neck, and the voice-leading strips. */
+/**
+ * Preset-wide controls above the boxes: the key and shifting everything (edit mode only), the neck,
+ * and what the strips between boxes show.
+ */
 export function CanvasToolbar() {
   const key = useWorkbench((s) => s.key);
   const setKey = useWorkbench((s) => s.setKey);
@@ -25,6 +28,7 @@ export function CanvasToolbar() {
   const setOrientation = useWorkbench((s) => s.setOrientation);
   const strips = useWorkbench((s) => s.strips);
   const setStrips = useWorkbench((s) => s.setStrips);
+  const viewing = useWorkbench((s) => s.viewing);
   const hasChord = useWorkbench((s) => s.boxes.some((box) => boxChord(box, s.settings).chord !== null));
 
   const findKey = () => {
@@ -35,69 +39,72 @@ export function CanvasToolbar() {
 
   return (
     <div className="canvas-toolbar">
-      <div className="toolbar-group" role="group" aria-label={`Key: ${keyName(key)}`}>
-        <span className="toolbar-label">Key</span>
-        <ScaleSelects scale={key} label="Key" onChange={setKey} />
-        <button
-          type="button"
-          className="button is-compact"
-          disabled={!hasChord}
-          title={
-            hasChord
-              ? 'Find the key of the progression, and give each chord the scale closest to it'
-              : 'Add chords to find their key'
-          }
-          onClick={findKey}
-        >
-          Find key
-        </button>
-      </div>
-      <div className="toolbar-group" role="group" aria-labelledby="shift-label">
-        <span className="toolbar-label" id="shift-label">
-          Shift
-        </span>
-        <div className="stepper">
-          <button
-            type="button"
-            aria-label="Shift every chord, scale and the key down a semitone"
-            title="Down a semitone"
-            onClick={() => transposeAll(-1)}
-          >
-            −
-          </button>
-          <button
-            type="button"
-            aria-label="Shift every chord, scale and the key up a semitone"
-            title="Up a semitone"
-            onClick={() => transposeAll(1)}
-          >
-            +
-          </button>
-        </div>
-      </div>
+      {!viewing && (
+        <>
+          <div className="toolbar-group" role="group" aria-label={`Key: ${keyName(key)}`}>
+            <span className="toolbar-label">Key</span>
+            <ScaleSelects scale={key} label="Key" onChange={setKey} />
+            <button
+              type="button"
+              className="button is-compact"
+              disabled={!hasChord}
+              title={
+                hasChord
+                  ? 'Find the key of the progression, and give each chord the scale closest to it'
+                  : 'Add chords to find their key'
+              }
+              onClick={findKey}
+            >
+              Find key
+            </button>
+          </div>
+          <div className="toolbar-group" role="group" aria-labelledby="shift-label">
+            <span className="toolbar-label" id="shift-label">
+              Shift
+            </span>
+            <div className="stepper">
+              <button
+                type="button"
+                aria-label="Shift every chord, scale and the key down a semitone"
+                title="Down a semitone"
+                onClick={() => transposeAll(-1)}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                aria-label="Shift every chord, scale and the key up a semitone"
+                title="Up a semitone"
+                onClick={() => transposeAll(1)}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </>
+      )}
       <div className="toolbar-group" role="group" aria-labelledby="neck-label">
         <span className="toolbar-label" id="neck-label">
           Neck
         </span>
         <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
       </div>
-      <div className="toolbar-group" role="group" aria-label="Voice leading">
-        <span className="toolbar-label" id="strips-label">
-          Voice leading
-        </span>
-        <button
-          type="button"
-          role="switch"
-          className="toggle"
-          aria-checked={strips.visible}
-          aria-labelledby="strips-label"
-          onClick={() => setStrips({ visible: !strips.visible })}
-        >
-          <span className="toggle-knob" />
-        </button>
-        {strips.visible && (
+      <div className="toolbar-group" role="group" aria-label="Lines between boxes">
+        <ToolbarSwitch
+          id="common-tones-label"
+          label="Common tones"
+          checked={strips.commonTones}
+          onChange={(commonTones) => setStrips({ commonTones })}
+        />
+        <ToolbarSwitch
+          id="voice-leading-label"
+          label="Voice leading"
+          checked={strips.voiceLeading}
+          onChange={(voiceLeading) => setStrips({ voiceLeading })}
+        />
+        {(strips.commonTones || strips.voiceLeading) && (
           <Segmented
-            label="Voice-leading labels"
+            label="Labels between boxes"
             options={LABEL_OPTIONS}
             value={strips.labelMode}
             onChange={(labelMode) => setStrips({ labelMode })}
@@ -105,5 +112,35 @@ export function CanvasToolbar() {
         )}
       </div>
     </div>
+  );
+}
+
+function ToolbarSwitch({
+  id,
+  label,
+  checked,
+  onChange,
+}: {
+  readonly id: string;
+  readonly label: string;
+  readonly checked: boolean;
+  readonly onChange: (checked: boolean) => void;
+}) {
+  return (
+    <span className="toolbar-switch">
+      <span className="toolbar-label" id={id}>
+        {label}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        className="toggle"
+        aria-checked={checked}
+        aria-labelledby={id}
+        onClick={() => onChange(!checked)}
+      >
+        <span className="toggle-knob" />
+      </button>
+    </span>
   );
 }

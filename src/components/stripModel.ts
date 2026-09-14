@@ -25,6 +25,10 @@ export interface StripView {
   readonly voices: readonly StripVoice[];
   readonly totalMotion: number;
   readonly commonTones: number;
+  /** "3 semitones · 1 common", or just the part the strip settings show. */
+  readonly summary: string;
+  /** What to say when no voice is left to draw. */
+  readonly emptyText: string;
   /** Plain-language summary for assistive technology. */
   readonly description: string;
 }
@@ -32,8 +36,9 @@ export interface StripView {
 const signed = (n: number) => `${n > 0 ? '+' : '−'}${Math.abs(n)}`;
 
 /**
- * The voice-leading strip between two adjacent boxes (spec §4.6). The boxes' fill switches choose
- * what is compared: scales when both are set to fill scale, chords otherwise.
+ * The strip between two adjacent boxes (spec §4.6). The boxes' fill switches choose what is compared:
+ * scales when both are set to fill scale, chords otherwise. The strip settings choose what is drawn:
+ * common tones, moving voices (with added and dropped tones), or both.
  */
 export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: StripSettings): StripView {
   const compared: StripCompare = from.box.fill.mode === 'scale' && to.box.fill.mode === 'scale' ? 'scales' : 'chords';
@@ -68,7 +73,20 @@ export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: Strip
       voice: { kind: 'added' as const, from: null, to: label(to, pc), semitones: 0, interval: '' },
     })),
   ];
-  const voices = placed.sort((a, b) => b.height - a.height).map((p) => p.voice);
+  const shown = (voice: StripVoice) => (voice.kind === 'common' ? strips.commonTones : strips.voiceLeading);
+  const voices = placed
+    .filter((p) => shown(p.voice))
+    .sort((a, b) => b.height - a.height)
+    .map((p) => p.voice);
+  const commonTones = leading.motions.filter((m) => m.distance === 0).length;
+  const summary = [
+    strips.voiceLeading ? `${leading.totalMotion} ${leading.totalMotion === 1 ? 'semitone' : 'semitones'}` : '',
+    strips.commonTones ? `${commonTones} common` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const emptyText =
+    placed.length === 0 ? 'No notes to compare' : strips.voiceLeading ? 'No voices move' : 'No common tones';
 
   const titleOf = (entry: CanvasEntry) =>
     compared === 'scales' ? entry.view.scaleName : entry.view.title || 'No notes';
@@ -89,10 +107,12 @@ export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: Strip
     toTitle,
     voices,
     totalMotion: leading.totalMotion,
-    commonTones: leading.motions.filter((m) => m.distance === 0).length,
+    commonTones,
+    summary,
+    emptyText,
     description:
       voices.length === 0
-        ? `No notes to compare between ${fromTitle} and ${toTitle}.`
-        : `Voice leading from ${fromTitle} to ${toTitle}: ${voices.map(phrase).join('; ')}. Total motion ${leading.totalMotion} semitones.`,
+        ? `${emptyText} between ${fromTitle} and ${toTitle}.`
+        : `From ${fromTitle} to ${toTitle}: ${voices.map(phrase).join('; ')}. ${summary}.`,
   };
 }

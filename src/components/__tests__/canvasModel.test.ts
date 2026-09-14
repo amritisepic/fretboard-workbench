@@ -48,7 +48,7 @@ describe('canvas model', () => {
       settings,
       makeScaleRef('diatonic', 5, 'C'),
     );
-    expect(model.entries.map((e) => e.view.scaleName)).toEqual(['F♯ Mixolydian', 'G Mixolydian ♭2', 'C Aeolian']);
+    expect(model.entries.map((e) => e.view.scaleName)).toEqual(['F♯ Mixolydian', 'G Mixolydian ♭2', 'C minor']);
     expect(model.entries.map((e) => e.keyName)).toEqual(['C minor', 'C Harmonic Major', 'C minor']);
     expect(model.entries.map((e) => e.numeral)).toEqual(['♯IV', 'V', 'i']);
   });

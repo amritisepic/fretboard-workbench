@@ -14,7 +14,7 @@ import { createBox } from '../workbench';
 const sample = (): PresetData => ({
   settings: { tuning: [35, 40, 45, 50, 55, 59, 64], fretCount: 22, capo: 1 },
   key: makeScaleRef('diatonic', 5, 'A'),
-  strips: { visible: false, labelMode: 'degrees' },
+  strips: { commonTones: false, voiceLeading: true, labelMode: 'degrees' },
   orientation: 'vertical',
   boxes: [
     {
@@ -71,7 +71,7 @@ describe('preset data', () => {
       delete json.settings.capo;
       delete json.orientation;
       delete json.boxes[0].degreeBasis;
-      (json.strips as Record<string, unknown>).compare = 'scales';
+      json.strips = { visible: false, labelMode: 'degrees', compare: 'scales' };
       json.boxes[1].positions = [
         { string: 0, fret: 3 },
         { string: 0, fret: 5 },
@@ -81,7 +81,7 @@ describe('preset data', () => {
     expect(data.settings.capo).toBe(0);
     expect(data.orientation).toBe('horizontal');
     expect(data.boxes[0].degreeBasis).toBe('key');
-    expect(data.strips).toEqual({ visible: false, labelMode: 'degrees' });
+    expect(data.strips).toEqual({ commonTones: false, voiceLeading: false, labelMode: 'degrees' });
     expect(data.boxes[1].positions).toEqual([1, 2, 3, 4, 5, 6].map((string) => ({ string, fret: 2 })));
   });
 

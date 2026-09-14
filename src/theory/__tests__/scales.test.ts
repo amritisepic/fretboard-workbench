@@ -23,7 +23,7 @@ import { formatSpelled, pcOfSpelled } from '../spelling';
 const STANDARD_GUITAR = [40, 45, 50, 55, 59, 64];
 
 describe('mode slider', () => {
-  it('C Ionian at slider position 2 is D Dorian with the same pitch classes', () => {
+  it('C major at slider position 2 is D Dorian with the same pitch classes', () => {
     const cIonian = makeScaleRef('diatonic', 0, 'C');
     const dDorian = withMode(cIonian, 1);
     expect(scaleRefPcSet(dDorian)).toBe(scaleRefPcSet(cIonian));
@@ -76,7 +76,7 @@ describe('mode slider', () => {
       'Melodic Minor', 'Dorian ♭2', 'Lydian Augmented', 'Lydian Dominant', 'Mixolydian ♭6', 'Locrian ♮2', 'Altered',
     ]);
     expect(names('harmonicMinor')).toEqual([
-      'Harmonic Minor', 'Locrian ♮6', 'Ionian ♯5', 'Dorian ♯4', 'Phrygian Dominant', 'Lydian ♯2', 'Altered ♭♭7',
+      'Harmonic Minor', 'Locrian ♮6', 'Major ♯5', 'Dorian ♯4', 'Phrygian Dominant', 'Lydian ♯2', 'Altered ♭♭7',
     ]);
     expect(modeName('doubleHarmonic', 3)).toBe('Hungarian Minor');
     expect(modeIntervals('doubleHarmonic', 3)).toEqual([0, 2, 3, 6, 7, 8, 11]);
@@ -87,7 +87,7 @@ describe('mode slider', () => {
       'Harmonic Major', 'Dorian ♭5', 'Phrygian ♭4', 'Lydian ♭3', 'Mixolydian ♭2', 'Lydian ♯2 ♯5', 'Locrian ♭♭7',
     ]);
     expect([1, 2, 4, 5, 6].map((m) => modeName('doubleHarmonic', m))).toEqual([
-      'Lydian ♯2 ♯6', 'Phrygian ♭4 ♭♭7', 'Mixolydian ♭2 ♭5', 'Ionian ♯2 ♯5', 'Locrian ♭♭3 ♭♭7',
+      'Lydian ♯2 ♯6', 'Phrygian ♭4 ♭♭7', 'Mixolydian ♭2 ♭5', 'Major ♯2 ♯5', 'Locrian ♭♭3 ♭♭7',
     ]);
   });
 
@@ -98,7 +98,7 @@ describe('mode slider', () => {
   });
 
   it('prefers keeping the 3rd when two base modes need equally many alterations', () => {
-    // Neapolitan major mode 4 is 1 2 3 ♯4 5 ♭6 ♭7, which has a major 3rd, so it is not "Aeolian ♮3 ♯4".
+    // Neapolitan major mode 4 is 1 2 3 ♯4 5 ♭6 ♭7, which has a major 3rd, so it is not "Minor ♮3 ♯4".
     expect(modeName('neapolitanMajor', 3)).toBe('Mixolydian ♯4 ♭6');
     expect(modeName('neapolitanMajor', 4)).toBe('Mixolydian ♭5 ♭6');
   });
@@ -115,8 +115,8 @@ describe('scale selector helpers', () => {
   });
 
   it('changes family or mode on the same tonic pitch and respells it', () => {
-    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 5, 'C♯'), 'diatonic', 0))).toBe('D♭ Ionian');
-    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 5, 'F♯'), 'diatonic', 0))).toBe('F♯ Ionian');
+    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 5, 'C♯'), 'diatonic', 0))).toBe('D♭ major');
+    expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 5, 'F♯'), 'diatonic', 0))).toBe('F♯ major');
     expect(scaleRefName(withFamilyMode(makeScaleRef('diatonic', 0, 'D'), 'melodicMinor', 6))).toBe('D Altered');
   });
 
@@ -136,12 +136,12 @@ describe('scale selector helpers', () => {
 describe('root box', () => {
   const cIonian = makeScaleRef('diatonic', 0, 'C');
 
-  it('transposing C Ionian up a semitone gives D♭ Ionian with the same structure', () => {
+  it('transposing C major up a semitone gives D♭ major with the same structure', () => {
     const up = transposeScaleRef(cIonian, 1);
-    expect(scaleRefName(up)).toBe('D♭ Ionian');
+    expect(scaleRefName(up)).toBe('D♭ major');
     expect(scaleRefIntervals(up)).toEqual(scaleRefIntervals(cIonian));
     expect(scaleRefPcSet(up)).toBe(transpose(scaleRefPcSet(cIonian), 1));
-    expect(scaleRefName(transposeScaleRef(cIonian, -1))).toBe('B Ionian');
+    expect(scaleRefName(transposeScaleRef(cIonian, -1))).toBe('B major');
   });
 
   it('shifts the fretboard fill by exactly one fret', () => {

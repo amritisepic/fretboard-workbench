@@ -13,6 +13,8 @@ export function BoxCard({
   numeral,
   keyName,
   selected,
+  viewing,
+  onRequestRemove,
 }: {
   readonly box: Box;
   readonly view: BoxView;
@@ -20,6 +22,10 @@ export function BoxCard({
   readonly numeral: string;
   readonly keyName: string;
   readonly selected: boolean;
+  /** View mode: no selecting, clicking notes or removing. */
+  readonly viewing: boolean;
+  /** Asks to remove the box; the app confirms first. */
+  readonly onRequestRemove: (boxId: string) => void;
 }) {
   const tuning = useWorkbench((s) => s.settings.tuning);
   const fretCount = useWorkbench((s) => s.settings.fretCount);
@@ -44,11 +50,13 @@ export function BoxCard({
     [box.id, togglePosition, selectBox],
   );
 
+  const className = ['box', selected ? 'is-selected' : '', viewing ? 'is-viewing' : ''].filter(Boolean).join(' ');
+
   return (
     <section
-      className={selected ? 'box is-selected' : 'box'}
+      className={className}
       aria-label={view.title || 'Empty box'}
-      onClick={() => selectBox(box.id)}
+      onClick={viewing ? undefined : () => selectBox(box.id)}
     >
       <header className="box-header">
         {numeral && (
@@ -59,7 +67,7 @@ export function BoxCard({
         {view.title ? (
           <h2 className="box-title">{view.title}</h2>
         ) : (
-          <h2 className="box-title is-placeholder">Click the fretboard to add notes</h2>
+          <h2 className="box-title is-placeholder">{viewing ? 'No notes' : 'Click the fretboard to add notes'}</h2>
         )}
         {refusedAt !== null && (
           <p className="box-notice" role="status">
@@ -67,16 +75,34 @@ export function BoxCard({
           </p>
         )}
       </header>
-      <Fretboard
-        tuning={tuning}
-        fretCount={fretCount}
-        capo={capo}
-        orientation={orientation}
-        dots={view.dots}
-        color={box.color}
-        ringSelected={box.fill.on}
-        onToggle={onToggle}
-      />
+      {!viewing && (
+        <button
+          type="button"
+          className="box-remove"
+          aria-label={`Remove ${view.title || 'this box'}`}
+          title="Remove box"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRequestRemove(box.id);
+          }}
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
+          </svg>
+        </button>
+      )}
+      <div className="fretboard-scroll">
+        <Fretboard
+          tuning={tuning}
+          fretCount={fretCount}
+          capo={capo}
+          orientation={orientation}
+          dots={view.dots}
+          color={box.color}
+          interactive={!viewing}
+          onToggle={onToggle}
+        />
+      </div>
     </section>
   );
 }

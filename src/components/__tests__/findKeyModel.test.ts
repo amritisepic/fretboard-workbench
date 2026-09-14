@@ -36,7 +36,7 @@ describe('find key', () => {
     const boxes = [F_SHARP_7_11, G_7_13, C_M7_11];
     const found = planFoundKey(boxes, settings);
     expect(found && keyName(found.key)).toBe('C minor');
-    expect(found?.boxes.map((b) => scaleRefName(b.scale))).toEqual(['F♯ Mixolydian', 'G Mixolydian ♭2', 'C Aeolian']);
+    expect(found?.boxes.map((b) => scaleRefName(b.scale))).toEqual(['F♯ Mixolydian', 'G Mixolydian ♭2', 'C minor']);
     expect(found?.boxes.map((b) => b.chordOverride)).toEqual([null, null, null]);
     const model = canvasAfter(boxes, found);
     expect(model.entries.map((e) => e.keyName)).toEqual(['C minor', 'C Harmonic Major', 'C minor']);
@@ -57,10 +57,10 @@ describe('find key', () => {
     expect(found?.boxes.map((b) => scaleRefName(b.scale))).toEqual([
       'D Dorian',
       'G Mixolydian',
-      'C Ionian',
+      'C major',
       'F♯ Dorian',
       'B Mixolydian',
-      'E Ionian',
+      'E major',
     ]);
     const model = canvasAfter(boxes, found);
     expect(model.entries.map((e) => e.view.title)).toEqual(['Dm7', 'G7', 'Cmaj7', 'F♯m7', 'B7', 'Emaj7']);

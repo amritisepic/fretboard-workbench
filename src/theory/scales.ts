@@ -74,8 +74,8 @@ export function modeScale(familyId: string, mode: number): Scale {
 }
 
 const DIATONIC_BASES: readonly Scale[] = [
-  { name: 'Ionian', intervals: [0, 2, 4, 5, 7, 9, 11] },
-  { name: 'Aeolian', intervals: [0, 2, 3, 5, 7, 8, 10] },
+  { name: 'Major', intervals: [0, 2, 4, 5, 7, 9, 11] },
+  { name: 'Minor', intervals: [0, 2, 3, 5, 7, 8, 10] },
   { name: 'Dorian', intervals: [0, 2, 3, 5, 7, 9, 10] },
   { name: 'Mixolydian', intervals: [0, 2, 4, 5, 7, 9, 10] },
   { name: 'Lydian', intervals: [0, 2, 4, 6, 7, 9, 11] },
@@ -172,9 +172,14 @@ export function scaleRefModeName(ref: ScaleRef): string {
   return modeName(ref.familyId, ref.mode);
 }
 
-/** "D Dorian", "C♭ Lydian". */
+/**
+ * "D Dorian", "C♭ Lydian". Major and minor read as in a key name after a tonic: "C major", "A minor".
+ * On their own (a scale list) they are "Major" and "Minor".
+ */
 export function scaleRefName(ref: ScaleRef): string {
-  return `${formatSpelled(ref.tonic)} ${scaleRefModeName(ref)}`;
+  const mode = scaleRefModeName(ref);
+  const plain = ref.familyId === 'diatonic' && (ref.mode === 0 || ref.mode === 5);
+  return `${formatSpelled(ref.tonic)} ${plain ? mode.toLowerCase() : mode}`;
 }
 
 export function scaleRefContext(ref: ScaleRef, chord?: ChordSpellingHint): ScaleContext {
