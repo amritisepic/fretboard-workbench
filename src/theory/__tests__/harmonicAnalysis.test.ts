@@ -183,6 +183,10 @@ const FIXTURES: readonly Fixture[] = [
   { name: 'common-tone diminished', chords: 'C C°7 C', key: 'C major', kinds: ['diatonic', 'passingDiminished', 'diatonic'], relations: { 1: ['commonToneDiminished'] } },
   { name: 'chromatic mediants', home: 'C major', chords: 'C E C A♭ C', relations: { 0: ['chromaticMediant'], 2: ['chromaticMediant'] } },
 
+  // Rock loops, from the corpus evaluation: repeated I→IV must not read as V→I in IV.
+  { name: 'rock loop I–IV–vi', chords: 'C7 F B♭ Dm7 F B♭ Dm7 F B♭ Dm7 F', key: 'F major' },
+  { name: 'rock loop I–♭VII–IV', chords: 'F E♭ F E♭ F B♭ Dm F E♭ F E♭ F', key: 'F major|F Mixolydian' },
+
   // Modes.
   { name: 'Dorian vamp', chords: 'Dm7 G7 Dm7 G7 Dm7', key: 'D Dorian' },
   {

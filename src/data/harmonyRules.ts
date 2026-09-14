@@ -141,7 +141,10 @@ const V: ChordPattern = { degree: 7, qualities: DOMINANT };
 
 export const CADENCE_RULES: readonly CadenceRule[] = [
   // Dominant to tonic.
-  rule('authenticCadence', MAJOR_KEYS, V, I_MAJOR, 1.5),
+  // A dominant seventh resolving is a cadence; a bare major triad a 5th above is also I → IV, which
+  // rock and pop loops repeat, so it counts for less.
+  rule('authenticCadence', MAJOR_KEYS, { degree: 7, qualities: ['dominant', 'suspendedDominant'] }, I_MAJOR, 1.5),
+  rule('authenticCadence', MAJOR_KEYS, { degree: 7, qualities: ['major', 'augmented'] }, I_MAJOR, 0.9),
   rule('authenticCadence', MINOR_KEYS, V, I_MINOR, 1.5),
   rule('authenticCadence', MINOR_KEYS, V, { degree: 0, qualities: ['major'] }, 1), // Picardy third
   rule('leadingToneCadence', MAJOR_KEYS, { degree: 11, qualities: LEADING_TONE }, I_MAJOR, 1.2),

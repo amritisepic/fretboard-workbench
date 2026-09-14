@@ -121,4 +121,7 @@ A modal key also gains more from each of its tonic chords, since it has no domin
 - **Augmented sixth chords** are recognised only as tritone substitutes of V. Classical notation then names them Ger⁶₅, Fr⁴₃ or It⁶. One resolving elsewhere, or spelled for a key where it isn't ♭VI, keeps its tritone-substitute label.
 - **Enharmonic modulation** is flagged only when a diminished 7th sits at the change.
 - **Diatonic planing** (parallel diatonic 7ths) isn't tagged.
-- **Corpus evaluation** (plan §3.6, §5.5) hasn't been run. The research corpora need downloading and a licence check, which was left for the user to approve.
+- **Corpus evaluation** (plan §3.6, §5.5) covers keys only.
+  - McGill Billboard, RS200 and When in Rome are downloaded locally, and `npm run eval:corpus` compares the analysis with their annotated keys (results in the plan's §7).
+  - Billboard and RS200 annotate only tonics.
+  - No open corpus annotates chord scales, so reference-scale suggestions are tested only by the labelled progressions.

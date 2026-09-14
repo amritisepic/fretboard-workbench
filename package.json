@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "eval:corpus": "vitest run --config vitest.corpus.config.ts",
     "typecheck": "tsc -p tsconfig.theory.json && tsc -p tsconfig.json",
     "icons": "node scripts/generate-icons.mjs",
     "verify:pwa": "npm run build && node scripts/verify-pwa.mjs",

@@ -20,7 +20,7 @@
 - **Waiting on the user:**
   - Review the decisions listed at the end of this session's report and in the plan's §7.
   - Say whether to commit, merge or push.
-  - Approve downloading research corpora for offline evaluation (plan §3.6, §5.5). Nothing has been downloaded or licence-checked yet.
+  - Research corpora (approved 2026-09-14) are downloaded to the gitignored `corpora/`: McGill Billboard, RS200 and When in Rome, with licences checked in `corpora/SOURCES.md`. Results and tuning are in the plan's §7.
 - **Known gaps:** see `docs/harmonic-patterns.md` §7.
   - Melody and metre aren't known.
   - Augmented sixth chords aren't named Ger/Fr/It.
@@ -39,7 +39,11 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 250 tests in 19 files, about 20 s. Most of the time is the exhaustive pitch-set tests.
+- `npm.cmd test`: 256 tests in 20 files, about 20 s. Most of the time is the exhaustive pitch-set tests.
+- `npm.cmd run eval:corpus`: evaluates the analysis against the research corpora in `corpora/`, then writes `corpora/reports/latest.md`.
+  - The whole run takes several minutes.
+  - `corpora/` is gitignored, and `corpora/SOURCES.md` records sources and licences.
+  - Environment variables: `CORPUS_LIMIT` (pieces per corpus), `CORPUS_ONLY` (for example `rs200`) and `CORPUS_WINDOW` (chords per window; 0 means whole pieces).
 - `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json` (covers `src` only). There is no `@types/node`, so tests can't import `node:` modules.
 - `npm.cmd run build`, then `npm.cmd run preview`: http://localhost:4173.
 - `npm.cmd run verify:pwa`: builds, then checks every `dist` file is precached and the manifest is installable.
@@ -116,6 +120,12 @@
   - sidebar: `Sidebar`, `RootBox`, `ScalePicker`/`ScaleSelects`, `ChordNameField`, `HarmonyField` (readings, pins, key at this box), `ColorField`, `RankingList` (marks the suggested scale), `FillSwitch`
   - other: `UpdateNotice`, `ConfirmDialog`, `useKeyboardShortcuts`, `readingChoice.ts` (pinning a reading moves an unedited scale with it)
   - pure view models: `boardModel.ts`, `canvasModel.ts` (analysis and key choices per box), `stripModel.ts`, `rankingModel.ts`, `findKeyModel.ts`, `analysisModel.ts` (labels in both notations, explanations, relation and pattern labels)
+- **`src/corpus/`** (pure; typechecked and unit-tested with inline snippets):
+  - parsers that turn research-corpus annotations into the analyzer's chords, each with its annotated key: `billboard.ts` (McGill Billboard, Harte chord labels), `rockCorpus.ts` (RS200 `.har` rules) and `romanText.ts` (When in Rome)
+  - `chords.ts`, which builds chords from degrees
+- **`scripts/corpus/`:**
+  - `evaluate.eval.ts`, the evaluation runner, run by `vitest.corpus.config.ts`
+  - `legacy/`: the key finder from commit `0ce8623`, kept only as the "before" comparison
 - **Docs:** `docs/harmonic-analysis-plan.md` (the plan, decisions, and what was built) and `docs/harmonic-patterns.md` (the catalogue).
 - **Tests:** in `__tests__` folders under `theory`, `components` and `state`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
   - `theory/__tests__/harmonicAnalysis.test.ts` is the evaluation harness of labelled progressions.
@@ -226,7 +236,8 @@
 - **`preview_start` with a name fails** (npm can't find `node`). Run the dev server as a background shell with Node on PATH, then open the URL.
 - **Stopping a background `npm run dev` task can leave its Node process running on port 5173.** Check the port and only stop a Vite process you started.
 - **Vitest 5 hides `console.log` from passing tests.** To inspect engine output while tuning, write it to a file from a throwaway test (with `// @ts-nocheck`, since there are no Node types) and delete the test afterwards.
-- **In the Bash tool, `cd` persists** between calls; prefix commands with the project path.
+- **In the Bash tool, `cd` persists** between calls, and calls made in parallel share it. A `cd corpora/billboard` in one call put a clone started alongside it inside that folder. Prefix commands with the absolute project path.
+- **Git on Windows and long paths:** When in Rome's Lieder paths pass the 260-character limit, so its checkout failed until `git config core.longpaths true` was set in that clone. Download only its analyses with `git clone --filter=blob:none --no-checkout --depth 1`, then `git sparse-checkout set --no-cone '/Corpus/**/analysis*.txt'`.
 - **The Grep tool skips gitignored folders** (`node_modules`, `dist`). Use PowerShell `Select-String` for those.
 - **In PowerShell, `$pid` is read-only.** Native tools writing to stderr (git push) show up as "NativeCommandError" even on success; read the actual output.
 - **Control-character escapes like `\u0000` in written file content turned into raw bytes.** Avoid them, and scan `src` and `scripts` for control characters afterwards.

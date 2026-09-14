@@ -101,7 +101,7 @@ export const ANALYSIS_WEIGHTS = {
   // ---- Evidence for the tonic ---------------------------------------------------------------------
 
   /** A chord rooted on the key's tonic, with a quality that suits it. */
-  tonicChord: 0.2,
+  tonicChord: 0.4,
   /** Extra when that chord ends the progression, the strongest single sign of a key. */
   finalTonic: 1,
   /** Extra in a modal key, whose tonic has no dominant to establish it. */
