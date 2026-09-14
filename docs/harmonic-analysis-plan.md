@@ -1,6 +1,6 @@
 # Harmonic analysis: scope and plan
 
-Status: built on 2026-09-14 on the `harmonic-analysis` branch (not yet committed). The user's decisions are recorded in §5, and the design below follows them. §7 records what was built and the decisions made while building it, for review. The pattern catalogue is `docs/harmonic-patterns.md`.
+Status: built on 2026-09-14, evaluated against research corpora the same day, and merged to `master` through PR #1. The user's decisions are recorded in §5, and the design below follows them. §7 records what was built, the decisions made while building it (still awaiting the user's review), the corpus results, and the open work for the next session. The pattern catalogue is `docs/harmonic-patterns.md`.
 
 ## 1. Why the current key and scale choices go wrong
 
@@ -187,7 +187,7 @@ The user asked for the whole plan to be built overnight, with decisions made and
 | 2 | "Harmonic analysis" switch and Jazz/Classical in the toolbar. The strips get an analysis lane (relation, ii–V bracket, resolution arrow, pattern names), and each numeral gets a function tag with a one-sentence explanation on hover or tap. | `CanvasToolbar`, `VoiceLeadingStrip`, `BoxCard`, `analysisModel.ts` |
 | 3 | Key bar v2 with tonicization. Ambiguous boxes split the key and scale bands with a chooser, and numerals are marked tentative. Readings and a key pin per box live in the sidebar's Harmony section; pins are saved with presets and move with transposition. | `keyPlan.ts`, `Canvas`, `HarmonyField`, `workbench.ts`, `presetFormat.ts` |
 | 4 | Find key gives each chord the scale its function suggests, with closeness to the key as the tie-breaker. The ranking list marks that scale "Suggested". | `functionScale` in `keyPlan.ts`, `rankingModel.ts` |
-| 5 | Harness of 60 labelled progressions: the user's screenshots, textbook cadences and substitutions, Autumn Leaves, All the Things You Are, Giant Steps, rhythm changes, a chorale phrase, modal vamps and every named pattern. It reports fixtures passing, local-key agreement, chord–scale agreement and ambiguous listings, all 100%. No corpus has been used (see below). | `src/theory/__tests__/harmonicAnalysis.test.ts` |
+| 5 | Harness of 60 labelled progressions: the user's screenshots, textbook cadences and substitutions, Autumn Leaves, All the Things You Are, Giant Steps, rhythm changes, a chorale phrase, modal vamps and every named pattern. It reports fixtures passing, local-key agreement, chord–scale agreement and ambiguous listings, all 100%. The corpus evaluation (below) measures keys against 359,000 annotated chords from three research corpora. | `src/theory/__tests__/harmonicAnalysis.test.ts`, `src/corpus/`, `scripts/corpus/evaluate.eval.ts` |
 
 The user's screenshots now read as intended. B♭m7 Cm7 D♭maj7 E♭7 is ii–iii–IV–V in A♭ major with scales B♭ Dorian, C Phrygian, D♭ Lydian and E♭ Mixolydian. A♭7 is V7/IV, shown in D♭ major with A♭ Mixolydian. F7 shows "B♭ minor | B♭ major?" with "F Phrygian Dominant | F Mixolydian?". Choosing B♭ major pins it and moves the scale to F Mixolydian.
 
@@ -221,11 +221,30 @@ The user's screenshots now read as intended. B♭m7 Cm7 D♭maj7 E♭7 is ii–i
     - A ii–V vamp ending on V lists C major, D Dorian and G Mixolydian.
     - Am6 in a line cliché makes A Dorian as good as A minor.
 
-### Not done
+### Open work (for the next session)
 
-- **Corpora.** Approved and downloaded on 2026-09-14; see "Corpus evaluation" below. Only keys can be checked against them: no open corpus annotates chord scales. The 1,555 professionally annotated jazz standards in Pachet (arXiv 2606.03459) come from a commercial book.
-- **Review of the catalogue.** Phase 0's review with the user didn't happen; the catalogue is ready for it.
-- **Visual checks.** The interface was verified through the DOM and two screenshots, since the app window was hidden for most of the session. The popover, split chooser and stacked figures still need a look on a visible screen.
+1. **Visual checks.** The interface was verified through the DOM and a few screenshots, since the app window was hidden for most of the session. Still to see on a visible screen:
+   - the explanation popover
+   - the key-bar and scale-bar split chooser
+   - stacked figured bass
+   - the sidebar Harmony section
+   - phone width
+2. **Reviews with the user.**
+   - Phase 0's review of `docs/harmonic-patterns.md` didn't happen; the catalogue is ready for it.
+   - The building decisions above are still awaiting review, modal home keys especially, since they replace the first key bar's major-and-minor-only ruling.
+3. **Accuracy.** Work from the remaining errors in "Corpus evaluation" below:
+   - the key a 5th below in pop and rock
+   - the key a 5th above and the relative key in classical music
+   - early choral music and the Lieder, where the old key finder still does better
+
+   Keep the 60 labelled progressions passing, and measure every change on all three corpora.
+4. **Chord scales can't be checked against a corpus.** No open corpus annotates them; the 1,555 professionally annotated jazz standards in Pachet (arXiv 2606.03459) come from a commercial book. Suggested scales are tested only by the labelled progressions.
+5. **Performance.** About 60 ms for 32 chords and up to about 230 ms for a long classical piece, recomputed from scratch on each change.
+6. **Known gaps in the analysis** are listed in `docs/harmonic-patterns.md` §7:
+   - melody and metre
+   - diatonic planing
+   - enharmonic modulation beyond diminished 7ths
+   - augmented sixth chords outside tritone substitutes of V
 
 ### Corpus evaluation (2026-09-14)
 
@@ -236,22 +255,36 @@ The user's screenshots now read as intended. B♭m7 Cm7 D♭maj7 E♭7 is ii–i
 
 Tonic agreement by chord:
 
-| Corpus | Chords | Old key finder | Most common root | Original weights | Variant A | Variant B (in the code) |
+| Corpus | Chords | Old key finder | Most common root | Original weights | Variant A | Variant B (kept) |
 |---|---|---|---|---|---|---|
 | McGill Billboard (tonics only) | 86,155 | 66.3% | 52.5% | 66.0% | 72.6% | 71.2% |
 | RS200 (tonics only) | 37,355 | 68.6% | 59.9% | 69.7% | 77.0% | 73.9% |
-| When in Rome | 235,348 | 80.8% | 42.9% | 80.5% | 79.7% | pending |
+| When in Rome | 235,348 | 80.8% | 42.9% | 80.5% | 79.7% | 80.3% |
 
-- **Keys with mode** (When in Rome): old key finder 76.6%, original weights 78.0%, variant A 77.3%.
-- **Secondary dominants** showing their target's key:
-  - When in Rome: 68.2% with the original weights, against 29.1% for the old key finder.
-  - RS200: 65%, against 23%.
-- **Wrong but listed:** among the chords whose home key is wrong, the annotated key is among the alternatives for 12% of pop and rock chords and 26% of classical ones.
+When in Rome in more detail:
+
+| Measure | Old key finder | Original weights | Variant A | Variant B (kept) |
+|---|---|---|---|---|
+| Tonic and mode | 76.6% | 78.0% | 77.3% | 77.8% |
+| Secondary dominants show their target's key | 29.1% | 68.2% | 68.8% | 68.9% |
+| Whole-piece tonic | 88.4% | 89.2% | 88.9% | 89.2% |
+
+- **Secondary dominants on RS200** show their target's key 65% of the time with every variant, against 23% for the old key finder.
+- **Wrong but listed:** among the chords whose home key is wrong, the annotated key is among the alternatives for 9–13% of pop and rock chords and 26% of classical ones.
 - **What the variants change.** Most errors put the key a 5th below the annotated one, because I–IV and I–♭VII loops earn V→I cadence bonuses in the IV key.
   - Variant A lowers the bonus for a plain major triad on V resolving to I from 1.5 to 0.6. A dominant 7th keeps 1.5. It also raises `tonicChord` from 0.2 to 0.4.
   - Variant B raises `tonicChord` to 0.4 but lowers the triad cadence only to 0.9.
+  - Variant C (triad cadence 1.2) brings back the rock-loop misread ("C7 F B♭ Dm7…" read in B♭ major) and fails a labelled progression, so it was rejected without further measurement.
   - Variant A gains most on pop and rock but loses 0.8 points on classical music, where triad V→I is a real cadence.
-- **Decision pending.** Variant B is kept if its When in Rome result holds at or above the original weights; its run hadn't finished when this was written.
+- **Decision (user, 2026-09-14): variant B is kept.**
+  - It gains 5.2 points on Billboard and 4.2 on RS200, and loses 0.2 on When in Rome, both in tonic and in tonic with mode.
+  - It missed the bar set beforehand (When in Rome at or above the original weights) by those 0.2 points; the user chose it anyway.
+  - Whole-piece tonics are unchanged, and secondary dominants improve slightly.
+- **Remaining errors with variant B:**
+  - Pop and rock: the key a 5th below is still the largest group, 42.5% of wrong Billboard chords and 58.7% of wrong RS200 chords.
+  - When in Rome: the key a 5th above (29.7%) and the relative key (22.5%) lead.
+  - The weakest classical collections trail the old key finder: early choral music (70.5% against 72.4%) and the Lieder (77.9% against 80.6%).
 - **Limits:**
   - Billboard and RS200 annotate a tonic per section, and coarsely: a passage clearly in F minor inside an A♭ annotation counts as wrong.
-  - The weakest classical collections are early choral music (about 70%, against 72.4% for the old key finder) and the Lieder.
+  - Pieces are read whole. Windows cut mid-phrase (`CORPUS_WINDOW`) end on arbitrary chords, which the final-tonic bonus mistakes for endings, so they understate accuracy.
+  - Each run of all three corpora takes about 7 minutes. Every weight change should be measured on all three and keep the labelled progressions passing.
