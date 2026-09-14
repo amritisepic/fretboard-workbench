@@ -5,7 +5,7 @@ import { buildBoxView } from '../boardModel';
 import { buildCanvasModel } from '../canvasModel';
 import { planFoundKey, type FoundKey } from '../findKeyModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true };
 const box = (positions: FretPosition[]): Box => ({ ...createBox(), positions });
 /** One fret per string, lowest string first; null leaves the string out. */
 const shape = (...frets: (number | null)[]) =>

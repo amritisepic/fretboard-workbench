@@ -4,7 +4,7 @@ import { createBox, type Box, type Settings } from '../../state/workbench';
 import { makeScaleRef, type FretPosition, type ScaleRef } from '../../theory';
 import { buildCanvasModel } from '../canvasModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true };
 const box = (positions: FretPosition[], scale: ScaleRef): Box => ({ ...createBox(scale), positions });
 /** One fret per string, lowest string first; null leaves the string out. */
 const shape = (...frets: (number | null)[]) => frets.flatMap((fret, string) => (fret === null ? [] : [{ string, fret }]));

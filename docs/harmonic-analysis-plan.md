@@ -1,6 +1,6 @@
 # Harmonic analysis: scope and plan
 
-Status: plan only; nothing here is built. The user's decisions from 2026-09-14 are recorded in §5, and the design below follows them.
+Status: built on 2026-09-14 on the `harmonic-analysis` branch (not yet committed). The user's decisions are recorded in §5, and the design below follows them. §7 records what was built and the decisions made while building it, for review. The pattern catalogue is `docs/harmonic-patterns.md`.
 
 ## 1. Why the current key and scale choices go wrong
 
@@ -173,3 +173,56 @@ It reports key agreement, chord–scale agreement and whether ambiguous cases li
 | 3 | Key bar v2: tonicization switching, ambiguous segments with a chooser, per-box key pins; the user's screenshots as acceptance tests | 2 sessions |
 | 4 | Function-based reference scales | 1–2 sessions |
 | 5 | Evaluation harness against labelled progressions and corpus samples; weight tuning | ongoing |
+
+## 7. What was built (2026-09-14)
+
+The user asked for the whole plan to be built overnight, with decisions made and reported rather than asked. Anything costly to undo was to wait, and nothing reached that bar.
+
+### By phase
+
+| Phase | Built | Where |
+|---|---|---|
+| 0 | The catalogue, written from the sources' standard definitions, covering every pattern in §2 plus the modes, notation and known gaps. Built on without the planned review. | `docs/harmonic-patterns.md` |
+| 1 | Analyzer: readings per home key, cadence table, cheapest-path search with the cost of every reading's best path, alternatives within a margin, pins, relations, tags, and patterns across several chords | `src/theory/analysis.ts`, `src/theory/patterns.ts`, `src/data/harmonyRules.ts`, `src/data/analysisWeights.ts` |
+| 2 | "Harmonic analysis" switch and Jazz/Classical in the toolbar. The strips get an analysis lane (relation, ii–V bracket, resolution arrow, pattern names), and each numeral gets a function tag with a one-sentence explanation on hover or tap. | `CanvasToolbar`, `VoiceLeadingStrip`, `BoxCard`, `analysisModel.ts` |
+| 3 | Key bar v2 with tonicization. Ambiguous boxes split the key and scale bands with a chooser, and numerals are marked tentative. Readings and a key pin per box live in the sidebar's Harmony section; pins are saved with presets and move with transposition. | `keyPlan.ts`, `Canvas`, `HarmonyField`, `workbench.ts`, `presetFormat.ts` |
+| 4 | Find key gives each chord the scale its function suggests, with closeness to the key as the tie-breaker. The ranking list marks that scale "Suggested". | `functionScale` in `keyPlan.ts`, `rankingModel.ts` |
+| 5 | Harness of 58 labelled progressions: the user's screenshots, textbook cadences and substitutions, Autumn Leaves, All the Things You Are, Giant Steps, rhythm changes, a chorale phrase, modal vamps and every named pattern. It reports fixtures passing, local-key agreement, chord–scale agreement and ambiguous listings, all 100%. No corpus has been used (see below). | `src/theory/__tests__/harmonicAnalysis.test.ts` |
+
+The user's screenshots now read as intended. B♭m7 Cm7 D♭maj7 E♭7 is ii–iii–IV–V in A♭ major with scales B♭ Dorian, C Phrygian, D♭ Lydian and E♭ Mixolydian. A♭7 is V7/IV, shown in D♭ major with A♭ Mixolydian. F7 shows "B♭ minor | B♭ major?" with "F Phrygian Dominant | F Mixolydian?". Choosing B♭ major pins it and moves the scale to F Mixolydian.
+
+### Decisions made while building, for review
+
+1. **Where a tonicization shows.** The key bar switches to the target's key for the secondary chord and its related ii only. A target that is diatonic in the home key stays there (A7 → Dm7 in C: D minor over A7, C major over Dm7). A target outside the home key, just resolved to, shows its own key (B♭7 → E♭maj7 in C shows E♭ major over both).
+2. **Home keys.** Major, minor, Dorian, Mixolydian, Lydian and Phrygian on every tonic, with small per-box costs for the modes. The earlier Find key ruling allowed only major and the minors; §2's modal keys supersede it. Harmonic and melodic minor are one "minor" home key that accepts its raised 7th on V and vii.
+3. **Borrowed chords keep the tonic, and the scale still colours the key.** An A♭ Lydian box in C major still shows C minor, as the first key bar ruled, because §2's "key stays" was read as "the tonic stays". A Phrygian dominant V in a minor key keeps plain "C minor".
+4. **Scales as evidence.** A box's scale counts toward a reading only when it holds the chord, so a new box's default scale says nothing. Alternatives are judged from the chords alone, so the scales Find key sets can't hide an ambiguity.
+5. **Ambiguity.**
+   - The margin is 0.9 cost units. Chromatic readings, which explain nothing, are never listed.
+   - The key bar shows at most two keys; the sidebar lists up to four readings.
+   - The numeral is marked tentative when the key bar splits, or when the analysis lane is on.
+6. **Choosing a reading.** Clicking a key in the split, or a reading in the sidebar, pins it. Clicking the pinned one again unpins. Pinning also moves the box's scale to the reading's suggested scale, but only if the scale was still the old reading's suggestion. A key pin ("Key at this box: Fixed") and a reading pin clear each other.
+7. **Modulation versus tonicization.**
+   - Changing home key costs 3, plus 0.5 per extra note changed (C → G costs 3, C → E costs 4.5); a same-tonic change costs 3.5.
+   - A ii–V into a key outside the home key costs extra.
+   - Secondary chords cost extra before the home key's tonic or dominant has sounded.
+   - Opening on a tonic that a dominant later resolves to counts for that key.
+   - The Picardy bonus needs the minor tonic to have sounded first.
+8. **New readings not in §2's tables:** a chromatic approach chord a half step from a same-quality neighbour (F♯7 → G7), and a tonicized chord.
+9. **Notation.**
+   - Jazz writes ii7, Imaj7, V7/IV and subV7, with no inversion figures, since the chord name carries the slash.
+   - Classical writes figured bass (I⁶₄, V⁶₅, V⁴₂), ♭II⁷ with "tritone sub", and Ger⁶₅, Fr⁴₃ or It⁶ for a tritone substitute of V.
+   - Borrowed chords read "borrowed from C minor" or "mixture (C minor)".
+   - The lane names cadences in words in classical notation, and draws brackets and arrows only in jazz.
+10. **The switch.** Harmonic analysis is off by default and saved with the preset, like the other strip switches. The key-bar splits and the sidebar's Harmony section show whether it's on or off, because §3.4 ties ambiguity to the key bar, not to the switch.
+11. **Examples adjusted to the engine's reasonable readings.**
+    - Cm7 at the start of Autumn Leaves may be iv of G minor or the ii of B♭; both are listed.
+    - The first Bmaj7 of Giant Steps reads as ♭VI of E♭ until more context; the later B, G and E♭ areas show correctly.
+    - A ii–V vamp ending on V lists C major, D Dorian and G Mixolydian.
+    - Am6 in a line cliché makes A Dorian as good as A minor.
+
+### Not done
+
+- **Corpora.** Downloading research datasets needs the user's go-ahead in chat, and each licence needs checking (§5.5). The harness is ready to take them.
+- **Review of the catalogue.** Phase 0's review with the user didn't happen; the catalogue is ready for it.
+- **Visual checks.** The interface was verified through the DOM and two screenshots, since the app window was hidden for most of the session. The popover, split chooser and stacked figures still need a look on a visible screen.

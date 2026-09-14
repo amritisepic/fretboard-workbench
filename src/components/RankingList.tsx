@@ -60,6 +60,11 @@ function RankRows({
           >
             <span className="rank-name">
               {row.scale.name}
+              {row.suggested && (
+                <span className="rank-suggested" title="The scale this chord's function suggests">
+                  Suggested
+                </span>
+              )}
               {row.missingNote && <span className="rank-missing">{row.missingNote}</span>}
             </span>
             <span className="rank-strip" aria-hidden="true">

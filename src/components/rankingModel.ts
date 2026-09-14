@@ -30,6 +30,8 @@ export interface RankingRow {
   readonly selected: boolean;
   /** "no ♭5" for scales missing chord tones, otherwise "". */
   readonly missingNote: string;
+  /** The scale the chord's function suggests (see functionScale). */
+  readonly suggested: boolean;
 }
 
 export type RankingSectionId = 'pinned' | 'tier0' | 'tier1' | 'tier2';
@@ -62,6 +64,7 @@ export function buildRankingView(
   view: BoxView,
   previousScale: PcSet | undefined,
   key?: ScaleRef,
+  suggested: ScaleRef | null = null,
 ): RankingView | null {
   const { chord } = view;
   if (!chord) return null;
@@ -89,6 +92,8 @@ export function buildRankingView(
       cells,
       selected: scale.pcs === currentPcs && pcOfSpelled(scale.ref.tonic) === currentTonic,
       missingNote: scale.missing.length > 0 ? `no ${scale.missing.map((m) => m.label).join(', ')}` : '',
+      suggested:
+        suggested !== null && scale.pcs === scaleRefPcSet(suggested) && pcOfSpelled(scale.ref.tonic) === pcOfSpelled(suggested.tonic),
     };
   };
 

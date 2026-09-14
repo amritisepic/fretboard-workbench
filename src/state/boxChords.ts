@@ -49,13 +49,27 @@ export function boxChord(box: Box, settings: Settings): BoxChord {
   return value;
 }
 
-/** The key in effect at each box (see planKeys), from the preset's key and each box's scale and chord. */
+let lastPlan: {
+  readonly key: ScaleRef;
+  readonly boxes: readonly Box[];
+  readonly settings: Settings;
+  readonly plan: KeyPlan;
+} | null = null;
+
+/**
+ * The key in effect at each box and the analysis behind it (see planKeys), from the preset's key and
+ * each box's scale, chord and pins. The canvas, the sidebar and the store ask for the same plan
+ * after each change, so the last one is kept.
+ */
 export function keyPlanOf(key: ScaleRef, boxes: readonly Box[], settings: Settings): KeyPlan {
-  return planKeys(
+  if (lastPlan && lastPlan.key === key && lastPlan.boxes === boxes && lastPlan.settings === settings) return lastPlan.plan;
+  const plan = planKeys(
     key,
     boxes.map((box) => {
       const { chord, pcs } = boxChord(box, settings);
-      return { scale: box.scale, chord: chord ? { chord, pcs } : null };
+      return { scale: box.scale, chord: chord ? { chord, pcs } : null, keyPin: box.keyPin, readingPin: box.readingPin };
     }),
   );
+  lastPlan = { key, boxes, settings, plan };
+  return plan;
 }

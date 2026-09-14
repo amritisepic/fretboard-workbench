@@ -3,7 +3,7 @@ import { createBox, type Box, type FillMode, type Settings } from '../../state/w
 import { makeScaleRef } from '../../theory';
 import { buildBoxView } from '../boardModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0 };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true };
 
 // C3 on the A string, E3 on the D string, A3 on the G string: C E A with C lowest.
 const amOverC: Box = {

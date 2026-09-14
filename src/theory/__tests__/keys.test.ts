@@ -1,8 +1,10 @@
 // Acceptance test 10 (engine level), as amended: the key in effect and roman numerals. Also finding the key.
 import { describe, expect, it } from 'vitest';
 import { identifyChord } from '../chords';
-import { changesKey, closestScale, findKey, keyName, planKeys, romanNumeral, type ChordEvidence } from '../keys';
+import { findKey, planKeys } from '../keyPlan';
+import { changesKey, closestScale, keyName, romanNumeral, type ChordEvidence } from '../keys';
 import { pcOf, pcSet } from '../pitch';
+import { progression } from './chordSymbols';
 import { makeScaleRef, scaleRefName, type ScaleRef } from '../scales';
 
 const C_MAJOR = makeScaleRef('diatonic', 0, 'C');
@@ -109,7 +111,7 @@ describe('the key in effect', () => {
     ]);
   });
 
-  it('changes the tonic for a run of chords outside it, but not for two in the middle', () => {
+  it('modulates for a ii–V–I in a new key, and tonicizes for a ii–V in the middle (plan §5.1)', () => {
     const progression: [ScaleRef, number[]][] = [
       [makeScaleRef('diatonic', 1, 'D'), DM7],
       [makeScaleRef('diatonic', 4, 'G'), G7],
@@ -122,7 +124,42 @@ describe('the key in effect', () => {
       planKeys(C_MAJOR, boxes.map(([scale, pitches]) => ({ scale, chord: evidence(pitches) }))).keys.map(keyName);
     expect(plan(progression)).toEqual(['C major', 'C major', 'C major', 'E major', 'E major', 'E major']);
     const [dm7, g7, cmaj7, fSharpM7, b7] = progression;
-    expect(plan([dm7, g7, fSharpM7, b7, cmaj7])).toEqual(['C major', 'C major', 'C major', 'C major', 'C major']);
+    // F♯m7 B7 is ii–V of E, so the key bar shows E major there, then returns to C major.
+    expect(plan([dm7, g7, fSharpM7, b7, cmaj7])).toEqual(['C major', 'C major', 'E major', 'E major', 'C major']);
+  });
+});
+
+describe('the key bar v2 (plan §3.2, §3.4)', () => {
+  const A_FLAT = makeScaleRef('diatonic', 0, 'A♭');
+  const symbols = ['B♭m7', 'Cm7', 'D♭maj7', 'E♭7', 'A♭7', 'F7'];
+  const scales = ['B♭ Dorian', 'C Phrygian', 'D♭ Lydian', 'E♭ Mixolydian', 'A♭ Mixolydian'].map((name) => {
+    const [tonic, mode] = name.split(' ');
+    return makeScaleRef('diatonic', ['Major', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian'].indexOf(mode), tonic);
+  });
+  const boxesWith = (last: ScaleRef) =>
+    progression(symbols.join(' ')).map((chord, i) => ({ chord, scale: i < 5 ? scales[i] : last }));
+
+  it('tonicizes D♭ at A♭7 and keeps F7 ambiguous, whichever scale F7 has', () => {
+    const minor = planKeys(A_FLAT, boxesWith(makeScaleRef('harmonicMinor', 4, 'F')));
+    expect(minor.keys.map(keyName)).toEqual(['A♭ major', 'A♭ major', 'A♭ major', 'A♭ major', 'D♭ major', 'B♭ minor']);
+    expect(minor.analysis.boxes[5].alternatives.map((r) => keyName(r.local.ref))).toContain('B♭ major');
+
+    // F Mixolydian over F7 says B♭ major; B♭ minor stays listed.
+    const major = planKeys(A_FLAT, boxesWith(makeScaleRef('diatonic', 4, 'F')));
+    expect(keyName(major.keys[5])).toBe('B♭ major');
+    expect(major.analysis.boxes[5].alternatives.map((r) => keyName(r.local.ref))).toContain('B♭ minor');
+  });
+
+  it('pins a key or a reading at a box', () => {
+    const boxes = boxesWith(makeScaleRef('diatonic', 4, 'F'));
+    const keyPinned = planKeys(A_FLAT, boxes.map((b, i) => (i === 4 ? { ...b, keyPin: makeScaleRef('diatonic', 0, 'A♭') } : b)));
+    expect(keyName(keyPinned.keys[4])).toBe('A♭ major');
+    expect(keyPinned.analysis.boxes[4]).toMatchObject({ pinned: true, ambiguous: false });
+
+    const minorReading = planKeys(A_FLAT, boxesWith(makeScaleRef('harmonicMinor', 4, 'F'))).analysis.boxes[5].reading;
+    const readingPinned = planKeys(A_FLAT, boxes.map((b, i) => (i === 5 ? { ...b, readingPin: minorReading.pinId } : b)));
+    expect(keyName(readingPinned.analysis.boxes[5].reading.local.ref)).toBe('B♭ minor');
+    expect(readingPinned.analysis.boxes[5].pinned).toBe(true);
   });
 });
 

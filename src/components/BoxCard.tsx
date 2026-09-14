@@ -1,17 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { useWorkbench, type Box } from '../state/workbench';
 import { MAX_CHORD_NOTES, type FretPosition } from '../theory';
+import type { FunctionLabel } from './analysisModel';
 import type { BoxView } from './boardModel';
 import { Fretboard } from './Fretboard';
+import { FunctionText } from './FunctionText';
 
 /** How long the "chord is full" note stays up after a refused click. */
 const NOTICE_MS = 2500;
+
+/** What harmonic analysis adds under the numeral: the chord's function and a sentence about it. */
+export interface AnalysisTag {
+  readonly label: FunctionLabel;
+  readonly explanation: string;
+}
 
 export function BoxCard({
   box,
   view,
   numeral,
   keyName,
+  tentative,
+  tag,
   selected,
   viewing,
   onRequestRemove,
@@ -21,6 +31,10 @@ export function BoxCard({
   /** Roman numeral in the key in effect, or "" without a chord. */
   readonly numeral: string;
   readonly keyName: string;
+  /** Other readings are nearly as likely, and none is pinned. */
+  readonly tentative: boolean;
+  /** Null while harmonic analysis is off, or without a chord. */
+  readonly tag: AnalysisTag | null;
   readonly selected: boolean;
   /** View mode: no selecting, clicking notes or removing. */
   readonly viewing: boolean;
@@ -30,6 +44,7 @@ export function BoxCard({
   const tuning = useWorkbench((s) => s.settings.tuning);
   const fretCount = useWorkbench((s) => s.settings.fretCount);
   const capo = useWorkbench((s) => s.settings.capo);
+  const fretMarkers = useWorkbench((s) => s.settings.fretMarkers);
   const orientation = useWorkbench((s) => s.orientation);
   const selectBox = useWorkbench((s) => s.selectBox);
   const togglePosition = useWorkbench((s) => s.togglePosition);
@@ -60,8 +75,12 @@ export function BoxCard({
     >
       <header className="box-header">
         {numeral && (
-          <span className="box-numeral" title={`${numeral} in ${keyName}`}>
+          <span
+            className={tentative ? 'box-numeral is-tentative' : 'box-numeral'}
+            title={tentative ? `${numeral} in ${keyName}, tentative: other readings are nearly as likely` : `${numeral} in ${keyName}`}
+          >
             {numeral}
+            {tentative && <span className="tentative-mark">?</span>}
           </span>
         )}
         {view.title ? (
@@ -69,6 +88,7 @@ export function BoxCard({
         ) : (
           <h2 className="box-title is-placeholder">{viewing ? 'No notes' : 'Click the fretboard to add notes'}</h2>
         )}
+        {tag && tag.label.text && <FunctionTag tag={tag} />}
         {refusedAt !== null && (
           <p className="box-notice" role="status">
             A chord has {MAX_CHORD_NOTES} notes at most. Click one to remove it first.
@@ -97,6 +117,7 @@ export function BoxCard({
           fretCount={fretCount}
           capo={capo}
           orientation={orientation}
+          fretMarkers={fretMarkers}
           dots={view.dots}
           color={box.color}
           interactive={!viewing}
@@ -104,5 +125,32 @@ export function BoxCard({
         />
       </div>
     </section>
+  );
+}
+
+/** The function under the numeral; hovering or tapping it shows what it means. */
+function FunctionTag({ tag }: { readonly tag: AnalysisTag }) {
+  const [open, setOpen] = useState(false);
+  const explanationId = useId();
+  return (
+    <div className="box-function" onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        className="function-tag"
+        aria-expanded={open}
+        aria-describedby={explanationId}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(!open);
+        }}
+        onBlur={() => setOpen(false)}
+      >
+        <FunctionText label={tag.label} />
+        {tag.label.note && <span className="function-note">{tag.label.note}</span>}
+      </button>
+      <p id={explanationId} role="tooltip" className={open ? 'function-explanation is-open' : 'function-explanation'}>
+        {tag.explanation}
+      </p>
+    </div>
   );
 }

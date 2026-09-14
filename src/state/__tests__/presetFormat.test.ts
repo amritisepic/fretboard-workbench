@@ -12,13 +12,15 @@ import {
 import { createBox } from '../workbench';
 
 const sample = (): PresetData => ({
-  settings: { tuning: [35, 40, 45, 50, 55, 59, 64], fretCount: 22, capo: 1 },
+  settings: { tuning: [35, 40, 45, 50, 55, 59, 64], fretCount: 22, capo: 1, fretMarkers: false },
   key: makeScaleRef('diatonic', 5, 'A'),
-  strips: { commonTones: false, voiceLeading: true, labelMode: 'degrees' },
+  strips: { commonTones: false, voiceLeading: true, labelMode: 'degrees', analysis: true, notation: 'classical' },
   orientation: 'vertical',
   boxes: [
     {
       ...createBox(makeScaleRef('melodicMinor', 5, 'F♯')),
+      keyPin: makeScaleRef('diatonic', 5, 'B'),
+      readingPin: 'relatedTwo:6minor:10minor:0:-',
       positions: [
         { string: 1, fret: 3 },
         { string: 6, fret: 22 },
@@ -69,8 +71,11 @@ describe('preset data', () => {
   it('reads presets saved before the capo, the neck orientation, degree counting and the chord limits', () => {
     const data = parseEdited((json) => {
       delete json.settings.capo;
+      delete json.settings.fretMarkers;
       delete json.orientation;
       delete json.boxes[0].degreeBasis;
+      delete json.boxes[0].keyPin;
+      delete json.boxes[0].readingPin;
       json.strips = { visible: false, labelMode: 'degrees', compare: 'scales' };
       json.boxes[1].positions = [
         { string: 0, fret: 3 },
@@ -79,9 +84,11 @@ describe('preset data', () => {
       ];
     })();
     expect(data.settings.capo).toBe(0);
+    expect(data.settings.fretMarkers).toBe(true);
     expect(data.orientation).toBe('horizontal');
     expect(data.boxes[0].degreeBasis).toBe('key');
-    expect(data.strips).toEqual({ commonTones: false, voiceLeading: false, labelMode: 'degrees' });
+    expect(data.boxes[0]).toMatchObject({ keyPin: null, readingPin: null });
+    expect(data.strips).toEqual({ commonTones: false, voiceLeading: false, labelMode: 'degrees', analysis: false, notation: 'jazz' });
     expect(data.boxes[1].positions).toEqual([1, 2, 3, 4, 5, 6].map((string) => ({ string, fret: 2 })));
   });
 

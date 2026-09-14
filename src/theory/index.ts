@@ -6,3 +6,6 @@ export * from './fretboard';
 export * from './voiceleading';
 export * from './ranking';
 export * from './keys';
+export * from './analysis';
+export * from './patterns';
+export * from './keyPlan';

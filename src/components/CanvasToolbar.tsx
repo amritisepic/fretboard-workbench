@@ -1,5 +1,5 @@
 import { boxChord } from '../state/boxChords';
-import { useWorkbench, type LabelMode, type Orientation } from '../state/workbench';
+import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { keyName } from '../theory';
 import { planFoundKey } from './findKeyModel';
 import { ScaleSelects } from './ScaleSelects';
@@ -13,6 +13,11 @@ const LABEL_OPTIONS: readonly SegmentedOption<LabelMode>[] = [
 const ORIENTATION_OPTIONS: readonly SegmentedOption<Orientation>[] = [
   { value: 'horizontal', label: 'Horizontal' },
   { value: 'vertical', label: 'Vertical' },
+];
+
+const NOTATION_OPTIONS: readonly SegmentedOption<HarmonyNotation>[] = [
+  { value: 'jazz', label: 'Jazz' },
+  { value: 'classical', label: 'Classical' },
 ];
 
 /**
@@ -108,6 +113,22 @@ export function CanvasToolbar() {
             options={LABEL_OPTIONS}
             value={strips.labelMode}
             onChange={(labelMode) => setStrips({ labelMode })}
+          />
+        )}
+      </div>
+      <div className="toolbar-group" role="group" aria-label="Harmonic analysis">
+        <ToolbarSwitch
+          id="harmonic-analysis-label"
+          label="Harmonic analysis"
+          checked={strips.analysis}
+          onChange={(analysis) => setStrips({ analysis })}
+        />
+        {strips.analysis && (
+          <Segmented
+            label="Analysis notation"
+            options={NOTATION_OPTIONS}
+            value={strips.notation}
+            onChange={(notation) => setStrips({ notation })}
           />
         )}
       </div>

@@ -26,6 +26,8 @@ export type DegreeBasis = 'key' | 'scale';
 export type FillMode = 'inversion' | 'scale';
 /** How each box draws its neck: frets across the page, or strings down it like a chord chart. */
 export type Orientation = 'horizontal' | 'vertical';
+/** How harmonic analysis writes functions: V7/IV and slash chords, or V⁷/IV with figured bass. */
+export type HarmonyNotation = 'jazz' | 'classical';
 
 export interface FillState {
   readonly on: boolean;
@@ -47,6 +49,13 @@ export interface Box {
    * notes change, and applies again whenever it matches the clicked notes.
    */
   readonly chordOverride: string | null;
+  /** The key the user fixed at this box, or null to let the analysis choose. Moves with the box. */
+  readonly keyPin: ScaleRef | null;
+  /**
+   * The reading of the chord the user chose (Reading.pinId), or null. It is relative to the chord
+   * root, so it survives transposing, and applies whenever the analysis still offers it.
+   */
+  readonly readingPin: string | null;
 }
 
 export interface Settings {
@@ -55,9 +64,11 @@ export interface Settings {
   readonly fretCount: number;
   /** Fret the capo sits at, 0 for none. Frets below it can't be played; positions stay absolute. */
   readonly capo: number;
+  /** Light grey inlay dots at frets 3, 5, 7, 9 and 12, repeating up the neck. */
+  readonly fretMarkers: boolean;
 }
 
-/** Strips between adjacent boxes. Global to the preset; a strip shows while either part is on. */
+/** Strips between adjacent boxes. Global to the preset; a strip shows while any part is on. */
 export interface StripSettings {
   /** Lines for the tones the two chords share. */
   readonly commonTones: boolean;
@@ -65,6 +76,9 @@ export interface StripSettings {
   readonly voiceLeading: boolean;
   /** Note names or scale degrees, independent of the boxes' own label modes. */
   readonly labelMode: LabelMode;
+  /** Harmonic analysis: a lane in the strips, and each chord's function under its numeral. */
+  readonly analysis: boolean;
+  readonly notation: HarmonyNotation;
 }
 
 /** What "Find key" sets on one box. */
@@ -112,7 +126,7 @@ export interface WorkbenchState {
   /** Moves the fill switch; choosing a fill also turns it on. */
   setFillMode(id: string, mode: FillMode): void;
   toggleFill(id: string): void;
-  /** Root box: moves the clicked shape, the scale and the chord override together. */
+  /** Root box: moves the clicked shape, the scale, the chord override and the key pin together. */
   transposeBox(id: string, semitones: number): void;
   /** Global shift: transposes every box as the root box does, and the key with them. */
   transposeAll(semitones: number): void;
@@ -121,6 +135,10 @@ export interface WorkbenchState {
   setMode(id: string, mode: number): void;
   setChordOverride(id: string, key: string | null): void;
   setColor(id: string, color: string): void;
+  /** Fixes the key at a box, or with null lets the analysis choose again. */
+  setKeyPin(id: string, key: ScaleRef | null): void;
+  /** Chooses a reading of the box's chord, or with null lets the analysis choose again. */
+  setReadingPin(id: string, pinId: string | null): void;
   setKey(key: ScaleRef): void;
   /** Find key: the key and each listed box's scale and chord pick, as one change. */
   setKeyAndScales(key: ScaleRef, updates: readonly BoxScaleUpdate[]): void;
@@ -137,6 +155,7 @@ export interface WorkbenchState {
    * the key move by the same number of semitones as the capo.
    */
   setCapo(capo: number): void;
+  setFretMarkers(on: boolean): void;
   /** Ignores blank names. */
   setPresetName(name: string): void;
   /** Replaces everything the preset stores and deselects. */
@@ -160,24 +179,35 @@ export function createBox(scale: ScaleRef = makeScaleRef('diatonic', 0, 'C')): B
     color: DEFAULT_BOX_COLOR,
     fill: { on: false, mode: 'inversion' },
     chordOverride: null,
+    keyPin: null,
+    readingPin: null,
   };
 }
 
+export const DEFAULT_STRIPS: StripSettings = {
+  commonTones: true,
+  voiceLeading: true,
+  labelMode: 'names',
+  analysis: false,
+  notation: 'jazz',
+};
+
 const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 'orientation' | 'boxes'> => ({
-  settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0 },
+  settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0, fretMarkers: true },
   key: makeScaleRef('diatonic', 0, 'C'),
-  strips: { commonTones: true, voiceLeading: true, labelMode: 'names' },
+  strips: DEFAULT_STRIPS,
   orientation: 'horizontal',
   boxes: [],
 });
 
-/** A box moved by `semitones`: shape (kept between the capo and the last fret), scale and chord pick. */
+/** A box moved by `semitones`: shape (kept between the capo and the last fret), scale, chord pick and key pin. */
 function transposed(box: Box, semitones: number, settings: Settings): Box {
   return {
     ...box,
     positions: transposePositions(box.positions, semitones, settings.fretCount, settings.capo),
     scale: transposeScaleRef(box.scale, semitones),
     chordOverride: box.chordOverride === null ? null : transposeChordCandidateKey(box.chordOverride, semitones),
+    keyPin: box.keyPin === null ? null : transposeScaleRef(box.keyPin, semitones),
   };
 }
 
@@ -245,6 +275,8 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
     setMode: (id, mode) => updateBox(id, (box) => ({ scale: withMode(box.scale, mode) })),
     setChordOverride: (id, chordOverride) => updateBox(id, () => ({ chordOverride })),
     setColor: (id, color) => updateBox(id, () => ({ color })),
+    setKeyPin: (id, keyPin) => updateBox(id, () => ({ keyPin })),
+    setReadingPin: (id, readingPin) => updateBox(id, () => ({ readingPin })),
 
     setKey: (key) => set({ key }),
     setKeyAndScales: (key, updates) =>
@@ -284,6 +316,7 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
           boxes: state.boxes.map((box) => transposed(box, delta, settings)),
         };
       }),
+    setFretMarkers: (fretMarkers) => set((state) => ({ settings: { ...state.settings, fretMarkers } })),
 
     setPresetName: (name) =>
       set((state) => {

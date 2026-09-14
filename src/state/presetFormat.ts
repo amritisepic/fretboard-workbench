@@ -15,7 +15,16 @@ import {
   type ScaleRef,
 } from '../theory';
 import { newId } from './ids';
-import type { Box, DegreeBasis, FillMode, LabelMode, Orientation, Settings, StripSettings } from './workbench';
+import type {
+  Box,
+  DegreeBasis,
+  FillMode,
+  HarmonyNotation,
+  LabelMode,
+  Orientation,
+  Settings,
+  StripSettings,
+} from './workbench';
 
 export const FILE_FORMAT = 'fretboard-workbench';
 /** The newest format this app reads. Version 2 added whole-library files. */
@@ -29,11 +38,12 @@ const LABEL_MODES: readonly LabelMode[] = ['names', 'degrees'];
 const FILL_MODES: readonly FillMode[] = ['inversion', 'scale'];
 const ORIENTATIONS: readonly Orientation[] = ['horizontal', 'vertical'];
 const DEGREE_BASES: readonly DegreeBasis[] = ['key', 'scale'];
+const NOTATIONS: readonly HarmonyNotation[] = ['jazz', 'classical'];
 
 /**
  * Everything a preset stores (spec §7). Its name is kept alongside. Fields added after version 1
- * (the capo, the orientation, each box's degree basis, and separate common-tone and voice-leading
- * switches) are optional when reading, and fields since removed (the strips' chords/scales choice, and
+ * (the capo, fret markers, the orientation, each box's degree basis, and separate common-tone and
+ * voice-leading switches) are optional when reading, and fields since removed (the strips' chords/scales choice, and
  * their single visibility switch, which now sets both parts) are handled, so older files still load.
  */
 export interface PresetData {
@@ -150,6 +160,7 @@ function parseSettings(value: unknown, path: string): Settings {
     tuning: strings.map((midi, i) => whole(midi, `${path}.tuning[${i}]`, 0, 127)),
     fretCount: clampFretCount(fretCount),
     capo: settings.capo === undefined ? 0 : whole(settings.capo, `${path}.capo`, 0, MAX_CAPO),
+    fretMarkers: settings.fretMarkers === undefined ? true : flag(settings.fretMarkers, `${path}.fretMarkers`),
   };
 }
 
@@ -183,6 +194,9 @@ function parseBox(value: unknown, path: string, settings: Settings): Box {
     color: color.toUpperCase(),
     fill: { on: flag(fill.on, `${path}.fill.on`), mode: choice(fill.mode, `${path}.fill.mode`, FILL_MODES) },
     chordOverride: override,
+    keyPin: box.keyPin === undefined || box.keyPin === null ? null : parseScaleRef(box.keyPin, `${path}.keyPin`),
+    readingPin:
+      box.readingPin === undefined || box.readingPin === null ? null : text(box.readingPin, `${path}.readingPin`),
   };
 }
 
@@ -201,6 +215,8 @@ export function parsePresetData(value: unknown, path = 'preset'): PresetData {
       commonTones: part('commonTones'),
       voiceLeading: part('voiceLeading'),
       labelMode: choice(strips.labelMode, `${path}.strips.labelMode`, LABEL_MODES),
+      analysis: strips.analysis === undefined ? false : flag(strips.analysis, `${path}.strips.analysis`),
+      notation: strips.notation === undefined ? 'jazz' : choice(strips.notation, `${path}.strips.notation`, NOTATIONS),
     },
     orientation:
       data.orientation === undefined ? 'horizontal' : choice(data.orientation, `${path}.orientation`, ORIENTATIONS),

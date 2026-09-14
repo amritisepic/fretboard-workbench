@@ -25,7 +25,15 @@ describe('workbench store', () => {
     expect(state().settings.fretCount).toBe(12);
     expect(state().viewing).toBe(false);
     expect(state().settings.capo).toBe(0);
+    expect(state().settings.fretMarkers).toBe(true);
     expect(state().orientation).toBe('horizontal');
+  });
+
+  it('turns the fret markers off and on', () => {
+    state().setFretMarkers(false);
+    expect(state().settings.fretMarkers).toBe(false);
+    state().setFretMarkers(true);
+    expect(state().settings.fretMarkers).toBe(true);
   });
 
   it('adds and selects a box with a red, unfilled, C major default', () => {
@@ -193,9 +201,9 @@ describe('workbench store', () => {
 
   it('keeps a preset key and strip settings, and starts new boxes in the key in effect at the end', () => {
     expect(keyName(state().key)).toBe('C major');
-    expect(state().strips).toEqual({ commonTones: true, voiceLeading: true, labelMode: 'names' });
-    state().setStrips({ labelMode: 'degrees', commonTones: false });
-    expect(state().strips).toEqual({ commonTones: false, voiceLeading: true, labelMode: 'degrees' });
+    expect(state().strips).toEqual({ commonTones: true, voiceLeading: true, labelMode: 'names', analysis: false, notation: 'jazz' });
+    state().setStrips({ labelMode: 'degrees', commonTones: false, analysis: true, notation: 'classical' });
+    expect(state().strips).toEqual({ commonTones: false, voiceLeading: true, labelMode: 'degrees', analysis: true, notation: 'classical' });
 
     const first = state().addBox();
     expect(scaleRefName(firstBox().scale)).toBe('C major');
@@ -262,6 +270,21 @@ describe('workbench store', () => {
     expect(state().boxes).toBe(boxes);
     expect(state().selectedBoxId).toBeNull();
     expect(state().document).toEqual({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's' });
+  });
+
+  it('pins a key and a reading, moving the key pin with the box', () => {
+    const id = state().addBox();
+    expect(firstBox()).toMatchObject({ keyPin: null, readingPin: null });
+    state().setKeyPin(id, makeScaleRef('diatonic', 0, 'D♭'));
+    state().setReadingPin(id, 'secondaryDominant:4major:5major:0:-');
+    state().transposeBox(id, 2);
+    expect(firstBox().keyPin && keyName(firstBox().keyPin!)).toBe('E♭ major');
+    expect(firstBox().readingPin).toBe('secondaryDominant:4major:5major:0:-');
+    state().transposeAll(-2);
+    expect(firstBox().keyPin && keyName(firstBox().keyPin!)).toBe('D♭ major');
+    state().setKeyPin(id, null);
+    state().setReadingPin(id, null);
+    expect(firstBox()).toMatchObject({ keyPin: null, readingPin: null });
   });
 
   it('removes the selected box and clears the selection', () => {

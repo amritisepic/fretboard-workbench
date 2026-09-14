@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { keyPlanOf } from '../state/boxChords';
 import { useWorkbench, type Box, type DegreeBasis, type LabelMode } from '../state/workbench';
-import { formatSpelled, keyName, scaleRefName, scaleRefPcSet } from '../theory';
+import { formatSpelled, functionScale, keyName, scaleRefName, scaleRefPcSet } from '../theory';
 import { getBoxView } from './boardModel';
 import { ChordNameField } from './ChordNameField';
 import { ColorField } from './ColorField';
 import { FillSwitch } from './FillSwitch';
+import { HarmonyField } from './HarmonyField';
 import { RankingList } from './RankingList';
 import { buildRankingView } from './rankingModel';
 import { RootBox } from './RootBox';
@@ -36,18 +37,26 @@ export function Sidebar({ box }: { readonly box: Box }) {
 
   const index = boxes.findIndex((b) => b.id === box.id);
   const previousScale = index > 0 ? boxes[index - 1].scale : null;
-  const keyHere = useMemo(
-    () => keyPlanOf(globalKey, boxes, settings).keys[index] ?? globalKey,
-    [globalKey, boxes, settings, index],
-  );
+  const plan = useMemo(() => keyPlanOf(globalKey, boxes, settings), [globalKey, boxes, settings]);
+  const keyHere = plan.keys[index] ?? globalKey;
   const view = getBoxView(box, settings, keyHere);
+  const analysis = plan.analysis.boxes[index];
+  const neighbour = (i: number) => (i >= 0 && i < boxes.length ? getBoxView(boxes[i], settings, plan.keys[i]) : null);
+  const previousView = neighbour(index - 1);
+  const nextView = neighbour(index + 1);
 
   const ranking = useMemo(
     () =>
       box.fill.mode === 'scale'
-        ? buildRankingView(box, view, previousScale ? scaleRefPcSet(previousScale) : undefined, keyHere)
+        ? buildRankingView(
+            box,
+            view,
+            previousScale ? scaleRefPcSet(previousScale) : undefined,
+            keyHere,
+            view.chord && analysis ? functionScale(view.chordPcs, view.chord, analysis) : null,
+          )
         : null,
-    [box, view, previousScale, keyHere],
+    [box, view, previousScale, keyHere, analysis],
   );
 
   return (
@@ -60,6 +69,20 @@ export function Sidebar({ box }: { readonly box: Box }) {
         <RootBox root={formatSpelled(box.scale.tonic)} onStep={(semitones) => transposeBox(box.id, semitones)} />
         <ScalePicker box={box} />
         <ChordNameField box={box} view={view} />
+        {analysis && (
+          <HarmonyField
+            box={box}
+            view={view}
+            analysis={analysis}
+            keyHere={keyHere}
+            context={{
+              title: view.title,
+              previousTitle: previousView?.title || null,
+              nextTitle: nextView?.title || null,
+              nextRoot: index + 1 < boxes.length ? (plan.analysis.boxes[index + 1].facts?.root ?? null) : null,
+            }}
+          />
+        )}
         <div className="field">
           <span className="field-label">Dot labels</span>
           <Segmented

@@ -745,32 +745,17 @@ button:disabled {
   }
 }
 
-/* Clicked notes: a lit core, a crisp ring, a slow pulse and a highlight travelling round the ring. */
-.fretboard .is-clicked .dot-halo,
-.fretboard .is-clicked .dot-ring,
-.fretboard .is-clicked .dot-orbit {
+.fretboard .inlay {
+  fill: var(--rule-strong);
+  fill-opacity: 0.75;
   pointer-events: none;
-  transform-box: fill-box;
-  transform-origin: center;
 }
 
-.fretboard .dot-halo {
-  opacity: 0;
-  animation: dot-pulse 3s ease-out infinite;
-  animation-delay: var(--dot-delay, 0s);
-}
-
+/* Clicked notes: a lit core inside a crisp ring. */
 .fretboard .dot-ring {
   fill: none;
+  pointer-events: none;
   stroke-width: 1.75;
-}
-
-.fretboard .dot-orbit {
-  fill: none;
-  stroke-linecap: round;
-  stroke-width: 2.25;
-  animation: dot-orbit 3.2s linear infinite;
-  animation-delay: var(--dot-delay, 0s);
 }
 
 .fretboard .dot-core {
@@ -787,36 +772,6 @@ button:disabled {
   }
 }
 
-@keyframes dot-pulse {
-  0% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-
-  70%,
-  100% {
-    opacity: 0;
-    transform: scale(1.85);
-  }
-}
-
-@keyframes dot-orbit {
-  to {
-    transform: rotate(-1turn);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fretboard .dot-halo,
-  .fretboard .dot-orbit {
-    animation: none;
-  }
-
-  .fretboard .dot-halo {
-    display: none;
-  }
-}
-
 .fretboard .dot-label {
   pointer-events: none;
   font-size: 10.5px;
@@ -828,6 +783,269 @@ button:disabled {
 .fretboard .dot-label.is-long {
   font-size: 8.5px;
   letter-spacing: -0.02em;
+}
+
+/* ---- Harmonic analysis ------------------------------------------------ */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.box-numeral.is-tentative {
+  border-style: dashed;
+}
+
+.tentative-mark {
+  margin-left: 1px;
+  color: var(--ink-faint);
+}
+
+/* Under the numeral and chord name, on a line of its own. */
+.box-function {
+  position: relative;
+  flex-basis: 100%;
+}
+
+.function-tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  background: var(--paper);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.box.is-viewing .function-tag {
+  cursor: help;
+}
+
+.function-tag:hover {
+  border-color: var(--ink);
+}
+
+.function-text {
+  position: relative;
+  white-space: nowrap;
+}
+
+.function-text .figure {
+  font-size: 0.68em;
+  line-height: 0;
+}
+
+/* Stacked figured bass: ⁶₅, ⁴₃, ⁴₂. */
+.function-text .figures {
+  display: inline-flex;
+  flex-direction: column;
+  margin: 0 1px;
+  font-size: 0.62em;
+  line-height: 0.95;
+  vertical-align: -0.35em;
+}
+
+.function-note {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.function-explanation {
+  position: absolute;
+  z-index: 6;
+  top: calc(100% + 6px);
+  left: 0;
+  display: none;
+  width: max-content;
+  max-width: min(300px, 80vw);
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+@media (hover: hover) {
+  .box-function:hover .function-explanation {
+    display: block;
+  }
+}
+
+.function-tag:focus-visible + .function-explanation,
+.function-explanation.is-open {
+  display: block;
+}
+
+.key-band-label.is-split {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.key-choice {
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #56524a;
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.key-choice.is-chosen {
+  font-weight: 700;
+}
+
+.key-choice.is-pinned {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button.key-choice:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.key-split-bar {
+  opacity: 0.5;
+}
+
+.scale-alternative {
+  color: #7a756c;
+  font-weight: 500;
+}
+
+.strip-analysis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+}
+
+.strip-pattern {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  text-align: center;
+}
+
+.strip-pattern.is-continued {
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.strip-relation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.strip-relation-label {
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.strip-relation-label.is-none {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.strip-mark {
+  display: block;
+  overflow: visible;
+}
+
+.strip-mark line,
+.strip-mark path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.strip-mark .is-dashed {
+  stroke-dasharray: 4 3;
+}
+
+.reading-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reading-option {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.reading-option:hover {
+  border-color: var(--rule-strong);
+}
+
+.reading-option.is-chosen {
+  border-color: var(--ink);
+}
+
+.reading-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.reading-key {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.reading-explanation {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.harmony-field .hint {
+  margin-top: 8px;
+}
+
+.key-pin {
+  margin-top: 16px;
+}
+
+.key-pin-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 /* ---- Sidebar --------------------------------------------------------- */
@@ -1188,6 +1406,17 @@ button:disabled {
   gap: 8px;
   font-size: 13px;
   font-weight: 500;
+}
+
+.rank-suggested {
+  margin-left: auto;
+  padding: 0 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .rank-missing {

@@ -1,8 +1,8 @@
 import { chordInUse, playablePositions } from '../state/boxChords';
 import type { Box, BoxScaleUpdate, Settings } from '../state/workbench';
 import {
-  closestScale,
   findKey,
+  functionScale,
   identifyChord,
   pcOf,
   pcSet,
@@ -22,7 +22,7 @@ export interface FoundKey {
 
 /**
  * "Find key": the keys the progression moves through (see findKey), then for each box the reference
- * scale closest to the key at that box, with the chord root as the scale's tonic (see closestScale).
+ * scale its function suggests, with the chord root as the scale's tonic (see functionScale).
  * Returns null when no box has a chord.
  *
  * Chords are named without a scale for finding the keys, since the boxes' scales are what is being
@@ -43,6 +43,7 @@ export function planFoundKey(boxes: readonly Box[], settings: Settings): FoundKe
       const chord = nameChord(box, pitches);
       return chord ? { chord, pcs } : null;
     }),
+    boxes.map((box) => ({ keyPin: box.keyPin, readingPin: box.readingPin })),
   );
   if (!found) return null;
 
@@ -52,7 +53,7 @@ export function planFoundKey(boxes: readonly Box[], settings: Settings): FoundKe
       const keyHere = found.keys[i];
       const chord = nameChord(box, pitches, scaleRefPcSet(keyHere));
       if (!chord) return { id: box.id, scale: keyHere, chordOverride: box.chordOverride };
-      const scale = closestScale(pcs, chord, keyHere);
+      const scale = functionScale(pcs, chord, found.analysis.boxes[i]);
       const automatic = identifyChord(pitches, { scale: scaleRefPcSet(scale) })[0];
       const keepsName = box.chordOverride === chord.key || automatic?.key === chord.key;
       return { id: box.id, scale, chordOverride: keepsName ? box.chordOverride : chord.key };

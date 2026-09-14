@@ -1,4 +1,4 @@
-import { memo, useId, type CSSProperties } from 'react';
+import { memo, useId } from 'react';
 import type { Orientation } from '../state/workbench';
 import { pitchName, type FretPosition, type Tuning } from '../theory';
 import type { BoardDot } from './boardModel';
@@ -12,6 +12,8 @@ const STRING_GAP = 26;
 const DOT_RADIUS = 11;
 const PAD_END = 10;
 const MARKER_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24, 27];
+/** The inlay dots at the marker frets; octave frets get two. */
+const INLAY_RADIUS = 5;
 
 /** Space for the string names before the open strings, and for the fret numbers beside the neck. */
 const MARGINS: Readonly<Record<Orientation, { readonly names: number; readonly numbers: number }>> = {
@@ -25,6 +27,8 @@ export interface FretboardProps {
   /** Fret the capo sits at, 0 for none. */
   readonly capo: number;
   readonly orientation: Orientation;
+  /** Light grey inlay dots at the marker frets. */
+  readonly fretMarkers: boolean;
   readonly dots: readonly BoardDot[];
   readonly color: string;
   /** False in view mode: nothing responds to clicks. */
@@ -34,23 +38,20 @@ export interface FretboardProps {
 
 /** Radius of the ring drawn around each clicked note. */
 const RING_GAP = 3;
-/** Length of the travelling highlight on that ring, as a share of its circumference. */
-const ORBIT_SHARE = 0.26;
 
 /**
  * Horizontal boards run the frets across the page with the highest string on top, as in tab.
  * Vertical boards run them down the page with the lowest string on the left, as in a chord chart.
  * Geometry is worked out along and across the neck, then mapped to x and y.
  *
- * Clicked notes stand apart from map notes: a lit gradient in the box color, a crisp ring, a slow
- * pulse and a highlight travelling round the ring. Each note's animation starts at its own point in
- * the cycle, so a chord shimmers rather than blinking in unison.
+ * Clicked notes stand apart from map notes: a lit gradient in the box color inside a crisp ring.
  */
 export const Fretboard = memo(function Fretboard({
   tuning,
   fretCount,
   capo,
   orientation,
+  fretMarkers,
   dots,
   color,
   interactive,
@@ -58,9 +59,7 @@ export const Fretboard = memo(function Fretboard({
 }: FretboardProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const coreFill = `dot-core-${uid}`;
-  const orbitStroke = `dot-orbit-${uid}`;
   const ringRadius = DOT_RADIUS + RING_GAP;
-  const ringLength = 2 * Math.PI * ringRadius;
   const vertical = orientation === 'vertical';
   const stringCount = tuning.length;
   const margins = MARGINS[orientation];
@@ -89,6 +88,9 @@ export const Fretboard = memo(function Fretboard({
   const strongInk = labelInk(color);
   const weakInk = labelInk(weak);
   const capoWire = nut + capo * FRET_LENGTH;
+  const markerFrets = MARKER_FRETS.filter((fret) => fret <= fretCount);
+  // Centred across the neck; an octave fret's pair sits a string gap either side of the centre.
+  const neckMiddle = (firstString + lastString) / 2;
 
   return (
     <svg
@@ -105,10 +107,6 @@ export const Fretboard = memo(function Fretboard({
           <stop offset="0.55" stopColor={color} />
           <stop offset="1" stopColor={mix(color, '#1E1E1E', 0.7)} />
         </radialGradient>
-        <linearGradient id={orbitStroke} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor={mix(color, '#FFFFFF', 0.2)} stopOpacity="0" />
-          <stop offset="1" stopColor={mix(color, '#FFFFFF', 0.2)} stopOpacity="1" />
-        </linearGradient>
       </defs>
       {capo > 0 && (
         <rect
@@ -117,6 +115,14 @@ export const Fretboard = memo(function Fretboard({
           rx={6}
         />
       )}
+
+      {fretMarkers &&
+        markerFrets.flatMap((fret) =>
+          (fret % 12 === 0 ? [neckMiddle - STRING_GAP, neckMiddle + STRING_GAP] : [neckMiddle]).map((across, i) => {
+            const at = point(alongOf(fret), across);
+            return <circle key={`inlay-${fret}-${i}`} className="inlay" cx={at.x} cy={at.y} r={INLAY_RADIUS} />;
+          }),
+        )}
 
       {tuning.map((midi, string) => {
         const across = acrossOf(string);
@@ -145,7 +151,7 @@ export const Fretboard = memo(function Fretboard({
       })}
       <line className="nut" {...segment(nut, firstString, nut, lastString)} />
 
-      {MARKER_FRETS.filter((fret) => fret <= fretCount).map((fret) => {
+      {markerFrets.map((fret) => {
         const at = vertical
           ? point(alongOf(fret), margins.numbers - 6)
           : point(alongOf(fret), lastString + DOT_RADIUS + 14);
@@ -169,20 +175,9 @@ export const Fretboard = memo(function Fretboard({
         const { x: cx, y: cy } = point(alongOf(dot.fret), acrossOf(dot.string));
         const toggle = interactive ? () => onToggle({ string: dot.string, fret: dot.fret }) : undefined;
         if (dot.selected) {
-          // A negative delay starts each note part-way through the cycle.
-          const phase: CSSProperties = { ['--dot-delay' as string]: `${-((dot.string * 0.61 + dot.fret * 0.23) % 3).toFixed(2)}s` };
           return (
-            <g key={`${dot.string}:${dot.fret}`} className="position position-strong is-clicked" style={phase}>
-              <circle className="dot-halo" cx={cx} cy={cy} r={DOT_RADIUS} fill={color} />
+            <g key={`${dot.string}:${dot.fret}`} className="position position-strong is-clicked">
               <circle className="dot-ring" cx={cx} cy={cy} r={ringRadius} stroke={color} />
-              <circle
-                className="dot-orbit"
-                cx={cx}
-                cy={cy}
-                r={ringRadius}
-                stroke={`url(#${orbitStroke})`}
-                strokeDasharray={`${(ringLength * ORBIT_SHARE).toFixed(1)} ${(ringLength * (1 - ORBIT_SHARE)).toFixed(1)}`}
-              />
               <circle className="dot-core" cx={cx} cy={cy} r={DOT_RADIUS} fill={`url(#${coreFill})`} onClick={toggle} />
               <text className={dot.label.length > 2 ? 'dot-label is-long' : 'dot-label'} x={cx} y={cy} fill={strongInk}>
                 {dot.label}

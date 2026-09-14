@@ -4,7 +4,7 @@
 - **What:** a browser-based fretboard visualizer for guitar and bass. It started from a long spec the user wrote, built in 7 stages; the user has since added features in later sessions.
   - Boxes hold chords the user clicks onto the fretboard, with arpeggio and scale maps across any tuning.
   - Each box has a reference scale, chosen automatically or by hand, and the progression gets a key bar.
-  - Strips between boxes show common tones and voice leading.
+  - Strips between boxes show common tones, voice leading and harmonic analysis.
   - Presets and export/import; offline PWA.
 - **Live site:** https://amritisepic.github.io/fretboard-workbench/ (GitHub Pages). Repo: https://github.com/amritisepic/fretboard-workbench (public).
 - **Project folder:** `C:\Users\amrit\Documents\fretboard-workbench`, deliberately kept out of the user's ME 315 class folder.
@@ -13,16 +13,24 @@
 - **The spec is not in the repo.** Its essentials and the user's rulings are summarised below.
 
 ## Current state and next steps
-- **`master`** holds everything below and is deployed.
-- **Next major work: harmonic analysis.** The plan is in `docs/harmonic-analysis-plan.md`, with the user's decisions recorded.
-  - Phase 0 comes first: research to finish the pattern catalogue as `docs/harmonic-patterns.md`, reviewed with the user before any code.
-  - Key decisions: tonicization switches the key bar to the target's key; ambiguous readings are all shown, never decided silently; a jazz/classical notation switch; every pattern (jazz, pop, classical) in scope; research corpora OK for offline testing.
-- **Known weakness, deliberately not fixed yet:** Find key misreads progressions that start on ii (B♭m7 Cm7 D♭maj7 E♭7 comes out as B♭ minor/Dorian instead of ii–iii–IV–V in A♭). It also doesn't treat secondary dominants as pointing at their target. The plan covers both.
+- **`master`** is deployed and unchanged since the harmonic analysis decisions were recorded.
+- **Branch `harmonic-analysis`, not committed** (the user asked for commits only on request). It holds:
+  - the housekeeping from 2026-09-14: no animation on clicked notes, and a fret-marker switch in Settings
+  - harmonic analysis: all six phases of `docs/harmonic-analysis-plan.md`. Phase 0's catalogue is `docs/harmonic-patterns.md`; it was written and built on without the planned review, at the user's request to work through the night.
+- **Waiting on the user:**
+  - Review the decisions listed at the end of this session's report and in the plan's §7.
+  - Say whether to commit, merge or push.
+  - Approve downloading research corpora for offline evaluation (plan §3.6, §5.5). Nothing has been downloaded or licence-checked yet.
+- **Known gaps:** see `docs/harmonic-patterns.md` §7.
+  - Melody and metre aren't known.
+  - Augmented sixth chords aren't named Ger/Fr/It.
+  - Diatonic planing isn't tagged.
+  - The analysis takes about 60 ms for 32 chords; it's cached per change but not incremental.
 - **Other ideas raised with the user, not scheduled:** audio playback, typing chord symbols, suggested voicings, share links, image/PDF export, a practice mode, onboarding with example progressions, and accounts with sync. Accounts were deferred in favour of Export all.
 
 ## Environment
 - **OS and Node:** Windows 11, with Node 24 LTS installed via winget at `C:\Program Files\nodejs`.
-- **PATH:** shells opened before that install need `$env:Path = "C:\Program Files\nodejs;" + $env:Path`.
+- **PATH:** shells opened before that install need `$env:Path = "C:\Program Files\nodejs;" + $env:Path`. In Git Bash: `export PATH="/c/Program Files/nodejs:$PATH"`.
 - **PowerShell is Windows PowerShell 5.1.** No `??`, `?.` or `&&`.
 - **PowerShell blocks `npm.ps1`** (execution policy). Use `npm.cmd …`, or Command Prompt or Git Bash. The user was told they can run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` themselves. Don't change it for them; it's a security setting.
 - **GitHub CLI:** installed at `C:\Program Files\GitHub CLI\gh.exe` and signed in as `amritisepic` (scopes repo, workflow). Shells opened before the install need the full path. Signing in is the user's to do.
@@ -31,13 +39,14 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 178 tests in 17 files, about 16 s. Most of the time is the exhaustive pitch-set tests.
-- `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json` (covers `src` only).
+- `npm.cmd test`: 250 tests in 19 files, about 20 s. Most of the time is the exhaustive pitch-set tests.
+- `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json` (covers `src` only). There is no `@types/node`, so tests can't import `node:` modules.
 - `npm.cmd run build`, then `npm.cmd run preview`: http://localhost:4173.
 - `npm.cmd run verify:pwa`: builds, then checks every `dist` file is precached and the manifest is installable.
 - `npm.cmd run test:offline`: acceptance test 11. It uses headless Edge or Chrome over the DevTools protocol, serves on port 4174, shuts the server down, then checks the app boots offline.
 - `npm.cmd run icons`: regenerates `public/` icons from `scripts/generate-icons.mjs`, which has no dependencies.
 - **Subpath build like Pages:** set `$env:BASE_PATH = '/fretboard-workbench/'` before `build`, and before `preview` too.
+- **Analysis fixtures:** `npx vitest run src/theory/__tests__/harmonicAnalysis.test.ts`. The last test reports agreement: fixtures passing, local keys, chord scales, ambiguous listings.
 
 ## Deployment
 - **Workflow:** `.github/workflows/deploy.yml`. Every push to `master`, or a manual run from the Actions tab, runs `npm ci`, `npm test`, then `npm run build` with `BASE_PATH=/<repository-name>/`, and publishes `dist` with the Pages actions.
@@ -64,15 +73,15 @@
   | `d08b992` | Key bar and scale bar, tonic-preserving key plan |
   | `fd550d1` | Export all, GitHub Pages deployment |
   | `1d454d6` | View mode, mobile layout, animated notes, split strip switches |
-  | latest | Harmonic analysis decisions and this handoff |
+  | `0ce8623` | Harmonic analysis decisions and the previous handoff |
 
-- **Old local branches:** `stage-4-sidebar`, `stage-5-canvas`, `stage-6-presets`, `stage-7-pwa`, `handoff-notes`, `find-key-workflow`, `key-bar` and `view-mode-mobile` point at those commits. `origin` has `master` and `view-mode-mobile`.
-- **Branch workflow:** when asked to commit while on `master`, create a branch first. Then either suggest `git merge --ff-only`, or push to `master` if the user asks, as they did for the latest work. With `gh` available, PRs can be opened directly (`gh pr create`).
+- **Old local branches:** `stage-4-sidebar`, `stage-5-canvas`, `stage-6-presets`, `stage-7-pwa`, `handoff-notes`, `find-key-workflow`, `key-bar` and `view-mode-mobile` point at those commits. `origin` has `master` and `view-mode-mobile`. `harmonic-analysis` branches from `0ce8623` with uncommitted work.
+- **Branch workflow:** when asked to commit while on `master`, create a branch first. Then either suggest `git merge --ff-only`, or push to `master` if the user asks, as they did for earlier work. With `gh` available, PRs can be opened directly (`gh pr create`).
 - **Commit messages** end with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`. Write them to a file and use `git commit -F`, because PowerShell splits quoted text.
 - **Commit only when asked.**
 
 ## How the user wants to work
-- **Stop for review** after each chunk of work.
+- **Stop for review** after each chunk of work. For the harmonic analysis the user asked instead for work through the night, deciding and reporting rather than asking, and stopping only for decisions that would be costly to undo.
 - **List every decision** made where the spec or request was ambiguous.
 - **Ask about genuine ambiguities** instead of guessing, and don't silently substitute simpler features.
 - **Check claims** rather than trusting them, including the spec's.
@@ -87,28 +96,33 @@
   - `chords.ts`: chord types including generated tension chords, chord identification with slash names, chord-tone spelling
   - `ranking.ts`: scale ranking by tiers, pinning of the key's own modes, voice-leading term
   - `voiceleading.ts`: minimum-motion matching
-  - `keys.ts`: key names, roman numerals, `planKeys` (key bar), `findKey`, `closestScale`
+  - `keys.ts`: key names, roman numerals (`romanNumeral`, `degreeNumeral`), `closestScale`
+  - `analysis.ts`: the harmonic analyzer. It covers chord facts, home keys, readings per key, the cheapest-path search with per-reading path costs, alternatives, pins, relations and box tags.
+  - `patterns.ts`: named multi-chord patterns found in a finished analysis
+  - `keyPlan.ts`: `planKeys` (key bar), `findKey`, `functionScale` (the scale a reading suggests)
   - `fretboard.ts`: tunings, positions, capo, the one-note-per-string limit, transposing shapes
-- **`src/data/`:** scale families, chord types and tension bases, chord-ID weights, ranking weights with commonness priors, key-plan weights (`keyPlanWeights.ts`), tuning presets.
+- **`src/data/`:** scale families, chord types and tension bases, chord-ID weights, ranking weights with commonness priors, tuning presets, `harmonyRules.ts` (borrowing sources, cadence table, function scales, pattern names), `analysisWeights.ts` (every analysis cost). `keyPlanWeights.ts` is gone.
 - **`src/state/`:**
-  - `workbench.ts`: the Zustand store with settings (tuning, frets, capo), key, strips, orientation, boxes, selection, view mode and document
-  - `boxChords.ts`: each box's chord (memoised) and `keyPlanOf`, shared by the store and views
+  - `workbench.ts`: the Zustand store with settings (tuning, frets, capo, fret markers), key, strips (including `analysis` and `notation`), orientation, boxes (including `keyPin` and `readingPin`), selection, view mode and document
+  - `boxChords.ts`: each box's chord (memoised) and `keyPlanOf` (planKeys with pins; the last plan is cached), shared by the store and views
   - `library.ts`: the preset library store, including Export all
   - `repository.ts`: IndexedDB access
   - `persistence.ts`: session autosave and restore before first render
   - `presetFormat.ts`: validation and the export format. Version 2 adds whole-library files; preset and folder files are still written as version 1. Fields added later are optional when read, and old snapshots are upgraded.
   - `libraryTree.ts`, `documentStatus.ts`, `ids.ts`
 - **`src/components/`:**
-  - top of screen: `TopBar` (with the Edit/View switch), `PresetNameField`, `ExplorerPanel`, `SettingsPanel`
-  - canvas: `Canvas`, `useRowStarts`, `useFitToFrame` (view mode), `CanvasToolbar`, `BoxCard`, `Fretboard` (SVG), `VoiceLeadingStrip`
-  - sidebar: `Sidebar`, `RootBox`, `ScalePicker`/`ScaleSelects`, `ChordNameField`, `ColorField`, `RankingList`, `FillSwitch`
-  - other: `UpdateNotice`, `ConfirmDialog`, `useKeyboardShortcuts`
-  - pure view models: `boardModel.ts`, `canvasModel.ts`, `stripModel.ts`, `rankingModel.ts`, `findKeyModel.ts`
-- **`docs/harmonic-analysis-plan.md`:** the harmonic analysis plan.
+  - top of screen: `TopBar` (with the Edit/View switch), `PresetNameField`, `ExplorerPanel`, `SettingsPanel` (with the fret-marker switch)
+  - canvas: `Canvas` (key-bar splits and choosers), `useRowStarts`, `useFitToFrame` (view mode), `CanvasToolbar` (with the Harmonic analysis switch and Jazz/Classical), `BoxCard` (function tag and explanation), `Fretboard` (SVG with inlays), `VoiceLeadingStrip` (with the analysis lane), `FunctionText`
+  - sidebar: `Sidebar`, `RootBox`, `ScalePicker`/`ScaleSelects`, `ChordNameField`, `HarmonyField` (readings, pins, key at this box), `ColorField`, `RankingList` (marks the suggested scale), `FillSwitch`
+  - other: `UpdateNotice`, `ConfirmDialog`, `useKeyboardShortcuts`, `readingChoice.ts` (pinning a reading moves an unedited scale with it)
+  - pure view models: `boardModel.ts`, `canvasModel.ts` (analysis and key choices per box), `stripModel.ts`, `rankingModel.ts`, `findKeyModel.ts`, `analysisModel.ts` (labels in both notations, explanations, relation and pattern labels)
+- **Docs:** `docs/harmonic-analysis-plan.md` (the plan, decisions, and what was built) and `docs/harmonic-patterns.md` (the catalogue).
 - **Tests:** in `__tests__` folders under `theory`, `components` and `state`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
+  - `theory/__tests__/harmonicAnalysis.test.ts` is the evaluation harness of labelled progressions.
+  - `theory/__tests__/chordSymbols.ts` builds chords from symbols ("B♭m7", "C/G", "F♯7(11)") for tests.
 
 ## Spec essentials
-- **Settings:** 4–9 strings, and resizing adds or removes at the low end. Per-string tuning with presets. 12–30 frets, clamped with an inline message; the default is 12. Capo 0–11.
+- **Settings:** 4–9 strings, and resizing adds or removes at the low end. Per-string tuning with presets. 12–30 frets, clamped with an inline message; the default is 12. Capo 0–11. Fret markers on or off (default on).
 - **Boxes:** click notes on the SVG fretboard, one per string, six at most. A fill switch gives an arpeggio map or a scale fill.
   - A reference scale is always required.
   - Spelling is derived, never toggled.
@@ -120,8 +134,8 @@
   2. missing tones, weighted root 10, 3rd 8, 7th 6, altered 5th 8, extensions 3, perfect 5th 1
   3. everything else, sorted by overlap
 
-  There's also a collapsed "maximally distant" list.
-- **Strips** between boxes: separate Common tones and Voice leading switches.
+  There's also a collapsed "maximally distant" list. The scale the chord's function suggests is marked "Suggested".
+- **Strips** between boxes: separate Common tones, Voice leading and Harmonic analysis switches.
 - **Key bar and scale bar** above the boxes, with roman numerals counted from the key bar.
 - **Presets and folders** in IndexedDB, with JSON export/import and Export all.
 - **Offline PWA.**
@@ -140,35 +154,41 @@
 - **Tension chords** come from `TENSION_BASES` in `data/chords.ts`: F♯7(11), G7(13), m9♭5, 9(♯11).
 - **Chords** have one note per string and six notes at most; a refused click shows a brief notice.
 - **Workflow:** fill in the chords, press Find key, then adjust.
-- **Find key** runs the key planner on the chords alone:
-  - It considers only major, natural minor, harmonic minor and melodic minor keys.
-  - The preset key becomes the key covering the most boxes.
-  - Each box's scale is the one closest to the key at that box (`closestScale`).
-- **Key bar** (`planKeys`, weights in `data/keyPlanWeights.ts`) is the cheapest sequence of keys from the preset key:
-  - A scale that alters the key changes it but keeps the tonic: G Mixolydian ♭2 in C minor gives C Harmonic Major; A♭ Lydian in C major gives C minor.
-  - A passing chord whose scale lacks the tonic stays in the key as chromatic (F♯7 in C minor is ♯IV).
-  - The tonic moves only for about three such chords in a row, or two at the end.
-  - Test 10 was amended to match. Harmonic analysis v2 will add tonicization (see the plan).
+- **Harmonic analysis decisions** (plan §5): tonicization switches the key bar to the target's key; ambiguous readings are all shown, never decided silently; a jazz/classical notation switch; every pattern in scope; corpora OK for offline testing.
+- **Find key** runs the analyzer on the chords alone:
+  - Home keys are major, minor, Dorian, Mixolydian, Lydian and Phrygian. The first key bar allowed only major and the minors; the plan's modal keys replace that, pending review.
+  - The preset key becomes the home key covering the most boxes.
+  - Each box's scale is the one its reading suggests (`functionScale`): Mixolydian for V7 of a major chord, Phrygian dominant for V7 of a minor one, whole–half diminished for a diminished 7th, Lydian dominant for a tritone substitute. Otherwise it's the scale closest to the local key, or to the source key for a borrowed chord.
+  - Pins are respected.
+- **Key bar** (`planKeys`, analysis in `theory/analysis.ts`, costs in `data/analysisWeights.ts`):
+  - Each box shows the local key of its reading. That's the home key, or the key a secondary dominant, leading-tone chord, related ii or tritone substitute tonicizes. A chord outside the key that its dominant just resolved to shows its own key.
+  - A diatonic target stays in the home key (A7 → Dm7 in C: D minor over A7, C major over Dm7).
+  - A scale that alters the key still changes the collection but keeps the tonic: A♭ Lydian in C major shows C minor. A minor key's raised 7th on V/vii doesn't count as an alteration.
+  - A box's scale is evidence for its reading only when the scale holds the chord.
+  - Ambiguous boxes split the key band and scale band ("B♭ minor | B♭ major?", at most two) and mark the numeral tentative. Clicking a choice pins that reading, and clicking the pinned one again unpins.
+  - The sidebar's Harmony section lists every reading with its explanation and can fix the key at the box.
+  - Test 10 (first amendment) still passes. The run-of-chords test was amended again for tonicization.
 - **Degree labels** count from the key in effect by default. Each box can switch to its reference scale, and the strips follow that choice.
-- **Capo** keeps the tuning. Shapes move with it, so chords, scales and the key transpose. Toolbar Shift transposes everything by a semitone.
+- **Capo** keeps the tuning. Shapes move with it, so chords, scales, the key and key pins transpose. Toolbar Shift transposes everything by a semitone.
 - **Neck orientation switch** rotates the fretboards (vertical = chord-chart style); it doesn't change the box layout.
 - **Strips:**
   - Scales are compared when both boxes are set to fill scale.
-  - Common tones and Voice leading are separate switches, and the Names/Degrees choice shows while one is on.
+  - Common tones, Voice leading and Harmonic analysis are separate switches. The Names/Degrees choice shows while common tones or voice leading is on, and Jazz/Classical shows while harmonic analysis is on.
   - Old presets' single "visible" switch sets both.
 - **Ranking:** rows all start on the chord root. Tier-0 modes of the key in effect are pinned first. The tier-1 limit is 8.
 - **Edit / View** switch in the top bar:
   - View mode hides the sidebar, the add button, each box's "x" and the Key/Find key/Shift controls, and disables note clicks and shortcuts.
   - It scales the whole canvas to fit. `useFitToFrame` tries layout widths up to a single row, box groups keep their natural width, and it enlarges at most 1.5×.
+  - Key-bar choices show as text, and function tags still explain on hover or tap.
   - It isn't saved.
 - **Each box has an "x"** that removes it after the same confirmation as the Delete key.
-- **Clicked notes** have a gradient core, a crisp ring, a slow pulse and an orbiting highlight, all in the box color, staggered per note. Reduced motion turns the animation off.
+- **Clicked notes** have a gradient core and a crisp ring in the box color. The animation was removed on 2026-09-14, at the user's request.
+- **Fret markers:** light grey inlays at 3, 5, 7, 9, 12 (two dots), 15 and so on, behind the strings. A switch in Settings, on by default and saved with the preset.
 - **Responsive:**
   - The `.app` grid column is `minmax(0, 1fr)`, so content scrolls instead of widening the page.
   - At 1024px and below the sidebar slides over the canvas with a Done button.
   - At 760px and below: the top bar uses icons and the name takes the leftover width, the toolbar is one scrolling row, strips sit above their box, and wide necks scroll sideways so notes stay finger-sized.
 - **Accounts:** not now. Export all is the backup and migration path.
-- **Harmonic analysis decisions** are recorded in `docs/harmonic-analysis-plan.md` §5.
 
 ## Spec errors found (the code uses the correct theory)
 - F♯ natural minor's 7th is E; E♯ belongs to harmonic or melodic minor.
@@ -196,11 +216,17 @@
   - Screenshots and clicks can fail, and focus and blur events don't fire.
   - `requestAnimationFrame` never fires, so a page script waiting on it hangs and may resume later, even running leftover clicks.
   - Drive React with dispatched events and `setTimeout` waits, and tell the user.
+- **Driving the app from page scripts:**
+  - Click DOM buttons (`button.click()`) rather than importing the store with `await import('/src/state/workbench.ts')`. After a hot update the page's store is a newer module instance, and the import gets a stale one.
+  - Importing before any hot update works, and is a quick way to build a progression.
+- **A clean browser session:** run a second dev server on another port (`npx vite --port 5175 --strictPort`). Each origin has its own IndexedDB, so testing doesn't overwrite the session saved at 5173.
 - **Mobile emulation:** after switching the browser tool to the mobile or tablet preset, reload the page, or the layout viewport stays desktop-sized.
 - **Clicking notes from scripts:** pick a note by its `.position` group index (string × playable frets + fret − capo), then click its `.dot-core` or first circle. Clicked notes contain extra circles, so indexing circles directly goes wrong.
 - **The browser tool's `key` action can't send Space.**
 - **`preview_start` with a name fails** (npm can't find `node`). Run the dev server as a background shell with Node on PATH, then open the URL.
 - **Stopping a background `npm run dev` task can leave its Node process running on port 5173.** Check the port and only stop a Vite process you started.
+- **Vitest 5 hides `console.log` from passing tests.** To inspect engine output while tuning, write it to a file from a throwaway test (with `// @ts-nocheck`, since there are no Node types) and delete the test afterwards.
+- **In the Bash tool, `cd` persists** between calls; prefix commands with the project path.
 - **The Grep tool skips gitignored folders** (`node_modules`, `dist`). Use PowerShell `Select-String` for those.
 - **In PowerShell, `$pid` is read-only.** Native tools writing to stderr (git push) show up as "NativeCommandError" even on success; read the actual output.
 - **Control-character escapes like `\u0000` in written file content turned into raw bytes.** Avoid them, and scan `src` and `scripts` for control characters afterwards.

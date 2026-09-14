@@ -131,7 +131,34 @@ export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
 
       <CapoField />
       <FretCountField />
+      <FretMarkersField />
     </div>
+  );
+}
+
+function FretMarkersField() {
+  const fretMarkers = useWorkbench((s) => s.settings.fretMarkers);
+  const setFretMarkers = useWorkbench((s) => s.setFretMarkers);
+
+  return (
+    <section className="settings-section">
+      <div className="settings-row">
+        <span className="field-label" id="fret-markers-label">
+          Fret markers
+        </span>
+        <button
+          type="button"
+          role="switch"
+          className="toggle"
+          aria-checked={fretMarkers}
+          aria-labelledby="fret-markers-label"
+          onClick={() => setFretMarkers(!fretMarkers)}
+        >
+          <span className="toggle-knob" />
+        </button>
+      </div>
+      <p className="hint">Light grey dots at frets 3, 5, 7, 9 and 12, repeating up the neck.</p>
+    </section>
   );
 }
 
