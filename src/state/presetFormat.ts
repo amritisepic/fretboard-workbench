@@ -18,7 +18,10 @@ import { newId } from './ids';
 import type { Box, DegreeBasis, FillMode, LabelMode, Orientation, Settings, StripSettings } from './workbench';
 
 export const FILE_FORMAT = 'fretboard-workbench';
-export const FILE_VERSION = 1;
+/** The newest format this app reads. Version 2 added whole-library files. */
+export const FILE_VERSION = 2;
+/** The version written for each kind of file: the oldest that can read it, so older copies of the app still open it. */
+const KIND_VERSIONS = { preset: 1, folder: 1, library: 2 } as const;
 
 const MAX_NAME_LENGTH = 120;
 const MAX_FOLDER_DEPTH = 32;
@@ -51,9 +54,16 @@ export interface ExportedFolder {
   readonly presets: readonly ExportedPreset[];
 }
 
+/** Every folder and preset: the top level of the library. */
+export interface ExportedLibrary {
+  readonly folders: readonly ExportedFolder[];
+  readonly presets: readonly ExportedPreset[];
+}
+
 export type ExportFile =
   | { readonly kind: 'preset'; readonly preset: ExportedPreset }
-  | { readonly kind: 'folder'; readonly folder: ExportedFolder };
+  | { readonly kind: 'folder'; readonly folder: ExportedFolder }
+  | { readonly kind: 'library'; readonly library: ExportedLibrary };
 
 export class PresetFormatError extends Error {
   constructor(path: string, problem: string) {
@@ -225,10 +235,21 @@ export function parseExportFile(source: string): ExportFile {
   if (version > FILE_VERSION) {
     throw new PresetFormatError('The file', `uses format version ${version}, which is newer than this app (${FILE_VERSION})`);
   }
-  const kind = choice(file.kind, 'file.kind', ['preset', 'folder']);
-  return kind === 'preset'
-    ? { kind: 'preset', preset: parseExportedPreset(file.preset, 'preset') }
-    : { kind: 'folder', folder: parseExportedFolder(file.folder, 'folder', 0) };
+  const kind = choice(file.kind, 'file.kind', ['preset', 'folder', 'library']);
+  if (kind === 'preset') return { kind: 'preset', preset: parseExportedPreset(file.preset, 'preset') };
+  if (kind === 'folder') return { kind: 'folder', folder: parseExportedFolder(file.folder, 'folder', 0) };
+  const library = fields(file.library, 'library');
+  return {
+    kind: 'library',
+    library: {
+      folders: list(library.folders, 'library.folders').map((folder, i) =>
+        parseExportedFolder(folder, `library.folders[${i}]`, 1),
+      ),
+      presets: list(library.presets, 'library.presets').map((preset, i) =>
+        parseExportedPreset(preset, `library.presets[${i}]`),
+      ),
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -269,5 +290,5 @@ export function withFreshBoxIds(data: PresetData): PresetData {
 }
 
 export function serializeExportFile(file: ExportFile): string {
-  return `${JSON.stringify({ format: FILE_FORMAT, version: FILE_VERSION, ...file }, null, 2)}\n`;
+  return `${JSON.stringify({ format: FILE_FORMAT, version: KIND_VERSIONS[file.kind], ...file }, null, 2)}\n`;
 }

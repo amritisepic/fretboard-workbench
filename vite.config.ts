@@ -3,6 +3,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // GitHub Pages serves the site from /<repository-name>/; the deploy workflow passes that path in.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [
     react(),
     VitePWA({

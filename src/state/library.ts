@@ -18,6 +18,7 @@ import {
   snapshotOf,
   withFreshBoxIds,
   type ExportedFolder,
+  type ExportedPreset,
 } from './presetFormat';
 import type { LibraryChange, LibraryRepository } from './repository';
 import { useWorkbench } from './workbench';
@@ -52,7 +53,9 @@ export interface LibraryState {
   deletePreset(id: string): Promise<void>;
   exportPreset(id: string): ExportedText;
   exportFolder(id: string): ExportedText;
-  /** Imports an exported file into a folder and returns a summary. Throws PresetFormatError. */
+  /** Every folder and preset in one file, for backups or moving to another browser. Throws when the library is empty. */
+  exportLibrary(): ExportedText;
+  /** Imports an exported preset, folder or library into a folder and returns a summary. Throws PresetFormatError. */
   importFile(source: string, folderId: string | null): Promise<string>;
 }
 
@@ -77,6 +80,27 @@ function requiredName(name: string, what: string): string {
 }
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+const exportedPreset = (preset: PresetRecord): ExportedPreset => ({ name: preset.name, data: preset.data });
+
+function exportedFolder(
+  folders: readonly FolderRecord[],
+  presets: readonly PresetRecord[],
+  folder: FolderRecord,
+): ExportedFolder {
+  return {
+    name: folder.name,
+    folders: childFolders(folders, folder.id).map((child) => exportedFolder(folders, presets, child)),
+    presets: presetsIn(presets, folder.id).map(exportedPreset),
+  };
+}
+
+/** "2026-09-13" in local time, for export file names. */
+function localDate(time: number): string {
+  const date = new Date(time);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 export const useLibrary = create<LibraryState>()((set, get) => {
   const persist = async (change: LibraryChange) => {
@@ -255,59 +279,74 @@ export const useLibrary = create<LibraryState>()((set, get) => {
       const preset = found(get().presets.find((p) => p.id === id), 'That preset');
       return {
         fileName: exportFileName(preset.name),
-        text: serializeExportFile({ kind: 'preset', preset: { name: preset.name, data: preset.data } }),
+        text: serializeExportFile({ kind: 'preset', preset: exportedPreset(preset) }),
       };
     },
 
     exportFolder: (id) => {
       const { folders, presets } = get();
-      const build = (folder: FolderRecord): ExportedFolder => ({
-        name: folder.name,
-        folders: childFolders(folders, folder.id).map(build),
-        presets: presetsIn(presets, folder.id).map((p) => ({ name: p.name, data: p.data })),
-      });
       const folder = found(folders.find((f) => f.id === id), 'That folder');
-      return { fileName: exportFileName(folder.name), text: serializeExportFile({ kind: 'folder', folder: build(folder) }) };
+      return {
+        fileName: exportFileName(folder.name),
+        text: serializeExportFile({ kind: 'folder', folder: exportedFolder(folders, presets, folder) }),
+      };
+    },
+
+    exportLibrary: () => {
+      const { folders, presets } = get();
+      if (folders.length === 0 && presets.length === 0) throw new Error('There are no presets to export yet.');
+      const library = {
+        folders: childFolders(folders, null).map((folder) => exportedFolder(folders, presets, folder)),
+        presets: presetsIn(presets, null).map(exportedPreset),
+      };
+      return {
+        fileName: exportFileName(`Fretboard Workbench presets ${localDate(Date.now())}`),
+        text: serializeExportFile({ kind: 'library', library }),
+      };
     },
 
     importFile: async (source, folderId) => {
       const file = parseExportFile(source);
       const { folders, presets } = get();
       const now = Date.now();
-
-      if (file.kind === 'preset') {
-        const record: PresetRecord = {
-          id: newId(),
-          folderId,
-          name: uniqueName(file.preset.name, presetNamesIn(presets, folderId)),
-          data: withFreshBoxIds(file.preset.data),
-          createdAt: now,
-          updatedAt: now,
-        };
-        await persist({ putPresets: [record] });
-        set((state) => ({ presets: [...state.presets, record] }));
-        return `Imported preset “${record.name}”.`;
-      }
-
       const newFolders: FolderRecord[] = [];
       const newPresets: PresetRecord[] = [];
-      const add = (folder: ExportedFolder, parentId: string | null, siblingNames: readonly string[]): FolderRecord => {
-        const record: FolderRecord = { id: newId(), parentId, name: uniqueName(folder.name, siblingNames), createdAt: now, updatedAt: now };
+
+      /** Adds presets beside siblings named in `taken`, which grows as names are used. */
+      const addPresets = (items: readonly ExportedPreset[], parentId: string | null, taken: string[]) => {
+        for (const preset of items) {
+          const name = uniqueName(preset.name, taken);
+          taken.push(name);
+          newPresets.push({ id: newId(), folderId: parentId, name, data: withFreshBoxIds(preset.data), createdAt: now, updatedAt: now });
+        }
+      };
+      const addFolder = (folder: ExportedFolder, parentId: string | null, taken: string[]): FolderRecord => {
+        const record: FolderRecord = { id: newId(), parentId, name: uniqueName(folder.name, taken), createdAt: now, updatedAt: now };
+        taken.push(record.name);
         newFolders.push(record);
         const childNames: string[] = [];
-        for (const child of folder.folders) childNames.push(add(child, record.id, childNames).name);
-        const presetNames: string[] = [];
-        for (const preset of folder.presets) {
-          const name = uniqueName(preset.name, presetNames);
-          presetNames.push(name);
-          newPresets.push({ id: newId(), folderId: record.id, name, data: withFreshBoxIds(preset.data), createdAt: now, updatedAt: now });
-        }
+        for (const child of folder.folders) addFolder(child, record.id, childNames);
+        addPresets(folder.presets, record.id, []);
         return record;
       };
-      const top = add(file.folder, folderId, folderNamesIn(folders, folderId));
+
+      let summary: string;
+      if (file.kind === 'preset') {
+        addPresets([file.preset], folderId, presetNamesIn(presets, folderId));
+        summary = `Imported preset “${newPresets[0].name}”.`;
+      } else if (file.kind === 'folder') {
+        const top = addFolder(file.folder, folderId, folderNamesIn(folders, folderId));
+        summary = `Imported folder “${top.name}” with ${plural(newPresets.length, 'preset')}.`;
+      } else {
+        const folderNames = folderNamesIn(folders, folderId);
+        for (const folder of file.library.folders) addFolder(folder, folderId, folderNames);
+        addPresets(file.library.presets, folderId, presetNamesIn(presets, folderId));
+        summary = `Imported ${plural(newFolders.length, 'folder')} and ${plural(newPresets.length, 'preset')}.`;
+      }
+
       await persist({ putFolders: newFolders, putPresets: newPresets });
       set((state) => ({ folders: [...state.folders, ...newFolders], presets: [...state.presets, ...newPresets] }));
-      return `Imported folder “${top.name}” with ${plural(newPresets.length, 'preset')}.`;
+      return summary;
     },
   };
 });

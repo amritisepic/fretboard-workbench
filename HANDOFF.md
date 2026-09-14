@@ -22,6 +22,12 @@
 - `npm.cmd run test:offline`: acceptance test 11. It uses headless Edge or Chrome over the DevTools protocol, serves on port 4174, shuts the server down, then checks the app boots offline.
 - `npm.cmd run icons`: regenerates `public/` icons from `scripts/generate-icons.mjs`, which has no dependencies.
 
+## Deployment
+- **Host:** GitHub Pages, from `.github/workflows/deploy.yml`. Every push to `master` (or a manual run) installs, tests, builds and publishes `dist`.
+- **Site path:** Pages serves the site at `/<repository-name>/`. The workflow passes that as `BASE_PATH`, which `vite.config.ts` uses as Vite's `base`; locally it stays `/`. A user site (`<name>.github.io`) or a custom domain needs `BASE_PATH` set to `/`.
+- **One-time setup by the user:** create the GitHub repository (public on the free plan), add it as `origin`, push `master`, then set Settings → Pages → Source to "GitHub Actions". Accounts and sign-in are the user's to do.
+- **Presets don't travel with the site:** each origin has its own IndexedDB, so move presets with Export all and Import.
+
 ## Git
 - **Commits:**
   - `d55aa93`: stages 1–3
@@ -56,7 +62,7 @@
   - `library.ts`: the preset library store
   - `repository.ts`: IndexedDB access
   - `persistence.ts`: session autosave and restore before first render
-  - `presetFormat.ts`: validation and the export format, version 1
+  - `presetFormat.ts`: validation and the export format. Version 2 adds whole-library files ("Export all"); preset and folder files are still written as version 1 so older copies can open them
   - `libraryTree.ts`, `documentStatus.ts`, `ids.ts`
 - **`src/components/`:**
   - top of screen: `TopBar`, `PresetNameField`, `ExplorerPanel`, `SettingsPanel`

@@ -114,6 +114,18 @@ describe('export files', () => {
     expect(parseExportFile(serializeExportFile({ kind: 'folder', folder }))).toEqual({ kind: 'folder', folder });
   });
 
+  it('round-trips the whole library, marking only that kind of file as version 2', () => {
+    const preset = { name: 'Minor ii–V', data: sample() };
+    const library = { folders: [{ name: 'Jazz', folders: [], presets: [preset] }], presets: [preset] };
+    const text = serializeExportFile({ kind: 'library', library });
+    expect(JSON.parse(text)).toMatchObject({ format: 'fretboard-workbench', version: 2, kind: 'library' });
+    expect(parseExportFile(text)).toEqual({ kind: 'library', library });
+    expect(JSON.parse(serializeExportFile({ kind: 'folder', folder: library.folders[0] })).version).toBe(1);
+    expect(() => parseExportFile('{"format":"fretboard-workbench","version":2,"kind":"library","library":{"folders":[],"presets":{}}}')).toThrow(
+      'library.presets must be a list',
+    );
+  });
+
   it('writes a versioned, readable file', () => {
     const text = serializeExportFile({ kind: 'preset', preset: { name: 'X', data: sample() } });
     expect(JSON.parse(text)).toMatchObject({ format: 'fretboard-workbench', version: 1, kind: 'preset' });

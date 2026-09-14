@@ -11,6 +11,12 @@ const initialWorkbench = useWorkbench.getState();
 const initialLibrary = useLibrary.getState();
 const workbench = () => useWorkbench.getState();
 const library = () => useLibrary.getState();
+/** Names of the folders and presets directly inside a folder (null = top level), sorted. */
+const childNames = (parentId: string | null) =>
+  [
+    ...library().folders.filter((f) => f.parentId === parentId).map((f) => f.name),
+    ...library().presets.filter((p) => p.folderId === parentId).map((p) => p.name),
+  ].sort();
 
 let databaseCount = 0;
 let databaseName = '';
@@ -155,6 +161,41 @@ describe('preset library', () => {
     await reconnect();
     expect(library().folders).toHaveLength(3);
     expect(library().presets).toHaveLength(2);
+  });
+
+  it('exports every folder and preset in one file and restores them in another library', async () => {
+    expect(() => library().exportLibrary()).toThrow('There are no presets to export yet.');
+    const setList = await library().createFolder(null, 'Set list');
+    const encore = await library().createFolder(setList.id, 'Encore');
+    workbench().setPresetName('Opener');
+    const opener = await library().saveCurrent();
+    await library().movePreset(opener.id, encore.id);
+    workbench().newDocument();
+    workbench().setPresetName('Loose idea');
+    await library().saveCurrent();
+
+    const file = library().exportLibrary();
+    expect(file.fileName).toMatch(/^Fretboard Workbench presets \d{4}-\d{2}-\d{2}\.json$/);
+
+    await connectFresh();
+    expect(await library().importFile(file.text, null)).toBe('Imported 2 folders and 2 presets.');
+    const importedSetList = library().folders.find((f) => f.name === 'Set list');
+    const importedEncore = library().folders.find((f) => f.name === 'Encore');
+    expect(importedSetList?.parentId).toBeNull();
+    expect(importedEncore?.parentId).toBe(importedSetList?.id);
+    expect(library().presets.map((p) => [p.name, p.folderId])).toEqual(
+      expect.arrayContaining([
+        ['Opener', importedEncore?.id],
+        ['Loose idea', null],
+      ]),
+    );
+
+    // Importing the same backup again keeps both copies side by side.
+    expect(await library().importFile(file.text, null)).toBe('Imported 2 folders and 2 presets.');
+    expect(childNames(null)).toEqual(['Loose idea', 'Loose idea 2', 'Set list', 'Set list 2']);
+    await reconnect();
+    expect(library().folders).toHaveLength(4);
+    expect(library().presets).toHaveLength(4);
   });
 
   it('rejects a broken import without changing the library', async () => {

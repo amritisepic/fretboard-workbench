@@ -153,6 +153,14 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
     if (fileRef.current) fileRef.current.value = '';
   };
 
+  const exportAll = () =>
+    run(() => {
+      closeMenus();
+      const file = library.exportLibrary();
+      downloadText(file.fileName, file.text);
+      return `Exported every folder and preset to ${file.fileName}.`;
+    });
+
   const exportTarget = (target: Target) =>
     run(() => {
       closeMenus();
@@ -387,8 +395,22 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
           <button type="button" className="button is-compact" onClick={() => void createFolder(null)}>
             New folder
           </button>
-          <button type="button" className="button is-compact" onClick={() => startImport(null)}>
+          <button
+            type="button"
+            className="button is-compact"
+            title="Import a preset, a folder or a full export"
+            onClick={() => startImport(null)}
+          >
             Import…
+          </button>
+          <button
+            type="button"
+            className="button is-compact"
+            disabled={isEmpty}
+            title="Save every folder and preset in one file, to back them up or move them to another browser"
+            onClick={() => void exportAll()}
+          >
+            Export all
           </button>
         </div>
       </div>
@@ -406,7 +428,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
       )}
 
       {isEmpty && library.status !== 'loading' ? (
-        <p className="explorer-empty">No saved presets yet. Save the workbench to add one.</p>
+        <p className="explorer-empty">No saved presets yet. Save the workbench to add one, or import an export.</p>
       ) : (
         <ul className="explorer-list">{renderLevel(null, 0)}</ul>
       )}
