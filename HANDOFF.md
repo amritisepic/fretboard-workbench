@@ -21,7 +21,7 @@
 - **Docs:**
   - `docs/harmonic-analysis-plan.md`: the plan, the user's decisions (§5), and what was built, with every building decision and the corpus results (§7)
   - `docs/harmonic-patterns.md`: the pattern catalogue, with known gaps in its §7
-- **Work from 2026-09-15** is on the branch `scale-wizard-examples-export-tour` (pushed to `origin`, not merged into `master`, so not deployed): the scale wizard, built-in examples, PDF/PNG export, the guided tour, vertical necks by default and the delete-warnings switch. See "Added on 2026-09-15" below. Merge by fast-forwarding when the user asks.
+- **Work from 2026-09-15** is on `master` and deployed. It was fast-forwarded from `scale-wizard-examples-export-tour` the same day, and the live site's bundle was checked for the new features. It covers the scale wizard, built-in examples, PDF/PNG export, the guided tour, vertical necks by default and the delete-warnings switch. See "Added on 2026-09-15" below.
 
 ## Open work, roughly in priority order
 0. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
@@ -110,13 +110,16 @@
   | `5aaef1f` | Harmonic analysis, fret markers, still clicked notes |
   | `09dc5a2` | Corpus evaluation and the tonic-weight retune |
   | `6c125bc` | Final corpus results and the previous handoff |
-  | branch | Scale wizard, examples, export, guided tour; this handoff |
+  | `237bb4c` | Scale wizard, examples, export, guided tour |
+  | `ea8967c` | Handoff for the 2026-09-15 work |
+  | latest | Handoff marked as merged and deployed |
 
 - **Branches:**
   - Old local branches `stage-4-sidebar`, `stage-5-canvas`, `stage-6-presets`, `stage-7-pwa`, `handoff-notes`, `find-key-workflow`, `key-bar` and `view-mode-mobile` point at earlier commits.
   - `harmonic-analysis` (local) points at `5aaef1f`, and `corpus-evaluation` (local and `origin`, PR #1) at the latest commit.
   - `origin` has `master`, `view-mode-mobile`, `corpus-evaluation` and `scale-wizard-examples-export-tour`.
-  - `scale-wizard-examples-export-tour` (local and `origin`) holds the 2026-09-15 work, two commits ahead of `master`.
+  - `scale-wizard-examples-export-tour` (local and `origin`) points at `ea8967c`. It was fast-forwarded into `master` and deployed on 2026-09-15.
+  - `handoff-merged` (local) holds the commit that marks it merged; `master` was fast-forwarded to it.
 - **Branch workflow:** when asked to commit while on `master`, create a branch first. Merge by fast-forwarding (`git merge --ff-only`) and pushing `master` when the user asks. That keeps history linear, keeps SHAs, and marks a matching PR as merged. `gh pr create` opens PRs.
 - **Commit messages** end with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`. Write them to a file and use `git commit -F`, because PowerShell splits quoted text.
 - **Commit only when asked.**
@@ -252,7 +255,7 @@
   - At 760px and below: the top bar uses icons and the name takes the leftover width, the toolbar is one scrolling row, strips sit above their box, and wide necks scroll sideways so notes stay finger-sized.
 - **Accounts:** not now. Export all is the backup and migration path.
 
-## Added on 2026-09-15 (branch `scale-wizard-examples-export-tour`; decisions await the user's review)
+## Added on 2026-09-15 (merged and deployed; decisions await the user's review)
 - **Asked and answered before building:**
   - The guided start is an interactive tour.
   - PDFs are built in the app and downloaded directly.
