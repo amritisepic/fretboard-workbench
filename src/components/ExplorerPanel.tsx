@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import type { ExampleFolder, ExampleProgression } from '../data/examples';
 import { hasUnsavedWork } from '../state/documentStatus';
+import { EXAMPLE_FOLDERS, exampleDocument } from '../state/examples';
 import { useLibrary } from '../state/library';
 import {
   ancestorFolderIds,
@@ -127,6 +129,19 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
       newDocument();
       onClose();
     }, 'Start a new preset anyway?');
+
+  /** Examples open as unsaved copies; Save puts one in the library. */
+  const openExample = (folder: ExampleFolder, example: ExampleProgression) => {
+    closeMenus();
+    guardUnsavedWork(
+      () =>
+        void run(() => {
+          useWorkbench.getState().loadDocument(exampleDocument(example, folder));
+          onClose();
+        }),
+      `Open the example “${example.name}” anyway?`,
+    );
+  };
 
   const createFolder = (parentId: string | null) =>
     run(async () => {
@@ -428,10 +443,59 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
       )}
 
       {isEmpty && library.status !== 'loading' ? (
-        <p className="explorer-empty">No saved presets yet. Save the workbench to add one, or import an export.</p>
+        <p className="explorer-empty">
+          No saved presets yet. Save the workbench to add one, import an export, or start from an example below.
+        </p>
       ) : (
         <ul className="explorer-list">{renderLevel(null, 0)}</ul>
       )}
+
+      <section className="explorer-examples" aria-label="Examples" data-tour="examples">
+        <h3 className="explorer-section-title">Examples</h3>
+        <p className="explorer-section-note">Each opens as an unsaved copy. Save it to keep your changes.</p>
+        <ul className="explorer-list">
+          {EXAMPLE_FOLDERS.map((folder) => {
+            const id = `example:${folder.name}`;
+            const isExpanded = expanded.has(id);
+            return (
+              <li key={id}>
+                <div className="explorer-row" style={{ paddingLeft: 6 }}>
+                  <button
+                    type="button"
+                    className="explorer-caret"
+                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${folder.name}`}
+                    aria-expanded={isExpanded}
+                    onClick={() => toggle(id)}
+                  >
+                    {isExpanded ? '▾' : '▸'}
+                  </button>
+                  <button type="button" className="explorer-name" onClick={() => toggle(id)}>
+                    <FolderIcon />
+                    <span>{folder.name}</span>
+                  </button>
+                  <span className="explorer-meta">{folder.examples.length}</span>
+                </div>
+                {isExpanded && (
+                  <ul className="explorer-list">
+                    {folder.examples.map((example) => (
+                      <li key={example.name}>
+                        <div className="explorer-row" style={{ paddingLeft: 24 }}>
+                          <span className="explorer-caret" aria-hidden="true" />
+                          <button type="button" className="explorer-name" onClick={() => openExample(folder, example)}>
+                            <PresetIcon />
+                            <span>{example.name}</span>
+                          </button>
+                          <span className="explorer-meta">{example.key}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <input
         ref={fileRef}

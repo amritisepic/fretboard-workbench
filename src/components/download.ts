@@ -1,6 +1,6 @@
-/** Hands the browser a text file to save. */
-export function downloadText(fileName: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+/** Hands the browser a file to save. */
+export function downloadBlob(fileName: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
@@ -8,4 +8,9 @@ export function downloadText(fileName: string, text: string): void {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Hands the browser a JSON text file to save. */
+export function downloadText(fileName: string, text: string): void {
+  downloadBlob(fileName, new Blob([text], { type: 'application/json' }));
 }

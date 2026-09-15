@@ -46,7 +46,7 @@ export function CanvasToolbar() {
     <div className="canvas-toolbar">
       {!viewing && (
         <>
-          <div className="toolbar-group" role="group" aria-label={`Key: ${keyName(key)}`}>
+          <div className="toolbar-group" role="group" aria-label={`Key: ${keyName(key)}`} data-tour="key">
             <span className="toolbar-label">Key</span>
             <ScaleSelects scale={key} label="Key" onChange={setKey} />
             <button
@@ -88,13 +88,13 @@ export function CanvasToolbar() {
           </div>
         </>
       )}
-      <div className="toolbar-group" role="group" aria-labelledby="neck-label">
+      <div className="toolbar-group" role="group" aria-labelledby="neck-label" data-tour="neck">
         <span className="toolbar-label" id="neck-label">
           Neck
         </span>
         <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
       </div>
-      <div className="toolbar-group" role="group" aria-label="Lines between boxes">
+      <div className="toolbar-group" role="group" aria-label="Lines between boxes" data-tour="strips">
         <ToolbarSwitch
           id="common-tones-label"
           label="Common tones"
@@ -116,7 +116,7 @@ export function CanvasToolbar() {
           />
         )}
       </div>
-      <div className="toolbar-group" role="group" aria-label="Harmonic analysis">
+      <div className="toolbar-group" role="group" aria-label="Harmonic analysis" data-tour="analysis">
         <ToolbarSwitch
           id="harmonic-analysis-label"
           label="Harmonic analysis"
@@ -136,7 +136,7 @@ export function CanvasToolbar() {
   );
 }
 
-function ToolbarSwitch({
+export function ToolbarSwitch({
   id,
   label,
   checked,

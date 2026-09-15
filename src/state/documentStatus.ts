@@ -49,7 +49,11 @@ export function documentStatus(state: WorkbenchState): DocumentStatus {
   return isDirty(state) ? 'edited' : 'saved';
 }
 
-/** Work that opening another preset would throw away: edits to a saved preset, or any boxes in an unsaved one. */
+/**
+ * Work that opening another preset would throw away: edits to a saved preset or an opened example
+ * (which keeps a snapshot without being in the library), or any boxes in another unsaved document.
+ */
 export function hasUnsavedWork(state: WorkbenchState): boolean {
-  return state.document.presetId === null ? state.boxes.length > 0 : isDirty(state);
+  if (state.document.presetId !== null || state.document.savedSnapshot !== null) return isDirty(state);
+  return state.boxes.length > 0;
 }

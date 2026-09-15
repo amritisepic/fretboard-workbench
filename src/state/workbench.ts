@@ -196,7 +196,7 @@ const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 
   settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0, fretMarkers: true },
   key: makeScaleRef('diatonic', 0, 'C'),
   strips: DEFAULT_STRIPS,
-  orientation: 'horizontal',
+  orientation: 'vertical',
   boxes: [],
 });
 

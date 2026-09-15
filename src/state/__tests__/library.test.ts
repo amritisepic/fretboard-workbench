@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { keyName, makeScaleRef } from '../../theory';
 import { documentStatus, hasUnsavedWork } from '../documentStatus';
+import { EXAMPLE_FOLDERS, exampleDocument } from '../examples';
 import { useLibrary } from '../library';
 import { startPersistence } from '../persistence';
 import { openRepository } from '../repository';
@@ -196,6 +197,22 @@ describe('preset library', () => {
     await reconnect();
     expect(library().folders).toHaveLength(4);
     expect(library().presets).toHaveLength(4);
+  });
+
+  it('opens an example as an unsaved copy that only counts as unsaved work once edited, and saves it', async () => {
+    const standards = EXAMPLE_FOLDERS.find((f) => f.name === 'Jazz standards');
+    const blueBossa = standards?.examples.find((e) => e.name === 'Blue Bossa');
+    if (!standards || !blueBossa) throw new Error('missing example');
+    workbench().loadDocument(exampleDocument(blueBossa, standards));
+    expect(workbench().document.presetId).toBeNull();
+    expect(documentStatus(workbench())).toBe('unsaved');
+    expect(hasUnsavedWork(workbench())).toBe(false);
+    workbench().setOrientation('horizontal');
+    expect(hasUnsavedWork(workbench())).toBe(true);
+
+    const saved = await library().saveCurrent();
+    expect(saved.name).toBe('Blue Bossa');
+    expect(documentStatus(workbench())).toBe('saved');
   });
 
   it('rejects a broken import without changing the library', async () => {

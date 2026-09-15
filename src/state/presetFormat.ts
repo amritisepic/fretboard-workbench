@@ -130,7 +130,7 @@ function itemName(value: unknown, path: string): string {
   return name.slice(0, MAX_NAME_LENGTH);
 }
 
-function parseScaleRef(value: unknown, path: string): ScaleRef {
+export function parseScaleRef(value: unknown, path: string): ScaleRef {
   const ref = fields(value, path);
   const familyId = text(ref.familyId, `${path}.familyId`);
   const family = SCALE_FAMILIES.find((f) => f.id === familyId);

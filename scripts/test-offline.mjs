@@ -181,6 +181,9 @@ const DRIVE_APP = `
   ${WAIT_FOR_APP}
   const click = (node) => node && node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   const circles = (box) => document.querySelectorAll('.box-group svg.fretboard')[box].querySelectorAll('.position circle');
+  // A first visit offers the guided tour; decline it as a new user would.
+  click([...document.querySelectorAll('.tour-card button')].find((button) => button.textContent === 'Not now'));
+  await wait();
   click(document.querySelector('.empty-state .add-button'));
   await wait();
   for (const [string, fret] of [[1, 3], [2, 2], [3, 0]]) { click(circles(0)[string * 25 + fret]); await wait(); }
@@ -215,7 +218,8 @@ const APP_STATE = `
     status: document.querySelector('.preset-status') ? document.querySelector('.preset-status').textContent : 'saved',
     boxes: document.querySelectorAll('.box-group').length,
     titles: [...document.querySelectorAll('.box-title')].map((node) => node.textContent),
-    presets: [...document.querySelectorAll('.explorer-row .explorer-name span')].map((node) => node.textContent),
+    // Saved presets only; the built-in examples are listed in their own section below.
+    presets: [...document.querySelectorAll('.explorer-panel > .explorer-list .explorer-name span')].map((node) => node.textContent),
     fontLoaded: [...document.fonts].some((face) => face.family.includes('Inter') && face.status === 'loaded'),
   };
 `;

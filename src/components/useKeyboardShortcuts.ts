@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useLibrary } from '../state/library';
+import type { Screen } from '../state/preferences';
 import { useWorkbench } from '../state/workbench';
 
 interface ShortcutOptions {
+  /** Workbench shortcuts apply only on the workbench; the scale wizard keeps Esc for its panels. */
+  readonly screen: Screen;
   readonly settingsOpen: boolean;
   readonly explorerOpen: boolean;
   readonly dialogOpen: boolean;
@@ -33,6 +36,7 @@ const ROOT_NUDGES: Readonly<Record<string, number>> = {
  * fields (including the mode slider and dropdowns) are left alone.
  */
 export function useKeyboardShortcuts({
+  screen,
   settingsOpen,
   explorerOpen,
   dialogOpen,
@@ -74,19 +78,20 @@ export function useKeyboardShortcuts({
         }
         return;
       }
+      const onWorkbench = screen === 'workbench';
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void useLibrary.getState().requestSave();
+        if (onWorkbench) void useLibrary.getState().requestSave();
         return;
       }
       if (event.key === 'Escape') {
         if (explorerOpen) closeExplorer();
         else if (settingsOpen) closeSettings();
         else if (isTextEntry(event.target)) event.target.blur();
-        else useWorkbench.getState().selectBox(null);
+        else if (onWorkbench) useWorkbench.getState().selectBox(null);
         return;
       }
-      if (explorerOpen || event.metaKey || event.ctrlKey || event.altKey || isTextEntry(event.target)) return;
+      if (!onWorkbench || explorerOpen || event.metaKey || event.ctrlKey || event.altKey || isTextEntry(event.target)) return;
 
       const { selectedBoxId, viewing, toggleFill, transposeBox } = useWorkbench.getState();
       if (viewing || selectedBoxId === null) return;
@@ -105,5 +110,5 @@ export function useKeyboardShortcuts({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [settingsOpen, explorerOpen, dialogOpen, closeSettings, closeExplorer, closeDialog, requestDelete]);
+  }, [screen, settingsOpen, explorerOpen, dialogOpen, closeSettings, closeExplorer, closeDialog, requestDelete]);
 }

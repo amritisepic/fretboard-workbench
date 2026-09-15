@@ -72,6 +72,7 @@ button:disabled {
 /* The column may shrink below its content, so wide necks and the toolbar scroll inside the page
    rather than widening it (which made phones zoom out). */
 .app {
+  --topbar-height: 56px;
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -91,7 +92,7 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: end;
   gap: 16px;
-  height: 56px;
+  height: var(--topbar-height);
   padding: 0 20px;
   border-bottom: 1px solid var(--rule-strong);
 }
@@ -250,7 +251,8 @@ button:disabled {
 .canvas-toolbar {
   position: sticky;
   z-index: 5;
-  top: 0;
+  /* Sticky offsets count from inside the workspace's padding, so this cancels it. */
+  top: -28px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1599,10 +1601,10 @@ kbd {
 .settings-panel {
   position: absolute;
   z-index: 20;
-  top: 55px;
+  top: calc(var(--topbar-height) - 1px);
   right: 20px;
   width: 360px;
-  max-height: calc(100% - 75px);
+  max-height: calc(100% - var(--topbar-height) - 19px);
   overflow: auto;
   padding: 22px;
   border: 1px solid var(--rule-strong);
@@ -1717,11 +1719,11 @@ kbd {
 .explorer-panel {
   position: absolute;
   z-index: 20;
-  top: 55px;
+  top: calc(var(--topbar-height) - 1px);
   left: 20px;
   width: 420px;
   max-width: calc(100% - 40px);
-  max-height: calc(100% - 75px);
+  max-height: calc(100% - var(--topbar-height) - 19px);
   overflow: auto;
   padding: 18px 14px 14px;
   border: 1px solid var(--rule-strong);
@@ -1913,6 +1915,24 @@ kbd {
   font-size: 12.5px;
 }
 
+.explorer-examples {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.explorer-section-title {
+  margin: 0 4px 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.explorer-section-note {
+  margin: 0 4px 8px;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
 /* ---- Offline and update notice --------------------------------------- */
 
 .update-notice {
@@ -2000,13 +2020,588 @@ kbd {
   color: #fff;
 }
 
+/* ---- Tool switch --------------------------------------------------------- */
+
+.app-switch {
+  align-self: center;
+}
+
+.app-switch .segmented button {
+  padding: 4px 12px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.topbar-title {
+  align-self: center;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ---- Scale wizard ---------------------------------------------------------- */
+
+.wizard-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  max-width: 1080px;
+}
+
+.wizard-section {
+  min-width: 0;
+  padding: 18px 22px 20px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.wizard-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 28px;
+  margin-bottom: 16px;
+}
+
+.wizard-section-head.is-alone {
+  margin-bottom: 0;
+}
+
+.wizard-section-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.wizard-section .segmented button {
+  padding: 5px 11px;
+  font-size: 12.5px;
+}
+
+.scale-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin-bottom: 14px;
+}
+
+.scale-title {
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.scale-summary {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.chromatic-scroll,
+.chord-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.chromatic {
+  border-collapse: separate;
+  border-spacing: 4px;
+}
+
+.chromatic th {
+  padding-right: 8px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chromatic td {
+  min-width: 46px;
+  height: 40px;
+  padding: 0 4px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.chromatic .note-cell {
+  color: var(--ink-faint);
+}
+
+.chromatic .note-cell.is-in {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+/* The tonic matches the tonic's dots on the fretboard. */
+.chromatic .note-cell.is-tonic {
+  border-color: #c8372d;
+  background: #c8372d;
+  color: #fff;
+}
+
+.chromatic .degree-cell {
+  border-style: dashed;
+}
+
+.chromatic .degree-cell.is-in {
+  border-style: solid;
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.scale-board {
+  overflow-x: auto;
+}
+
+.scale-board .fretboard {
+  max-width: none;
+}
+
+.top-voice {
+  width: 260px;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+.mode-stop:disabled {
+  opacity: 0.3;
+}
+
+.chord-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.chord-table thead th {
+  padding: 0 14px 8px;
+  border-bottom: 1px solid var(--rule-strong);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chord-table td,
+.chord-table tbody th {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.chord-table tbody tr:last-child td,
+.chord-table tbody tr:last-child th {
+  border-bottom: 0;
+}
+
+.chord-table thead th:first-child,
+.chord-table td:first-child {
+  padding-left: 2px;
+}
+
+.chord-numeral {
+  font-weight: 600;
+}
+
+.chord-table .chord-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chord-tones {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.chord-tone {
+  min-width: 2.3em;
+}
+
+/* ---- Top bar tools ------------------------------------------------------- */
+
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+}
+
+.topbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.topbar-button:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.link-button {
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-button:hover {
+  color: var(--ink);
+}
+
+/* ---- Export ---------------------------------------------------------------- */
+
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, calc(100vw - 40px));
+  height: min(780px, calc(100vh - 40px));
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  outline: none;
+}
+
+.export-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 14px 22px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.export-dialog-head h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.export-close {
+  position: static;
+}
+
+.export-dialog-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 340px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.export-options {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  overflow: auto;
+  padding: 18px 22px 22px;
+  border-right: 1px solid var(--rule);
+}
+
+.export-group {
+  display: grid;
+  gap: 8px;
+}
+
+.export-group .field-label {
+  margin-bottom: 0;
+}
+
+.export-group .hint {
+  margin-top: 0;
+}
+
+.export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-links {
+  display: flex;
+  gap: 8px;
+}
+
+.export-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.export-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 2px 12px;
+  max-height: 168px;
+  overflow: auto;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+
+.export-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.export-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 3px 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.export-check input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.export-check > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-index {
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+
+.export-value {
+  min-width: 42px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.export-preview {
+  overflow: auto;
+  padding: 18px 22px 24px;
+  background: var(--paper-sunk);
+}
+
+.export-summary,
+.export-empty {
+  margin-bottom: 14px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.export-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.export-pages.is-wide {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+.export-page {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule-strong);
+  background: #fff;
+}
+
+.export-page.is-image {
+  width: auto;
+  max-width: 100%;
+}
+
+.export-pages:has(.is-image) {
+  display: block;
+}
+
+.export-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--rule);
+}
+
+.export-status {
+  margin-right: auto;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+.export-status.is-error {
+  color: var(--danger);
+}
+
+/* The sheet is laid out off screen at export size; only its layout matters here. */
+.export-stage {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  pointer-events: none;
+}
+
+.export-sheet {
+  position: relative;
+  background: var(--paper);
+}
+
+.export-sheet .box-group,
+.export-sheet .box,
+.export-sheet .fretboard-scroll,
+.export-sheet .fretboard {
+  max-width: none;
+}
+
+.export-sheet .box-group {
+  flex-shrink: 0;
+}
+
+.export-sheet .chromatic-scroll,
+.export-sheet .chord-table-scroll,
+.export-sheet .scale-board {
+  overflow: visible;
+}
+
+.export-sheet.no-chord-names .box-title {
+  display: none;
+}
+
+.export-header {
+  padding-bottom: 20px;
+}
+
+.export-title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.export-subtitle {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.export-scale .export-section + .export-section {
+  margin-top: 26px;
+}
+
+.export-section-title {
+  margin-bottom: 10px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- Guided tour ------------------------------------------------------------ */
+
+.tour {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.tour-shade {
+  position: fixed;
+  background: rgba(58, 58, 58, 0.34);
+}
+
+.tour-ring {
+  position: fixed;
+  border: 2px solid var(--paper);
+  border-radius: 12px;
+  outline: 2px solid var(--ink);
+}
+
+.tour-card {
+  position: fixed;
+  width: min(370px, calc(100vw - 24px));
+  padding: 16px 18px 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  outline: none;
+}
+
+.tour-count {
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tour-card h2 {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tour-body {
+  margin-top: 6px;
+  color: var(--ink-soft);
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tour-actions .link-button {
+  margin-right: auto;
+}
+
+@media (max-width: 760px) {
+  .tour-card {
+    width: auto;
+  }
+}
+
 /* ---- Tablets: the sidebar slides over the canvas ------------------------ */
 
 @media (max-width: 1024px) {
   .sidebar {
     position: absolute;
     z-index: 10;
-    top: 56px;
+    top: var(--topbar-height);
     right: 0;
     bottom: 0;
     width: min(360px, 100%);
@@ -2067,6 +2662,7 @@ kbd {
   /* One scrolling row, so the sticky toolbar stays short. */
   .canvas-toolbar {
     flex-wrap: nowrap;
+    top: -16px;
     justify-content: flex-start;
     gap: 18px;
     margin: -16px -16px 16px;
@@ -2125,5 +2721,120 @@ kbd {
     left: 10px;
     width: auto;
     max-width: none;
+  }
+
+  /* Two rows on the workbench: the tool switch and Save above, then the presets tab, name, mode and
+     settings tab, so both tabs still open onto their panels. The scale wizard fits one row. */
+  .app {
+    --topbar-height: 96px;
+  }
+
+  .app.is-scales {
+    --topbar-height: 52px;
+  }
+
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: 44px 52px;
+    grid-template-areas:
+      'switch switch tools save'
+      'presets name mode settings';
+    column-gap: 6px;
+    row-gap: 0;
+  }
+
+  .topbar.is-scales {
+    grid-template-rows: 52px;
+    grid-template-areas: 'switch . tools settings';
+  }
+
+  .topbar-left,
+  .topbar-right {
+    display: contents;
+  }
+
+  .app-switch {
+    grid-area: switch;
+    justify-self: start;
+  }
+
+  .app-switch .segmented button {
+    padding: 4px 10px;
+  }
+
+  .save-button {
+    grid-area: save;
+  }
+
+  .topbar-tab[data-explorer-tab] {
+    grid-area: presets;
+  }
+
+  .preset-name {
+    grid-area: name;
+  }
+
+  .mode-switch {
+    grid-area: mode;
+  }
+
+  .topbar-settings {
+    grid-area: settings;
+    justify-self: end;
+  }
+
+  .topbar-title {
+    display: none;
+  }
+
+  .topbar-tools {
+    grid-area: tools;
+    justify-self: end;
+  }
+
+  .topbar-button {
+    padding: 0 9px;
+  }
+
+  .export-dialog {
+    width: calc(100vw - 20px);
+    height: calc(100dvh - 20px);
+  }
+
+  .export-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .export-options {
+    padding: 14px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .export-preview {
+    padding: 14px 16px;
+  }
+
+  /* The off-screen sheet keeps the desktop layout the export is drawn with. */
+  .export-sheet .box-group-body {
+    flex-direction: row;
+  }
+
+  .export-sheet .strip {
+    width: 200px;
+    padding: 0 16px;
+  }
+
+  .export-sheet .box-spacer {
+    display: block;
+  }
+
+  .export-sheet .box {
+    padding: 18px 22px 10px;
+  }
+
+  .export-sheet .fretboard-scroll {
+    overflow: visible;
   }
 }

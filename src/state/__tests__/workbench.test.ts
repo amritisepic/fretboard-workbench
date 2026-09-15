@@ -19,14 +19,14 @@ describe('workbench store', () => {
     useWorkbench.setState(initial, true);
   });
 
-  it('starts empty with standard tuning, 12 frets, no capo, horizontal necks and in edit mode', () => {
+  it('starts empty with standard tuning, 12 frets, no capo, vertical necks and in edit mode', () => {
     expect(state().boxes).toEqual([]);
     expect(formatTuning(state().settings.tuning)).toBe('E2 A2 D3 G3 B3 E4');
     expect(state().settings.fretCount).toBe(12);
     expect(state().viewing).toBe(false);
     expect(state().settings.capo).toBe(0);
     expect(state().settings.fretMarkers).toBe(true);
-    expect(state().orientation).toBe('horizontal');
+    expect(state().orientation).toBe('vertical');
   });
 
   it('turns the fret markers off and on', () => {
@@ -159,8 +159,8 @@ describe('workbench store', () => {
   });
 
   it('switches the neck orientation', () => {
-    state().setOrientation('vertical');
-    expect(state().orientation).toBe('vertical');
+    state().setOrientation('horizontal');
+    expect(state().orientation).toBe('horizontal');
   });
 
   it('sets the key and the found scales and chord picks in one change', () => {
@@ -254,11 +254,11 @@ describe('workbench store', () => {
     state().detachDocument();
     expect(state().document).toEqual({ presetId: null, name: 'Blues in F', savedSnapshot: null });
 
-    state().setOrientation('vertical');
+    state().setOrientation('horizontal');
     const { settings, key, strips, orientation, boxes } = state();
     state().newDocument();
     expect(state().boxes).toEqual([]);
-    expect(state().orientation).toBe('horizontal');
+    expect(state().orientation).toBe('vertical');
     expect(state().document.name).toBe('Untitled preset');
     state().loadDocument({
       presetId: 'p2',
@@ -266,7 +266,7 @@ describe('workbench store', () => {
       savedSnapshot: 's',
       data: { settings, key, strips, orientation, boxes },
     });
-    expect(state().orientation).toBe('vertical');
+    expect(state().orientation).toBe('horizontal');
     expect(state().boxes).toBe(boxes);
     expect(state().selectedBoxId).toBeNull();
     expect(state().document).toEqual({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's' });

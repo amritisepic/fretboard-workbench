@@ -9,3 +9,6 @@ export * from './keys';
 export * from './analysis';
 export * from './patterns';
 export * from './keyPlan';
+export * from './scaleChords';
+export * from './chordSymbols';
+export * from './voicing';

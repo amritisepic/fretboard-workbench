@@ -5,6 +5,16 @@ import { UNTITLED_PRESET, useWorkbench, type WorkbenchState } from './workbench'
 
 const SAVE_DELAY_MS = 300;
 
+let savesPaused = false;
+
+/**
+ * Stops saving the session while the guided tour shows its demo, so the saved session is still the
+ * user's own work if the tab closes mid-tour. The tour puts the work back before resuming.
+ */
+export function pauseSessionSaves(paused: boolean): void {
+  savesPaused = paused;
+}
+
 const sessionChanged = (a: WorkbenchState, b: WorkbenchState) =>
   a.settings !== b.settings ||
   a.key !== b.key ||
@@ -87,7 +97,7 @@ export async function startPersistence(
   };
 
   const unsubscribe = useWorkbench.subscribe((state, previous) => {
-    if (!sessionChanged(state, previous)) return;
+    if (savesPaused || !sessionChanged(state, previous)) return;
     clearTimeout(timer);
     timer = setTimeout(write, SAVE_DELAY_MS);
   });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { TUNING_PRESETS } from '../data/tunings';
+import { usePreferences } from '../state/preferences';
 import { useWorkbench } from '../state/workbench';
 import {
   MAX_CAPO,
@@ -132,7 +133,37 @@ export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
       <CapoField />
       <FretCountField />
       <FretMarkersField />
+      <DeleteWarningsField />
     </div>
+  );
+}
+
+/** A device setting, unlike the rest of the panel, which is saved with the preset. */
+function DeleteWarningsField() {
+  const deleteWarnings = usePreferences((s) => s.deleteWarnings);
+  const setDeleteWarnings = usePreferences((s) => s.setDeleteWarnings);
+
+  return (
+    <section className="settings-section">
+      <div className="settings-row">
+        <span className="field-label" id="delete-warnings-label">
+          Show delete warnings
+        </span>
+        <button
+          type="button"
+          role="switch"
+          className="toggle"
+          aria-checked={deleteWarnings}
+          aria-labelledby="delete-warnings-label"
+          onClick={() => setDeleteWarnings(!deleteWarnings)}
+        >
+          <span className="toggle-knob" />
+        </button>
+      </div>
+      <p className="hint">
+        Ask before removing a box. Kept on this device rather than in the preset. Deleting presets and folders always asks.
+      </p>
+    </section>
   );
 }
 

@@ -1,5 +1,6 @@
 import { documentStatus } from '../state/documentStatus';
 import { useLibrary } from '../state/library';
+import { usePreferences, type Screen } from '../state/preferences';
 import { useWorkbench } from '../state/workbench';
 import { PresetNameField } from './PresetNameField';
 import { Segmented, type SegmentedOption } from './Segmented';
@@ -11,47 +12,94 @@ const MODE_OPTIONS: readonly SegmentedOption<WorkbenchMode>[] = [
   { value: 'view', label: 'View' },
 ];
 
+const SCREEN_OPTIONS: readonly SegmentedOption<Screen>[] = [
+  { value: 'workbench', label: 'Workbench' },
+  { value: 'scales', label: 'Scale wizard' },
+];
+
 export function TopBar({
   settingsOpen,
   explorerOpen,
   onToggleSettings,
   onToggleExplorer,
+  onOpenExport,
+  onStartTour,
 }: {
   readonly settingsOpen: boolean;
   readonly explorerOpen: boolean;
   readonly onToggleSettings: () => void;
   readonly onToggleExplorer: () => void;
+  readonly onOpenExport: () => void;
+  readonly onStartTour: () => void;
 }) {
+  const screen = usePreferences((s) => s.screen);
+  const setScreen = usePreferences((s) => s.setScreen);
+  const hasBoxes = useWorkbench((s) => s.boxes.length > 0);
+  const workbench = screen === 'workbench';
+  const canExport = !workbench || hasBoxes;
+
   return (
-    <header className="topbar">
+    <header className={workbench ? 'topbar' : 'topbar is-scales'}>
       <div className="topbar-left">
-        <SaveButton />
-        <button
-          type="button"
-          className={explorerOpen ? 'topbar-tab is-open' : 'topbar-tab'}
-          aria-expanded={explorerOpen}
-          aria-haspopup="dialog"
-          data-explorer-tab=""
-          onClick={onToggleExplorer}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden="true">
-            <path d="M2 4.5v8h12V6H7.5L6 4.5z" />
-          </svg>
-          <span className="topbar-tab-label">Presets</span>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M2.5 4l2.5 2.5L7.5 4" />
-          </svg>
-        </button>
+        <div className="app-switch" data-tour="app-switch">
+          <Segmented label="Tool" options={SCREEN_OPTIONS} value={screen} onChange={setScreen} />
+        </div>
+        {workbench && (
+          <>
+            <SaveButton />
+            <button
+              type="button"
+              className={explorerOpen ? 'topbar-tab is-open' : 'topbar-tab'}
+              aria-expanded={explorerOpen}
+              aria-haspopup="dialog"
+              data-explorer-tab=""
+              data-tour="presets"
+              onClick={onToggleExplorer}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2 4.5v8h12V6H7.5L6 4.5z" />
+              </svg>
+              <span className="topbar-tab-label">Presets</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2.5 4l2.5 2.5L7.5 4" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
-      <PresetNameField />
+      {workbench ? <PresetNameField /> : <h1 className="topbar-title">Scale wizard</h1>}
       <div className="topbar-right">
-        <ModeSwitch />
+        {workbench && <ModeSwitch />}
+        <div className="topbar-tools">
+          <button type="button" className="topbar-button" data-tour="guide" title="Take the guided tour" onClick={onStartTour}>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.2" />
+              <path d="M6.3 6.2a1.8 1.8 0 1 1 2.5 1.7c-.5.2-.8.6-.8 1.1v.4" />
+              <circle cx="8" cy="11.6" r="0.4" fill="currentColor" />
+            </svg>
+            <span className="topbar-tab-label">Guide</span>
+          </button>
+          <button
+            type="button"
+            className="topbar-button"
+            data-tour="export"
+            disabled={!canExport}
+            title={canExport ? `Export the ${workbench ? 'preset' : 'scale'} as a PDF or an image` : 'Add a chord to export'}
+            onClick={onOpenExport}
+          >
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2M3 13.5h10" />
+            </svg>
+            <span className="topbar-tab-label">Export</span>
+          </button>
+        </div>
         <button
           type="button"
-          className={settingsOpen ? 'topbar-tab is-open' : 'topbar-tab'}
+          className={settingsOpen ? 'topbar-tab topbar-settings is-open' : 'topbar-tab topbar-settings'}
           aria-expanded={settingsOpen}
           aria-haspopup="dialog"
           data-settings-tab=""
+          data-tour="settings"
           onClick={onToggleSettings}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
@@ -71,7 +119,7 @@ function ModeSwitch() {
   const viewing = useWorkbench((s) => s.viewing);
   const setViewing = useWorkbench((s) => s.setViewing);
   return (
-    <div className="mode-switch">
+    <div className="mode-switch" data-tour="view-mode">
       <Segmented
         label="Mode"
         options={MODE_OPTIONS}

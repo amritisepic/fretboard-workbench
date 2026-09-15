@@ -66,22 +66,30 @@ export function Sidebar({ box }: { readonly box: Box }) {
         <button type="button" className="button is-compact sidebar-close" onClick={() => selectBox(null)}>
           Done
         </button>
-        <RootBox root={formatSpelled(box.scale.tonic)} onStep={(semitones) => transposeBox(box.id, semitones)} />
-        <ScalePicker box={box} />
-        <ChordNameField box={box} view={view} />
+        <div data-tour="root-box">
+          <RootBox root={formatSpelled(box.scale.tonic)} onStep={(semitones) => transposeBox(box.id, semitones)} />
+        </div>
+        <div data-tour="scale-picker">
+          <ScalePicker box={box} />
+        </div>
+        <div data-tour="chord-name">
+          <ChordNameField box={box} view={view} />
+        </div>
         {analysis && (
-          <HarmonyField
-            box={box}
-            view={view}
-            analysis={analysis}
-            keyHere={keyHere}
-            context={{
-              title: view.title,
-              previousTitle: previousView?.title || null,
-              nextTitle: nextView?.title || null,
-              nextRoot: index + 1 < boxes.length ? (plan.analysis.boxes[index + 1].facts?.root ?? null) : null,
-            }}
-          />
+          <div data-tour="harmony">
+            <HarmonyField
+              box={box}
+              view={view}
+              analysis={analysis}
+              keyHere={keyHere}
+              context={{
+                title: view.title,
+                previousTitle: previousView?.title || null,
+                nextTitle: nextView?.title || null,
+                nextRoot: index + 1 < boxes.length ? (plan.analysis.boxes[index + 1].facts?.root ?? null) : null,
+              }}
+            />
+          </div>
         )}
         <div className="field">
           <span className="field-label">Dot labels</span>
@@ -107,7 +115,7 @@ export function Sidebar({ box }: { readonly box: Box }) {
         </div>
         <ColorField box={box} />
         {box.fill.mode === 'scale' && (
-          <div className="field">
+          <div className="field" data-tour="ranking">
             <span className="field-label">{ranking ? `Scales for ${ranking.chordName}` : 'Scales'}</span>
             {ranking ? (
               <RankingList ranking={ranking} color={box.color} onSelect={(scale) => setScale(box.id, scale)} />

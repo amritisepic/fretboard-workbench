@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useState } from 'react';
-import { useWorkbench, type Box } from '../state/workbench';
+import { useWorkbench, type Box, type Orientation } from '../state/workbench';
 import { MAX_CHORD_NOTES, type FretPosition } from '../theory';
 import type { FunctionLabel } from './analysisModel';
 import type { BoxView } from './boardModel';
@@ -24,6 +24,7 @@ export function BoxCard({
   tag,
   selected,
   viewing,
+  orientation: neckOverride,
   onRequestRemove,
 }: {
   readonly box: Box;
@@ -38,6 +39,8 @@ export function BoxCard({
   readonly selected: boolean;
   /** View mode: no selecting, clicking notes or removing. */
   readonly viewing: boolean;
+  /** Draws the neck this way instead of the preset's orientation (exports). */
+  readonly orientation?: Orientation;
   /** Asks to remove the box; the app confirms first. */
   readonly onRequestRemove: (boxId: string) => void;
 }) {
@@ -45,7 +48,8 @@ export function BoxCard({
   const fretCount = useWorkbench((s) => s.settings.fretCount);
   const capo = useWorkbench((s) => s.settings.capo);
   const fretMarkers = useWorkbench((s) => s.settings.fretMarkers);
-  const orientation = useWorkbench((s) => s.orientation);
+  const presetOrientation = useWorkbench((s) => s.orientation);
+  const orientation = neckOverride ?? presetOrientation;
   const selectBox = useWorkbench((s) => s.selectBox);
   const togglePosition = useWorkbench((s) => s.togglePosition);
   /** Time of the latest refused click, so each refusal restarts the timer. */
