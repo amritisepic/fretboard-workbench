@@ -21,8 +21,13 @@
 - **Docs:**
   - `docs/harmonic-analysis-plan.md`: the plan, the user's decisions (§5), and what was built, with every building decision and the corpus results (§7)
   - `docs/harmonic-patterns.md`: the pattern catalogue, with known gaps in its §7
+- **Work from 2026-09-15** is on the branch `scale-wizard-examples-export-tour` (pushed to `origin`, not merged into `master`, so not deployed): the scale wizard, built-in examples, PDF/PNG export, the guided tour, vertical necks by default and the delete-warnings switch. See "Added on 2026-09-15" below. Merge by fast-forwarding when the user asks.
 
 ## Open work, roughly in priority order
+0. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
+   - the standards' chord changes, written from memory rather than checked against a chart
+   - export in Safari and Firefox, which was never tried
+   - real printing of an exported PDF
 1. **Visual check of the analysis interface on a visible screen.** It was verified through the DOM and a few screenshots only, since the app window was hidden for most of the session. Look at:
    - the function-tag explanation popover (hover, tap, view mode)
    - the key-bar split chooser ("B♭ minor | B♭ major?") and the scale-bar split under it
@@ -63,7 +68,7 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 256 tests in 20 files, about 10–20 s. Most of the time is the exhaustive pitch-set tests.
+- `npm.cmd test`: 277 tests in 26 files, about 20 s. Most of the time is the exhaustive pitch-set tests.
 - `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json` (covers `src` only). There is no `@types/node`, so tests in `src` can't import `node:` modules. `scripts/` isn't typechecked.
 - `npm.cmd run eval:corpus`: evaluates the analysis against the corpora in `corpora/`.
   - It writes `corpora/reports/latest.md`, or `latest-<corpus>.md` when limited to some corpora, plus a timestamped copy.
@@ -104,12 +109,14 @@
   | `0ce8623` | Harmonic analysis decisions and the previous handoff |
   | `5aaef1f` | Harmonic analysis, fret markers, still clicked notes |
   | `09dc5a2` | Corpus evaluation and the tonic-weight retune |
-  | latest | Final corpus results and this handoff |
+  | `6c125bc` | Final corpus results and the previous handoff |
+  | branch | Scale wizard, examples, export, guided tour; this handoff |
 
 - **Branches:**
   - Old local branches `stage-4-sidebar`, `stage-5-canvas`, `stage-6-presets`, `stage-7-pwa`, `handoff-notes`, `find-key-workflow`, `key-bar` and `view-mode-mobile` point at earlier commits.
   - `harmonic-analysis` (local) points at `5aaef1f`, and `corpus-evaluation` (local and `origin`, PR #1) at the latest commit.
-  - `origin` has `master`, `view-mode-mobile` and `corpus-evaluation`.
+  - `origin` has `master`, `view-mode-mobile`, `corpus-evaluation` and `scale-wizard-examples-export-tour`.
+  - `scale-wizard-examples-export-tour` (local and `origin`) holds the 2026-09-15 work, two commits ahead of `master`.
 - **Branch workflow:** when asked to commit while on `master`, create a branch first. Merge by fast-forwarding (`git merge --ff-only`) and pushing `master` when the user asks. That keeps history linear, keeps SHAs, and marks a matching PR as merged. `gh pr create` opens PRs.
 - **Commit messages** end with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`. Write them to a file and use `git commit -F`, because PowerShell splits quoted text.
 - **Commit only when asked.**
@@ -136,7 +143,10 @@
   - `patterns.ts`: named multi-chord patterns found in a finished analysis
   - `keyPlan.ts`: `planKeys` (key bar), `findKey`, `functionScale` (the scale a reading suggests)
   - `fretboard.ts`: tunings, positions, capo, the one-note-per-string limit, transposing shapes
-- **`src/data/`:** scale families, chord types and tension bases, chord-ID weights, ranking weights with commonness priors, tuning presets, `harmonyRules.ts` (borrowing sources, cadence table, function scales, pattern names), `analysisWeights.ts` (every analysis cost).
+  - `scaleChords.ts`: the scale wizard's notes, degrees (R, ♭2…), chromatic octave and chords stacked from each degree with jazz and classical numerals
+  - `chordSymbols.ts`: lead-sheet symbols ("Dø7", "G7b9", "C/G") into chord types; the test helper `__tests__/chordSymbols.ts` uses it
+  - `voicing.ts`: playable voicings for a symbol, "open" (pop/rock) or "jazz" (mid-neck, no open strings, smooth motion)
+- **`src/data/`:** `examples.ts` (the built-in example progressions and standards), and scale families, chord types and tension bases, chord-ID weights, ranking weights with commonness priors, tuning presets, `harmonyRules.ts` (borrowing sources, cadence table, function scales, pattern names), `analysisWeights.ts` (every analysis cost).
 - **`src/state/`:**
   - `workbench.ts`: the Zustand store with settings (tuning, frets, capo, fret markers), key, strips (including `analysis` and `notation`), orientation, boxes (including `keyPin` and `readingPin`), selection, view mode and document
   - `boxChords.ts`: each box's chord (memoised) and `keyPlanOf` (planKeys with pins; the last plan is cached), shared by the store and views
@@ -145,11 +155,17 @@
   - `persistence.ts`: session autosave and restore before first render
   - `presetFormat.ts`: validation and the export format. Version 2 adds whole-library files; preset and folder files are still written as version 1. Fields added later are optional when read, and old snapshots are upgraded.
   - `libraryTree.ts`, `documentStatus.ts`, `ids.ts`
+  - `preferences.ts` (screen, delete warnings, tour seen) and `scaleWizard.ts` (wizard settings), both in localStorage through `localSettings.ts`
+  - `examples.ts`: builds an example into a preset (voicings, key, function scales) and opens it as an unsaved copy
+  - `persistence.ts` also has `pauseSessionSaves`, which the tour uses
 - **`src/components/`:**
   - top of screen: `TopBar` (with the Edit/View switch), `PresetNameField`, `ExplorerPanel`, `SettingsPanel` (with the fret-marker switch)
   - canvas: `Canvas` (key-bar splits and choosers), `useRowStarts`, `useFitToFrame` (view mode), `CanvasToolbar` (with the Harmonic analysis switch and Jazz/Classical), `BoxCard` (function tag and explanation), `Fretboard` (SVG with inlays), `VoiceLeadingStrip` (with the analysis lane), `FunctionText`
   - sidebar: `Sidebar`, `RootBox`, `ScalePicker`/`ScaleSelects`, `ChordNameField`, `HarmonyField` (readings, pins, key at this box), `ColorField`, `RankingList` (marks the suggested scale), `FillSwitch`
   - other: `UpdateNotice`, `ConfirmDialog`, `useKeyboardShortcuts`, `readingChoice.ts` (pinning a reading moves an unedited scale with it)
+  - scale wizard: `ScaleWizard` (screen and controls), `ScaleSheet` (heading, chromatic grid, fretboard, chord table, shared with export), `scaleWizardModel.ts`
+  - `export/`: `ExportDialog` (options, preview, download), `WorkbenchSheet` and `ScaleExportSheet` (static layouts drawn off screen), `rasterize.ts` (element → SVG foreignObject with inlined CSS and Inter → canvas), `exportLayout.ts` (pages, fit, pagination), `pdfWriter.ts` (JPEG pages into a PDF)
+  - `tour/`: `GuidedTour` (overlay, demo, restore) and `tourSteps.ts`; steps find their targets through `data-tour` attributes
   - pure view models: `boardModel.ts`, `canvasModel.ts` (analysis and key choices per box), `stripModel.ts`, `rankingModel.ts`, `findKeyModel.ts`, `analysisModel.ts` (labels in both notations, explanations, relation and pattern labels)
 - **`src/corpus/`** (pure; typechecked and unit-tested with inline snippets):
   - parsers that turn research-corpus annotations into the analyzer's chords, each with its annotated key: `billboard.ts` (McGill Billboard, Harte chord labels), `rockCorpus.ts` (RS200 `.har` rules) and `romanText.ts` (When in Rome)
@@ -236,6 +252,61 @@
   - At 760px and below: the top bar uses icons and the name takes the leftover width, the toolbar is one scrolling row, strips sit above their box, and wide necks scroll sideways so notes stay finger-sized.
 - **Accounts:** not now. Export all is the backup and migration path.
 
+## Added on 2026-09-15 (branch `scale-wizard-examples-export-tour`; decisions await the user's review)
+- **Asked and answered before building:**
+  - The guided start is an interactive tour.
+  - PDFs are built in the app and downloaded directly.
+  - Examples are a built-in read-only section.
+  - Scales without 7 notes stack every other note.
+  - Jazz numerals count accidentals from major and classical ones from the scale.
+  - The delete-warnings switch covers boxes only.
+  - Pacing: build everything and report the decisions.
+- **Vertical necks by default** for new presets and new documents. Files without an orientation still open horizontal, since they were made that way.
+- **Show delete warnings:** a Settings switch kept on this device (localStorage), on by default. It covers the box × and the Delete key. Preset and folder deletions always ask.
+- **Tool switch** in the top bar: Workbench | Scale wizard, remembered on this device.
+  - The wizard hides Save, Presets, the name and Edit/View, and Ctrl+S does nothing there.
+  - At 760px and below the workbench top bar takes two rows: the switch, Guide, Export and Save above; Presets, the name, Edit/View and Settings below.
+- **Scale wizard:**
+  - Tonic and scale dropdowns (any mode of any family).
+  - A chromatic octave from the tonic, with scale notes lit and the tonic red. Notes outside the scale use the usual out-of-scale spelling, and their degree boxes stay empty.
+  - Degrees are counted from major, with "R" for the tonic. The user's example gave Phrygian dominant a 7; it is ♭7, and the wizard shows ♭7.
+  - Show scale draws the scale on the workbench's tuning, frets, capo and markers: the tonic at full strength, other notes in the map shade, notes or degrees, either orientation.
+  - The chord table has Numeral | Chord | Notes | Degrees, a Jazz/Classical switch and a top-voice slider (5–13).
+  - Settings are kept on this device. The defaults are show scale on, notes, vertical, jazz, and 7ths.
+- **Chord names in the wizard:**
+  - Regular stacks are named from their thirds with the tension-chord rules: a natural 9th stacks into the symbol, so the I13 of C major reads Cmaj13 although it holds F. One set of parentheses is used: Fm(maj11,♭13).
+  - Other stacks (a diminished 3rd, pentatonic "triads") are named by identification with the degree in the bass (C pentatonic on C: Am/C). Their numeral is the plain degree.
+  - Even-sized scales return to the root after half their notes, so whole tone, blues and augmented stack triads only and the diminished scale stacks up to 7ths. The slider stops beyond that are disabled.
+  - Classical numerals count from the scale only for 7-note scales. They show quality signs and the top figure (⁷ ⁹ ¹¹ ¹³), not the alterations.
+- **Examples** (Presets panel, below the saved presets):
+  - Four folders: Pop progressions (21), Rock progressions (19), Jazz progressions (20) and Jazz standards (22).
+  - One box per chord change, with repeated sections written out.
+  - The standards' changes were written from memory in common lead-sheet form. jazz-circle.com gave obviously wrong charts, so no web source was used.
+  - Each example opens in standard tuning, 12 frets, vertical, with analysis on. It opens in its own key, and each box takes `functionScale` for that key.
+  - Voicings are generated by `theory/voicing.ts`, which prefers keeping the 5th where omitting it would print "(no 5)". A test checks that every box names its chord as written.
+  - An opened example is an unsaved copy that keeps a snapshot, so browsing examples doesn't ask about discarding until one is edited (`hasUnsavedWork`).
+- **Export** (top-bar button on both screens; disabled on an empty workbench):
+  - **Workbench options:** which chords, and whether to show the title, key bar, scale bar, numerals, chord names, analysis, common tones and voice leading. Also the neck orientation and boxes per row.
+  - **Strips:** a strip between chosen boxes that aren't neighbours in the progression compares them but has no analysis lane.
+  - **PDF page:** A4, Letter or A3, portrait or landscape, with 6, 12 or 20 mm margins.
+  - **PDF fit:** one page (up to 200%), page width (60% of screen size unless boxes per row is set), or a 25–200% scale. Pages break between rows or sections.
+  - **PDF quality:** JPEG pages at 150 or 300 dpi, so the text isn't selectable.
+  - **PNG:** 1–3× screen size, wrapping at 1400 px, at most 16,000 px a side.
+  - Exports are white and always use the desktop layout, because media queries are left out. Choices are remembered until the app closes.
+  - **Scale wizard export:** name, chromatic notes, degrees, fretboard and chord table.
+- **Guided tour:**
+  - The welcome card appears by itself only on a first visit (never seen, empty workbench, no presets or folders). The Guide button starts it any time.
+  - Starting it sets aside the workbench, the wizard settings and the screen, pauses session saving and opens the demo Cmaj7 A7 Dm7 G7 Cmaj7.
+  - It has 22 steps across both tools. Ending it at any step restores everything.
+  - The overlay blocks the app, and Esc ends the tour.
+- **Fixed on the way:** the sticky canvas toolbar used `top: 0` inside the padded workspace, so it stuck 28px low and content scrolled into view above it. It now uses `top: -28px` (−16px on phones).
+- **Verification:**
+  - Tests, typecheck, build, `verify:pwa` and `test:offline` (15/15) all pass. The offline script now declines the tour and reads only saved presets.
+  - The app was driven through the DOM at 1280×720 and 375×812.
+  - A real PDF download was captured: Autumn Leaves, 8 pages, 2.3 MB.
+  - Exported pages were checked as images.
+  - Not checked: Safari and Firefox (foreignObject rendering), touch devices, printing, and on-screen screenshots of the tour.
+
 ## Spec errors found (the code uses the correct theory)
 - F♯ natural minor's 7th is E; E♯ belongs to harmonic or melodic minor.
 - Harmonic minor mode 3 is Ionian ♯5 (now "Major ♯5") and mode 7 is Altered ♭♭7, not the spec's names.
@@ -285,3 +356,9 @@
 - **Hot reload:** adding hooks can crash Fast Refresh in `App`, so reload after such edits. The console keeps old errors across reloads.
 - **Web research:** the search tool can't reach reddit.com. WebFetch can't render PDFs locally (no poppler), but `arxiv.org/html/<id>` works.
 - **GitHub's public API** shows Actions runs, job steps, check-run annotations and environment branch policies without signing in. That's how the Pages 404 (a branch policy) was found.
+- **Seeing rendered output while the window is hidden:**
+  - Run a tiny Node receiver in the scratchpad that saves POSTed data URLs as files (port 5199).
+  - From a page script, `fetch` export canvases to it, then open the images with Read.
+  - `rasterize.ts`'s `snapshot(element).draw(region, w, h)` renders any element this way.
+- **The export preview is slow on very tall sheets.** Every page draw lays out the whole foreignObject. Keep the snapshot (serialize once), and don't default to layouts that make sheets tens of thousands of pixels tall.
+- **A fresh browser profile gets the tour's welcome card,** which blocks shortcuts such as Ctrl+S. Scripts driving a fresh app must click "Not now" first (as `test-offline.mjs` does).
