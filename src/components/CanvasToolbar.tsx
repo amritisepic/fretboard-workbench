@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { boxChord } from '../state/boxChords';
 import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { keyName } from '../theory';
@@ -36,6 +37,8 @@ export function CanvasToolbar() {
   const viewing = useWorkbench((s) => s.viewing);
   const hasChord = useWorkbench((s) => s.boxes.some((box) => boxChord(box, s.settings).chord !== null));
 
+  const findKeyReasonId = useId();
+
   const findKey = () => {
     const { boxes, settings } = useWorkbench.getState();
     const found = planFoundKey(boxes, settings);
@@ -52,16 +55,20 @@ export function CanvasToolbar() {
             <button
               type="button"
               className="button is-compact"
-              disabled={!hasChord}
-              title={
-                hasChord
-                  ? 'Find the key of the progression, and give each chord the scale closest to it'
-                  : 'Add chords to find their key'
-              }
-              onClick={findKey}
+              // See the Export button in TopBar: a `disabled` button cannot be focused or hovered, so
+              // the reason it is unavailable reaches nobody on a touch screen.
+              aria-disabled={!hasChord}
+              aria-describedby={hasChord ? undefined : findKeyReasonId}
+              title={hasChord ? 'Find the key of the progression, and give each chord the scale closest to it' : undefined}
+              onClick={hasChord ? findKey : undefined}
             >
               Find key
             </button>
+            {!hasChord && (
+              <span className="visually-hidden" id={findKeyReasonId}>
+                Add chords to find their key.
+              </span>
+            )}
           </div>
           <div className="toolbar-group" role="group" aria-labelledby="shift-label">
             <span className="toolbar-label" id="shift-label">
@@ -149,7 +156,9 @@ export function ToolbarSwitch({
 }) {
   return (
     <span className="toolbar-switch">
-      <span className="toolbar-label" id={id}>
+      {/* Not `toolbar-label`: that treatment marks a group heading ("Key", "Shift", "Neck"), and a
+          switch's own name is not a heading. Six uppercase headings in one row shout at each other. */}
+      <span className="toolbar-switch-label" id={id}>
         {label}
       </span>
       <button

@@ -78,7 +78,7 @@ It checks three things:
 - **A usage table**: each token against the background it actually appears on, at the minimum WCAG
   asks for there — 4.5:1 behind body text, 3:1 for the visual boundary of a control. Decorative
   hairlines are left out on purpose; 1.4.11 covers what identifies a control, not every rule.
-- **The key-region and scale-band colours**, against the ink printed on them.
+- **The key-region and scale-band colors**, against the ink printed on them.
 - **`labelInk`**, which picks dark ink or white for a dot label by a luminance threshold and never
   checks what it got.
 

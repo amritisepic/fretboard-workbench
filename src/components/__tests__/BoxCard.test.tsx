@@ -121,11 +121,57 @@ describe('BoxCard', () => {
     expect(numeral && fn?.startsWith(numeral)).toBeFalsy();
   });
 
-  // The explanation is a <p role="tooltip"> that is always in the DOM and always referenced by
-  // aria-describedby, so a screen reader reads it whether or not it is open, and there is no way to
-  // dismiss it with Escape. Plan item 29 (Phase 4) replaces it with a real popover.
-  it.fails('keeps the function explanation out of the DOM until it is opened', () => {
+  // The header prints the numeral in its own chip and again inside the function tag below it
+  // ("I" above "I7"). Plan item 12 (Phase 2) collapses them into one chip.
+});
+
+describe('the chord function explanation', () => {
+  beforeEach(resetStores);
+
+  it('stays out of the DOM until it is opened', () => {
     const { container } = renderCard({ tag: TAG });
-    expect(container.querySelector('.function-explanation')).toBeNull();
+    expect(container.querySelector('.info-explanation')).toBeNull();
+    expect(screen.getByRole('button', { name: /What this means/ })).toHaveProperty('ariaExpanded', 'false');
+  });
+
+  it('opens on a tap, which is the only way in on a touch screen', () => {
+    renderCard({ tag: TAG });
+    fireEvent.click(screen.getByRole('button', { name: /What this means/ }));
+    expect(screen.getByRole('note').textContent).toBe(TAG.explanation);
+  });
+
+  it('closes on Escape and on a press outside it', () => {
+    renderCard({ tag: TAG });
+    const trigger = screen.getByRole('button', { name: /What this means/ });
+
+    fireEvent.click(trigger);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('note')).toBeNull();
+
+    fireEvent.click(trigger);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('note')).toBeNull();
+  });
+
+  it('opens on hover with a mouse, and ignores a hover that a tap produced', () => {
+    renderCard({ tag: TAG });
+    const trigger = screen.getByRole('button', { name: /What this means/ });
+
+    fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
+    expect(screen.getByRole('note')).toBeDefined();
+    fireEvent.pointerLeave(trigger, { pointerType: 'mouse' });
+    expect(screen.queryByRole('note')).toBeNull();
+
+    // A finger fires pointerenter too; letting that toggle would fight the click that follows.
+    fireEvent.pointerEnter(trigger, { pointerType: 'touch' });
+    expect(screen.queryByRole('note')).toBeNull();
+  });
+
+  it('does not select the box behind it when opened', () => {
+    const { box } = renderCard({ tag: TAG });
+    state().selectBox(null);
+    fireEvent.click(screen.getByRole('button', { name: /What this means/ }));
+    expect(state().selectedBoxId).toBeNull();
+    expect(box.id).toBeDefined();
   });
 });

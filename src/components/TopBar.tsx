@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { documentStatus } from '../state/documentStatus';
 import { useLibrary } from '../state/library';
 import { usePreferences, type Screen } from '../state/preferences';
@@ -37,6 +38,7 @@ export function TopBar({
   const hasBoxes = useWorkbench((s) => s.boxes.length > 0);
   const workbench = screen === 'workbench';
   const canExport = !workbench || hasBoxes;
+  const exportReasonId = useId();
 
   return (
     <header className={workbench ? 'topbar' : 'topbar is-scales'}>
@@ -83,15 +85,24 @@ export function TopBar({
             type="button"
             className="topbar-button"
             data-tour="export"
-            disabled={!canExport}
-            title={canExport ? `Export the ${workbench ? 'preset' : 'scale'} as a PDF or an image` : 'Add a chord to export'}
-            onClick={onOpenExport}
+            // `aria-disabled` rather than `disabled`, so the button keeps its place in the tab order
+            // and the reason below can reach a keyboard or screen-reader user. A `disabled` button
+            // is unfocusable and unhoverable, so its title reaches nobody on a touch screen.
+            aria-disabled={!canExport}
+            aria-describedby={canExport ? undefined : exportReasonId}
+            title={canExport ? `Export the ${workbench ? 'preset' : 'scale'} as a PDF or an image` : undefined}
+            onClick={canExport ? onOpenExport : undefined}
           >
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2M3 13.5h10" />
             </svg>
             <span className="topbar-tab-label">Export</span>
           </button>
+          {!canExport && (
+            <span className="visually-hidden" id={exportReasonId}>
+              Add a chord to export.
+            </span>
+          )}
         </div>
         <button
           type="button"

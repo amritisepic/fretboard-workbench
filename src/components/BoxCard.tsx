@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useWorkbench, type Box, type Orientation } from '../state/workbench';
 import { MAX_CHORD_NOTES, type FretPosition } from '../theory';
 import type { FunctionLabel } from './analysisModel';
 import type { BoxView } from './boardModel';
 import { Fretboard } from './Fretboard';
 import { FunctionText } from './FunctionText';
+import { InfoPopover } from './InfoPopover';
 
 /** How long the "chord is full" note stays up after a refused click. */
 const NOTICE_MS = 2500;
@@ -132,29 +133,18 @@ export function BoxCard({
   );
 }
 
-/** The function under the numeral; hovering or tapping it shows what it means. */
+/** The function under the numeral; clicking or tapping it explains what it means. */
 function FunctionTag({ tag }: { readonly tag: AnalysisTag }) {
-  const [open, setOpen] = useState(false);
-  const explanationId = useId();
   return (
-    <div className="box-function" onMouseLeave={() => setOpen(false)}>
-      <button
-        type="button"
+    <div className="box-function">
+      <InfoPopover
         className="function-tag"
-        aria-expanded={open}
-        aria-describedby={explanationId}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen(!open);
-        }}
-        onBlur={() => setOpen(false)}
+        label={`Chord function, ${tag.label.text}. What this means`}
+        explanation={tag.explanation}
       >
         <FunctionText label={tag.label} />
         {tag.label.note && <span className="function-note">{tag.label.note}</span>}
-      </button>
-      <p id={explanationId} role="tooltip" className={open ? 'function-explanation is-open' : 'function-explanation'}>
-        {tag.explanation}
-      </p>
+      </InfoPopover>
     </div>
   );
 }

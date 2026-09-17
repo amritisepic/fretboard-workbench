@@ -57,7 +57,10 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+/* `aria-disabled` is styled the same as `disabled`: see TopBar's Export button for why a control
+   that is unavailable still keeps its place in the tab order. */
+button:disabled,
+button[aria-disabled='true'] {
   cursor: default;
   opacity: 0.35;
 }
@@ -634,6 +637,15 @@ button:disabled {
   gap: 8px;
 }
 
+/* A switch's own name, as ordinary text. The uppercase `toolbar-label` treatment is reserved for the
+   headings that group several controls. */
+.toolbar-switch-label {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .workspace.is-viewing {
   display: flex;
   flex-direction: column;
@@ -827,11 +839,12 @@ button:disabled {
   text-align: left;
 }
 
-.box.is-viewing .function-tag {
-  cursor: help;
+.function-tag {
+  cursor: pointer;
 }
 
-.function-tag:hover {
+.function-tag:hover,
+.function-tag[aria-expanded='true'] {
   border-color: var(--ink);
 }
 
@@ -861,12 +874,20 @@ button:disabled {
   font-weight: 500;
 }
 
-.function-explanation {
+/* The trigger and its explanation, positioned together. */
+.info-popover {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+}
+
+/* Only in the DOM while it is open, so nothing has to hide it. */
+.info-explanation {
   position: absolute;
   z-index: 6;
   top: calc(100% + 6px);
   left: 0;
-  display: none;
+  display: block;
   width: max-content;
   max-width: min(300px, 80vw);
   padding: 8px 10px;
@@ -877,17 +898,7 @@ button:disabled {
   font-size: 12.5px;
   font-weight: 400;
   line-height: 1.4;
-}
-
-@media (hover: hover) {
-  .box-function:hover .function-explanation {
-    display: block;
-  }
-}
-
-.function-tag:focus-visible + .function-explanation,
-.function-explanation.is-open {
-  display: block;
+  text-align: left;
 }
 
 .key-band-label.is-split {
@@ -1594,6 +1605,21 @@ kbd {
   color: var(--ink-soft);
   font-family: inherit;
   font-size: 11px;
+}
+
+/* The keys that also work on a control, shown beside it instead of spelled out in a sentence. The
+   control itself carries `aria-keyshortcuts`, so this is decoration and is hidden from assistive
+   technology. */
+.shortcut {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.fill-head .shortcut {
+  margin-top: 0;
+  margin-right: auto;
+  margin-left: 8px;
 }
 
 /* ---- Settings panel -------------------------------------------------- */

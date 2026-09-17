@@ -7,7 +7,7 @@
  * Pure: no DOM, no imports. The stylesheet is read by the test, not by this module.
  */
 
-/** Minimum contrast for each kind of thing a colour sits behind. */
+/** Minimum contrast for each kind of thing a color sits behind. */
 export const MINIMUM = {
   /** Anything under 18.66px bold or 24px plain. */
   bodyText: 4.5,
@@ -22,7 +22,7 @@ export type Rgb = readonly [number, number, number];
 export function parseHex(hex: string): Rgb {
   const digits = hex.trim().replace(/^#/, '');
   const full = digits.length === 3 ? [...digits].map((c) => c + c).join('') : digits;
-  if (!/^[0-9a-f]{6}$/i.test(full)) throw new Error(`Not a hex colour: "${hex}"`);
+  if (!/^[0-9a-f]{6}$/i.test(full)) throw new Error(`Not a hex color: "${hex}"`);
   const n = Number.parseInt(full, 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
@@ -36,7 +36,7 @@ export function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** Contrast ratio between two opaque colours, from 1 (identical) to 21 (black on white). */
+/** Contrast ratio between two opaque colors, from 1 (identical) to 21 (black on white). */
 export function contrast(a: string, b: string): number {
   const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (high + 0.05) / (low + 0.05);
@@ -47,15 +47,15 @@ export const ratio = (a: string, b: string): number => Math.floor(contrast(a, b)
 
 /**
  * The custom properties declared on `:root` in a stylesheet, by name without the leading dashes.
- * Only colour values are kept; radii, fonts and the like are ignored.
+ * Only color values are kept; radii, fonts and the like are ignored.
  */
 export function rootColorTokens(css: string): Readonly<Record<string, string>> {
   const block = /:root\s*\{([^}]*)\}/.exec(css);
   if (!block) throw new Error('No :root block in the stylesheet');
   const tokens: Record<string, string> = {};
   for (const [, name, value] of block[1].matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
-    const colour = value.trim();
-    if (/^#[0-9a-f]{3,8}$/i.test(colour)) tokens[name] = colour;
+    const color = value.trim();
+    if (/^#[0-9a-f]{3,8}$/i.test(color)) tokens[name] = color;
   }
   return tokens;
 }

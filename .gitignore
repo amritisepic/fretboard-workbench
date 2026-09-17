@@ -9,3 +9,6 @@ corpora
 # are committed on purpose.
 test-results
 playwright-report
+
+# Subagent worktrees live here during a session.
+.claude/worktrees

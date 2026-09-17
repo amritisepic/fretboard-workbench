@@ -2,7 +2,13 @@ export function RootBox({ root, onStep }: { readonly root: string; readonly onSt
   return (
     <div className="field">
       <div className="root-box">
-        <button type="button" className="root-step" aria-label="Transpose the box down a semitone" onClick={() => onStep(-1)}>
+        <button
+          type="button"
+          className="root-step"
+          aria-label="Transpose the box down a semitone"
+          aria-keyshortcuts="ArrowLeft ArrowDown"
+          onClick={() => onStep(-1)}
+        >
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <path d="M3.5 8h9" />
           </svg>
@@ -13,14 +19,21 @@ export function RootBox({ root, onStep }: { readonly root: string; readonly onSt
             {root}
           </output>
         </div>
-        <button type="button" className="root-step" aria-label="Transpose the box up a semitone" onClick={() => onStep(1)}>
+        <button
+          type="button"
+          className="root-step"
+          aria-label="Transpose the box up a semitone"
+          aria-keyshortcuts="ArrowRight ArrowUp"
+          onClick={() => onStep(1)}
+        >
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <path d="M3.5 8h9M8 3.5v9" />
           </svg>
         </button>
       </div>
-      <p className="hint">
-        Moves the notes and scale together. <kbd>←</kbd> <kbd>→</kbd> also work.
+      <p className="shortcut" aria-hidden="true">
+        <kbd>←</kbd>
+        <kbd>→</kbd>
       </p>
     </div>
   );

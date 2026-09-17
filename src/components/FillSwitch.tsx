@@ -20,12 +20,16 @@ export function FillSwitch({
         <span className="field-label" id="fill-label">
           Fill
         </span>
+        <span className="shortcut" aria-hidden="true">
+          <kbd>Space</kbd>
+        </span>
         <button
           type="button"
           role="switch"
           className="toggle"
           aria-checked={fill.on}
           aria-labelledby="fill-label"
+          aria-keyshortcuts="Space"
           onClick={() => onSetOn(!fill.on)}
         >
           <span className="toggle-knob" />
@@ -60,9 +64,6 @@ export function FillSwitch({
           Fill scale
         </button>
       </div>
-      <p className="hint">
-        <kbd>Space</kbd> turns the fill on or off
-      </p>
     </div>
   );
 }

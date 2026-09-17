@@ -20,6 +20,17 @@ import { VoiceLeadingStrip } from './VoiceLeadingStrip';
  * different keys splits its band ("B♭ minor | B♭ major?") and, in edit mode, choosing one pins it.
  * In view mode the whole canvas is scaled to fit the screen and nothing can be edited.
  */
+/**
+ * What clicking one of a box's offered keys will do. The key bar shows only the key names, so this
+ * is the only statement of the action anywhere and belongs in the button's accessible name.
+ */
+function keyChoiceAction(choice: KeyChoice, pinned: boolean, title: string): string {
+  if (!choice.chosen) return `Read ${title} in ${choice.keyName}`;
+  return pinned
+    ? `Pinned to ${choice.keyName}. Choose again to let the analysis decide.`
+    : `Pin ${title} to ${choice.keyName}`;
+}
+
 export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: string) => void }) {
   const boxes = useWorkbench((s) => s.boxes);
   const settings = useWorkbench((s) => s.settings);
@@ -119,13 +130,11 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
                                 type="button"
                                 className={className}
                                 aria-pressed={choice.chosen}
-                                title={
-                                  choice.chosen
-                                    ? analysis.pinned
-                                      ? `Pinned to ${choice.keyName}. Click to let the analysis choose again.`
-                                      : `Pin ${choice.keyName}`
-                                    : `Read ${entry.view.title} in ${choice.keyName}`
-                                }
+                                // What the click does exists nowhere else on screen, so it has to be
+                                // the button's name rather than a title: a native tooltip never
+                                // appears on a touch screen, which is where this app is often used.
+                                aria-label={keyChoiceAction(choice, analysis.pinned, entry.view.title)}
+                                title={keyChoiceAction(choice, analysis.pinned, entry.view.title)}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   choose(entry, choice);

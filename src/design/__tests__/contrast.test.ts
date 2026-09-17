@@ -12,7 +12,7 @@ const token = (name: string) => {
 };
 
 /**
- * Where each colour is actually used, and what WCAG asks of it there. Decorative rules are left out
+ * Where each color is actually used, and what WCAG asks of it there. Decorative rules are left out
  * on purpose: 1.4.11 covers what identifies a control, not every hairline.
  *
  * `--ink-faint` carries fret numbers, string names, the save status and the hint paragraphs, all of
@@ -43,7 +43,7 @@ const KNOWN_FAILURES: readonly string[] = [
 const BAND_INK = '#56524A';
 
 describe('design tokens', () => {
-  it('declares every colour the usage table names', () => {
+  it('declares every color the usage table names', () => {
     for (const { fg, bg } of USAGE) {
       expect(() => parseHex(token(fg))).not.toThrow();
       expect(() => parseHex(token(bg))).not.toThrow();
@@ -73,14 +73,14 @@ describe('design tokens', () => {
   });
 });
 
-describe('key region colours', () => {
+describe('key region colors', () => {
   it('keeps the band ink readable on every region', () => {
     for (const region of KEY_REGION_COLORS) {
       expect(ratio(BAND_INK, region), `band ink on ${region}`).toBeGreaterThanOrEqual(MINIMUM.bodyText);
     }
   });
 
-  it('keeps the band ink readable on a scale band tinted with any dot colour', () => {
+  it('keeps the band ink readable on a scale band tinted with any dot color', () => {
     for (const swatch of SWATCHES) {
       expect(ratio(BAND_INK, bandShade(swatch.value)), `band ink on a ${swatch.name} scale band`).toBeGreaterThanOrEqual(
         MINIMUM.bodyText,
@@ -90,10 +90,10 @@ describe('key region colours', () => {
 
   // ---- Known gaps -------------------------------------------------------
 
-  // The eight region colours are all the same beige at slightly different hues. They are what tells
+  // The eight region colors are all the same beige at slightly different hues. They are what tells
   // one key region from the next, and several pairs are close to the just-noticeable threshold, so
-  // on a projector or in sunlight they read as one colour. Plan item 23 (Phase 3) rebuilds them.
-  it.fails('keeps the region colours far enough apart to tell one from another', () => {
+  // on a projector or in sunlight they read as one color. Plan item 23 (Phase 3) rebuilds them.
+  it.fails('keeps the region colors far enough apart to tell one from another', () => {
     for (let i = 0; i < KEY_REGION_COLORS.length; i++) {
       for (let j = i + 1; j < KEY_REGION_COLORS.length; j++) {
         expect(deltaE(KEY_REGION_COLORS[i], KEY_REGION_COLORS[j]), `${KEY_REGION_COLORS[i]} vs ${KEY_REGION_COLORS[j]}`)
@@ -104,16 +104,16 @@ describe('key region colours', () => {
 });
 
 describe('labelInk', () => {
-  it('picks the more readable of dark ink and white for every dot colour and its map shade', () => {
+  it('picks the more readable of dark ink and white for every dot color and its map shade', () => {
     for (const swatch of SWATCHES) {
-      for (const [kind, colour] of [
+      for (const [kind, color] of [
         ['clicked', swatch.value],
         ['map shade', mapShade(swatch.value)],
       ] as const) {
-        const chosen = labelInk(colour);
+        const chosen = labelInk(color);
         const other = chosen === '#FFFFFF' ? '#3A3A3A' : '#FFFFFF';
-        expect(contrast(chosen, colour), `${swatch.name} ${kind}: chose the worse of the two`).toBeGreaterThanOrEqual(
-          contrast(other, colour),
+        expect(contrast(chosen, color), `${swatch.name} ${kind}: chose the worse of the two`).toBeGreaterThanOrEqual(
+          contrast(other, color),
         );
       }
     }
@@ -126,14 +126,14 @@ describe('labelInk', () => {
   // where the palette is chosen to clear this; plan item 22 also drops the 8.5px size.
   it.fails('leaves every dot label readable against its dot', () => {
     for (const swatch of SWATCHES) {
-      const colour = swatch.value;
-      expect(ratio(labelInk(colour), colour), `${swatch.name} dot label`).toBeGreaterThanOrEqual(MINIMUM.bodyText);
+      const color = swatch.value;
+      expect(ratio(labelInk(color), color), `${swatch.name} dot label`).toBeGreaterThanOrEqual(MINIMUM.bodyText);
     }
   });
 });
 
 /**
- * CIE76 colour difference in Lab. Roughly: 1 is the smallest difference an eye can catch under ideal
+ * CIE76 color difference in Lab. Roughly: 1 is the smallest difference an eye can catch under ideal
  * conditions, 2.3 is the usual "just noticeable" threshold, and large flat areas separated in space
  * need considerably more than that.
  */
