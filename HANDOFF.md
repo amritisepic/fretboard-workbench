@@ -21,10 +21,12 @@
 - **Docs:**
   - `docs/harmonic-analysis-plan.md`: the plan, the user's decisions (§5), and what was built, with every building decision and the corpus results (§7)
   - `docs/harmonic-patterns.md`: the pattern catalogue, with known gaps in its §7
+  - `docs/ui-testing.md`: what the interface tests cover, the measured layout budgets, and every known interface defect on record
 - **Work from 2026-09-15** is on `master` and deployed. It was fast-forwarded from `scale-wizard-examples-export-tour` the same day, and the live site's bundle was checked for the new features. It covers the scale wizard, built-in examples, PDF/PNG export, the guided tour, vertical necks by default and the delete-warnings switch. See "Added on 2026-09-15" below.
 
 ## Open work, roughly in priority order
-0. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
+0. **Bug: the top bar covers its own controls between 761px and 910px.** `.topbar` is a three-column grid whose outer columns are `minmax(0, 1fr)`, so the left column shrinks below its content and spills over the ones beside it; `.topbar-tab` has `z-index: 21` and lands on top. At 770px Save, the preset name field, Edit and View are all unclickable — tapping View opens the Presets panel. Up to 910px the name field is still covered, so the preset can't be renamed. Phones (760px and below) use a different grid and are fine, as is 920px and up. Found by `e2e/metrics.spec.ts`, which asserts it as a `test.fail`. Tablet portrait and split-screen windows land in this range.
+0b. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
    - the standards' chord changes, written from memory rather than checked against a chart
    - export in Safari and Firefox, which was never tried
    - real printing of an exported PDF
@@ -68,8 +70,11 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 277 tests in 26 files, about 20 s. Most of the time is the exhaustive pitch-set tests.
-- `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json` (covers `src` only). There is no `@types/node`, so tests in `src` can't import `node:` modules. `scripts/` isn't typechecked.
+- `npm.cmd test`: 339 tests in 32 files, about 22 s. Most of the time is the exhaustive pitch-set tests. 16 are `it.fails`: interface defects on record, see `docs/ui-testing.md`.
+- `npm.cmd run test:e2e`: the browser suite (screenshots and layout measurements) in Chromium at 390, 768 and 1440 px. It builds and previews first, so allow a minute. `test:e2e:update` rewrites the screenshot baselines. Not part of `npm test` and not in CI yet.
+  - The first run on this machine needs `npx playwright install chromium`.
+  - Screenshot baselines are per platform (`-linux.png`, committed, matching CI). A Windows run writes its own `-win32.png`; don't commit those.
+- `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`), `tsconfig.json` (covers `src` only) and `tsconfig.e2e.json` (covers `e2e/` and `playwright.config.ts`). `@types/node` is installed but only `tsconfig.e2e.json` enables it, so tests in `src` still can't import `node:` modules. `scripts/` isn't typechecked.
 - `npm.cmd run eval:corpus`: evaluates the analysis against the corpora in `corpora/`.
   - It writes `corpora/reports/latest.md`, or `latest-<corpus>.md` when limited to some corpora, plus a timestamped copy.
   - Environment variables: `CORPUS_ONLY` (for example `rs200` or `billboard,when-in-rome`), `CORPUS_LIMIT` (pieces per corpus) and `CORPUS_WINDOW` (chords per window; the default 0 reads whole pieces).
@@ -177,7 +182,10 @@
 - **`scripts/corpus/`:**
   - `evaluate.eval.ts`, the evaluation runner, run by `vitest.corpus.config.ts`
   - `legacy/`: the key finder from commit `0ce8623`, kept only as the "old key finder" comparison
-- **Tests:** in `__tests__` folders under `theory`, `components`, `state` and `corpus`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
+- **Tests:** in `__tests__` folders under `theory`, `components`, `state`, `corpus` and `design`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
+  - Component tests are `.test.tsx` and open with `// @vitest-environment jsdom`; everything else stays in Node. Setup is `src/test/setup.ts`, shared fixtures `src/test/fixtures.ts` (which builds progressions out of the built-in examples), axe helpers `src/test/axe.ts`.
+  - `src/design/` holds the contrast arithmetic and the design-token checks. The test reads the real stylesheet through `?inline`, which is why `vite.config.ts` sets `test.css: true`.
+  - `e2e/` holds the browser suite: `states.ts` (the six states both suites cover), `visual.spec.ts` (18 screenshot baselines), `measure.ts` and `metrics.spec.ts` (the layout budgets).
   - `theory/__tests__/harmonicAnalysis.test.ts` is the harness of 60 labelled progressions.
   - `theory/__tests__/chordSymbols.ts` builds chords from symbols ("B♭m7", "C/G", "F♯7(11)") for tests.
 

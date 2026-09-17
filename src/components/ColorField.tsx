@@ -1,6 +1,7 @@
 import { useWorkbench, type Box } from '../state/workbench';
 
-const SWATCHES = [
+/** The dot colours offered in the sidebar. Exported so the contrast tests can check them. */
+export const SWATCHES = [
   { name: 'Red', value: '#C8372D' },
   { name: 'Orange', value: '#C9672A' },
   { name: 'Ochre', value: '#B08A1E' },

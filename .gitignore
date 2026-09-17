@@ -4,3 +4,8 @@ dev-dist
 coverage
 *.local
 corpora
+
+# Playwright: reports and failure artefacts. The screenshot baselines under e2e/**/*-snapshots/
+# are committed on purpose.
+test-results
+playwright-report
