@@ -153,6 +153,22 @@ describe('the chord function explanation', () => {
     expect(screen.queryByRole('note')).toBeNull();
   });
 
+  it('is held open by a click, so moving the mouse away does not take it back', () => {
+    renderCard({ tag: TAG });
+    const trigger = screen.getByRole('button', { name: /What this means/ });
+
+    // The usual mouse order: hover opens it, then the click lands.
+    fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('note'), 'a click must not close what hovering opened').toBeDefined();
+
+    fireEvent.pointerLeave(trigger, { pointerType: 'mouse' });
+    expect(screen.getByRole('note'), 'a held popover survives the pointer leaving').toBeDefined();
+
+    fireEvent.click(trigger);
+    expect(screen.queryByRole('note'), 'clicking again lets it go').toBeNull();
+  });
+
   it('opens on hover with a mouse, and ignores a hover that a tap produced', () => {
     renderCard({ tag: TAG });
     const trigger = screen.getByRole('button', { name: /What this means/ });

@@ -30,10 +30,13 @@ export function InfoPopover({
   readonly children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  /** Opened deliberately rather than by hovering, so moving the mouse away must not take it back. */
+  const held = useRef(false);
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const explanationId = useId();
 
   const close = useCallback(() => {
+    held.current = false;
     setOpen(false);
     onToggle?.(false);
   }, [onToggle]);
@@ -73,15 +76,23 @@ export function InfoPopover({
         aria-controls={open ? explanationId : undefined}
         onClick={(event) => {
           event.stopPropagation();
+          // Hover has usually opened it already by the time a mouse gets here, so a click that
+          // simply toggled would read as "clicking closes it". Clicking holds it open instead, and
+          // clicking again lets it go.
+          if (open && !held.current) {
+            held.current = true;
+            return;
+          }
+          held.current = !open;
           set(!open);
         }}
-        // A mouse opens it on hover as well; a pen or a finger uses the click above, which fires
-        // a pointerenter of its own that must not toggle it straight back shut.
+        // A mouse opens it on hover as well; a pen or a finger uses the click above, which fires a
+        // pointerenter of its own that must not toggle it straight back shut.
         onPointerEnter={(event) => {
           if (event.pointerType === 'mouse') set(true);
         }}
         onPointerLeave={(event) => {
-          if (event.pointerType === 'mouse') set(false);
+          if (event.pointerType === 'mouse' && !held.current) set(false);
         }}
       >
         {children}

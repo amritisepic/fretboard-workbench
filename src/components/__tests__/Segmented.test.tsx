@@ -80,7 +80,8 @@ describe('Segmented', () => {
     } finally {
       window.removeEventListener('keydown', listen);
     }
-    expect(seen).toEqual(['ArrowRight', 'Tab']);
+    // The bare ArrowRight is missing because the group stopped it; the other two went past.
+    expect(seen).toEqual(['Ctrl+ArrowRight', 'Tab']);
     expect(onChange).toHaveBeenCalledExactlyOnceWith('view');
   });
 });
