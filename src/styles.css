@@ -1305,6 +1305,15 @@ button.key-choice:hover {
 
 /* ---- Color ----------------------------------------------------------- */
 
+/* The custom-color picker is a control of its own and not one of the radios, so it sits outside the
+   radiogroup (see ColorField); the row puts it back on the same line as the swatches it follows. */
+.swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
 .swatches {
   display: flex;
   flex-wrap: wrap;
@@ -1320,10 +1329,26 @@ button.key-choice:hover {
   border-radius: 50%;
 }
 
+/* A ring of shadow rather than an outline, so that it can share a swatch with the focus ring: the
+   group's one tab stop is its checked swatch, so that is exactly where focus lands, and an outline
+   here would out-specify the one :focus-visible draws and leave focus invisible. */
 .swatch[aria-checked='true'],
 .swatch-custom.is-active {
-  outline: 1.5px solid var(--ink);
-  outline-offset: 2px;
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 3px var(--ink);
+}
+
+/* Outside the checked ring, so the two read as two rings rather than one thick one. */
+.swatch:focus-visible {
+  outline-offset: 4px;
+}
+
+/* The color input covers the custom swatch but is transparent, and the label clips what it holds,
+   so a focus ring on the input would be clipped away; the label wears it on the input's behalf. */
+.swatch-custom:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
 }
 
 .swatch-custom {

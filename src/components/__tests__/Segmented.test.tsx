@@ -36,21 +36,51 @@ describe('Segmented', () => {
     expect(await axeRuleIds(group)).toEqual([]);
   });
 
-  // ---- Known gaps -------------------------------------------------------
-  // These describe the behaviour a radiogroup promises but this component does not implement, so
-  // they are expected to fail today. Plan item 27 (Phase 4) fixes them; when it does, these tests
-  // start passing, `it.fails` reports that, and the `.fails` comes off.
-
-  it.fails('moves the selection with the arrow keys, as a radiogroup must', () => {
+  it('moves the selection with the arrow keys, as a radiogroup must', () => {
     const { onChange, group } = renderSegmented('edit');
     fireEvent.keyDown(group, { key: 'ArrowRight' });
     expect(onChange).toHaveBeenCalledExactlyOnceWith('view');
   });
 
-  it.fails('is a single tab stop, with only the checked option reachable by Tab', () => {
+  it('is a single tab stop, with only the checked option reachable by Tab', () => {
     const { group } = renderSegmented('edit');
     const stops = [...group.querySelectorAll('button')].filter((b) => b.tabIndex >= 0);
     expect(stops).toHaveLength(1);
     expect(stops[0]).toHaveProperty('ariaChecked', 'true');
+  });
+
+  it('wraps at both ends, and takes Home and End to them', () => {
+    const { onChange, group } = renderSegmented('edit');
+    fireEvent.keyDown(group, { key: 'ArrowLeft' });
+    expect(onChange).toHaveBeenLastCalledWith('view');
+    fireEvent.keyDown(group, { key: 'End' });
+    expect(onChange).toHaveBeenLastCalledWith('view');
+    fireEvent.keyDown(group, { key: 'Home' });
+    expect(onChange).toHaveBeenLastCalledWith('edit');
+  });
+
+  it('moves focus with the selection, so the group keeps its one tab stop', () => {
+    const { group } = renderSegmented('edit');
+    screen.getByRole('radio', { name: 'Edit' }).focus();
+    fireEvent.keyDown(group, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(screen.getByRole('radio', { name: 'View' }));
+  });
+
+  it('leaves keys it does not claim to the browser and the app', () => {
+    const { onChange, group } = renderSegmented('edit');
+    const seen: string[] = [];
+    const listen = (event: KeyboardEvent) => seen.push(`${event.ctrlKey ? 'Ctrl+' : ''}${event.key}`);
+    window.addEventListener('keydown', listen);
+    try {
+      // The app nudges the selected box's root with the bare arrow keys, from a window listener, so
+      // an arrow key the group acts on must not reach it; Ctrl+Arrow and Tab are not the group's.
+      fireEvent.keyDown(group, { key: 'ArrowRight' });
+      fireEvent.keyDown(group, { key: 'ArrowRight', ctrlKey: true });
+      fireEvent.keyDown(group, { key: 'Tab' });
+    } finally {
+      window.removeEventListener('keydown', listen);
+    }
+    expect(seen).toEqual(['ArrowRight', 'Tab']);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('view');
   });
 });
