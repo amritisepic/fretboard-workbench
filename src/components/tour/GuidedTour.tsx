@@ -4,6 +4,7 @@ import { pauseSessionSaves } from '../../state/persistence';
 import { usePreferences, type Screen } from '../../state/preferences';
 import { useScaleWizard, type ScaleWizardSettings } from '../../state/scaleWizard';
 import { useWorkbench, type LoadedDocument } from '../../state/workbench';
+import { useModalLayer } from '../focusLayer';
 import { TOUR_STEPS, type TourPanel, type TourStep } from './tourSteps';
 
 /** Space between a highlighted element and its ring, and between the ring and the card. */
@@ -119,6 +120,10 @@ export function GuidedTour({ onPanel, onClose }: { readonly onPanel: (panel: Tou
     onClose();
   }, [onPanel, onClose]);
 
+  // The tour blocks the app and asks to be finished, so it is modal in earnest: the page behind goes
+  // inert and Tab stays on the card, even while the tour opens the app's own panels to point at them.
+  const { ref, onKeyDown } = useModalLayer<HTMLDivElement>({ onClose: finish, initialFocus: cardRef });
+
   const go = (next: number) => {
     if (next < 0 || next >= TOUR_STEPS.length) return;
     if (!saved.current && next > 0) {
@@ -157,22 +162,10 @@ export function GuidedTour({ onPanel, onClose }: { readonly onPanel: (panel: Tou
     };
   }, [measure]);
 
+  // Each step's card is the one thing to read, so focus follows the step rather than staying put.
   useEffect(() => {
     cardRef.current?.focus();
   }, [index]);
-
-  // Esc ends the tour; nothing else reaches the app's shortcuts while it is open.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        finish();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [finish]);
 
   // Should the tour unmount some other way, never leave saving paused.
   useEffect(() => () => pauseSessionSaves(false), []);
@@ -187,7 +180,21 @@ export function GuidedTour({ onPanel, onClose }: { readonly onPanel: (panel: Tou
     : [{ inset: 0 }];
 
   return (
-    <div className="tour" role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-body">
+    <div
+      className="tour"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tour-title"
+      aria-describedby="tour-body"
+      ref={ref}
+      onKeyDown={onKeyDown}
+      onPointerDown={(event) => {
+        // The dimmed page does nothing when pressed, and must not take focus off the card either:
+        // the card is what answers Escape and what Tab is held inside. Cancelling the press is what
+        // stops the browser moving focus to the body, since the shades take no focus of their own.
+        if (event.target instanceof Node && !cardRef.current?.contains(event.target)) event.preventDefault();
+      }}
+    >
       {shades.map((style, i) => (
         <div key={i} className="tour-shade" style={style} />
       ))}

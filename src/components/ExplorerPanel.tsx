@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { ExampleFolder, ExampleProgression } from '../data/examples';
 import { hasUnsavedWork } from '../state/documentStatus';
 import { EXAMPLE_FOLDERS, exampleDocument } from '../state/examples';
@@ -15,6 +15,8 @@ import {
 import { useWorkbench } from '../state/workbench';
 import { ConfirmDialog } from './ConfirmDialog';
 import { downloadText } from './download';
+import { usePopoverLayer } from './focusLayer';
+import { rovingMenu } from './rovingMenu';
 
 interface Target {
   readonly kind: 'folder' | 'preset';
@@ -43,11 +45,21 @@ const sameTarget = (a: Target | null, b: Target) => a !== null && a.kind === b.k
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 const errorText = (error: unknown) => (error instanceof Error ? error.message : 'Something went wrong.');
 
-/** The preset explorer: saved presets in nested folders, with create, rename, move, delete, export and import. */
+/**
+ * The preset explorer: saved presets in nested folders, with create, rename, move, delete, export and
+ * import. Like the settings panel it is a non-modal popover hanging off a top-bar tab, not a modal
+ * dialog: the canvas behind stays live and a press outside closes it, so there is no `aria-modal`
+ * and no focus trap — only focus in on open, Escape to close, and focus back to the tab afterwards.
+ */
 export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  const ids = useId();
   const fileRef = useRef<HTMLInputElement>(null);
   const importFolderId = useRef<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  /** The button a menu was opened from, so leaving the menu can put focus back on it. */
+  const menuTrigger = useRef<HTMLButtonElement | null>(null);
+  /** Whether a confirmation was on screen, so the panel can notice when one has just been answered. */
+  const hadConfirmation = useRef(false);
   const library = useLibrary();
   const openPresetId = useWorkbench((s) => s.document.presetId);
   const newDocument = useWorkbench((s) => s.newDocument);
@@ -62,16 +74,31 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
 
+  const { ref: panelRef, onKeyDown: onPanelKeyDown } = usePopoverLayer<HTMLDivElement>({
+    trigger: '[data-explorer-tab]',
+    onClose,
+    // Escape peels one layer at a time: an open menu goes before the panel it sits in does.
+    onEscape: () => (menu || moving ? closeMenus() : onClose()),
+  });
+
+  // A menu promises the arrow keys, and they need somewhere to count from, so opening one takes
+  // focus into it. Disabled options — a folder cannot be moved into itself — are never that place.
   useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (panelRef.current?.contains(target) || target.closest('[data-explorer-tab]')) return;
-      onClose();
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [onClose]);
+    if (!menu && !moving) return;
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus();
+  }, [menu, moving]);
+
+  // A confirmation's own answer can remove the row whose button opened it, and focus then has
+  // nothing to go back to. The panel takes it rather than leaving it on the body.
+  useEffect(() => {
+    if (confirmation !== null) {
+      hadConfirmation.current = true;
+      return;
+    }
+    if (!hadConfirmation.current) return;
+    hadConfirmation.current = false;
+    if (document.activeElement === null || document.activeElement === document.body) panelRef.current?.focus();
+  }, [confirmation, panelRef]);
 
   const expand = (folderId: string | null) => {
     if (folderId !== null) setExpanded((previous) => new Set([...previous, ...ancestorFolderIds(library.folders, folderId), folderId]));
@@ -83,10 +110,16 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
       else next.add(folderId);
       return next;
     });
+  /** Closes whichever menu is open, putting focus back on the button that opened it. */
   const closeMenus = () => {
+    // Synchronously, while the item holding focus is still mounted: React has not re-rendered yet,
+    // and removing the focused element would drop focus on the body instead. Only when a menu was
+    // actually open, since most callers reach here from a row rather than from a menu.
+    if ((menu || moving) && menuTrigger.current?.isConnected) menuTrigger.current.focus();
     setMenu(null);
     setMoving(null);
   };
+  const menuKeys = rovingMenu(closeMenus);
 
   /** Runs an action, showing its returned message or its error. */
   const run = async (action: () => Promise<string | void> | string | void) => {
@@ -229,43 +262,51 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
   const renderMenus = (target: Target, items: readonly MenuItem[], name: string, currentParent: string | null) => (
     <>
       {sameTarget(menu, target) && (
-        <div className="explorer-menu" role="menu" aria-label={`Actions for ${name}`}>
-          {items.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              role="menuitem"
-              className={item.danger ? 'explorer-menu-item is-danger' : 'explorer-menu-item'}
-              onClick={item.onSelect}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="explorer-menu">
+          <div role="menu" aria-label={`Actions for ${name}`} ref={menuRef} onKeyDown={menuKeys.onKeyDown}>
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                className={item.danger ? 'explorer-menu-item is-danger' : 'explorer-menu-item'}
+                onClick={item.onSelect}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {sameTarget(moving, target) && (
-        <div className="explorer-menu" role="menu" aria-label={`Move ${name} to`}>
-          <p className="explorer-menu-title">Move to</p>
-          {folderOptions(library.folders).map((option) => {
-            const insideItself =
-              target.kind === 'folder' &&
-              option.id !== null &&
-              subtreeContents(library.folders, [], target.id).folderIds.includes(option.id);
-            return (
-              <button
-                key={option.id ?? 'top'}
-                type="button"
-                role="menuitem"
-                className="explorer-menu-item"
-                style={{ paddingLeft: 10 + option.depth * 14 }}
-                disabled={option.id === currentParent || insideItself}
-                onClick={() => void moveTarget(target, option.id)}
-              >
-                {option.name}
-                {option.id === currentParent ? ' (here)' : ''}
-              </button>
-            );
-          })}
+        <div className="explorer-menu">
+          {/* Outside the element carrying role="menu": a menu owns menuitems, and a heading among
+              them is a child the role does not allow. It names the menu from here instead. */}
+          <p className="explorer-menu-title" id={`${ids}move`}>
+            Move to
+          </p>
+          <div role="menu" aria-labelledby={`${ids}move`} ref={menuRef} onKeyDown={menuKeys.onKeyDown}>
+            {folderOptions(library.folders).map((option) => {
+              const insideItself =
+                target.kind === 'folder' &&
+                option.id !== null &&
+                subtreeContents(library.folders, [], target.id).folderIds.includes(option.id);
+              return (
+                <button
+                  key={option.id ?? 'top'}
+                  type="button"
+                  role="menuitem"
+                  className="explorer-menu-item"
+                  style={{ paddingLeft: 10 + option.depth * 14 }}
+                  disabled={option.id === currentParent || insideItself}
+                  onClick={() => void moveTarget(target, option.id)}
+                >
+                  {option.name}
+                  {option.id === currentParent ? ' (here)' : ''}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </>
@@ -276,9 +317,11 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
       type="button"
       className="explorer-more"
       aria-label={`Actions for ${name}`}
+      aria-haspopup="menu"
       aria-expanded={sameTarget(menu, target) || sameTarget(moving, target)}
-      onClick={() => {
+      onClick={(event) => {
         const open = sameTarget(menu, target) || sameTarget(moving, target);
+        menuTrigger.current = event.currentTarget;
         setMoving(null);
         setMenu(open ? null : target);
       }}
@@ -389,18 +432,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
   const isEmpty = library.folders.length === 0 && library.presets.length === 0;
 
   return (
-    <div
-      className="explorer-panel"
-      role="dialog"
-      aria-label="Presets"
-      ref={panelRef}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && (menu || moving)) {
-          event.stopPropagation();
-          closeMenus();
-        }
-      }}
-    >
+    <div className="explorer-panel" role="dialog" aria-label="Presets" tabIndex={-1} ref={panelRef} onKeyDown={onPanelKeyDown}>
       <div className="explorer-head">
         <h2 className="explorer-title">Presets</h2>
         <div className="explorer-actions">

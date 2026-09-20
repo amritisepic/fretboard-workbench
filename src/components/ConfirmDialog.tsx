@@ -1,5 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useId, useRef } from 'react';
+import { useModalLayer } from './focusLayer';
 
+/**
+ * A question that has to be answered before anything else can happen, so it is modal in earnest:
+ * the page behind it goes inert and Tab stays inside. Cancel is what opens focused, which is what
+ * makes Enter safe — the destructive answer is never the one a stray press gives.
+ */
 export function ConfirmDialog({
   title,
   body,
@@ -14,10 +20,12 @@ export function ConfirmDialog({
   readonly onCancel: () => void;
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-  }, []);
+  const { ref, onKeyDown } = useModalLayer<HTMLDivElement>({ onClose: onCancel, initialFocus: cancelRef });
+  // Two confirmations can be on screen at once — the preset panel raises its own over the app's —
+  // and a fixed id would have them both claiming the same title and the same description.
+  const id = useId();
+  const titleId = `${id}title`;
+  const bodyId = `${id}body`;
 
   return (
     <div
@@ -30,18 +38,14 @@ export function ConfirmDialog({
         className="dialog"
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="dialog-title"
-        aria-describedby="dialog-body"
-        onKeyDown={(event) => {
-          // The dialog is the top layer, so Esc stops here.
-          if (event.key === 'Escape') {
-            event.stopPropagation();
-            onCancel();
-          }
-        }}
+        aria-labelledby={titleId}
+        aria-describedby={bodyId}
+        tabIndex={-1}
+        ref={ref}
+        onKeyDown={onKeyDown}
       >
-        <h2 id="dialog-title">{title}</h2>
-        <p id="dialog-body">{body}</p>
+        <h2 id={titleId}>{title}</h2>
+        <p id={bodyId}>{body}</p>
         <div className="dialog-actions">
           <button ref={cancelRef} type="button" className="button" onClick={onCancel}>
             Cancel

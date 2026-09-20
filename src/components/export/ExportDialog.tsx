@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Screen } from '../../state/preferences';
 import { exportFileName } from '../../state/libraryTree';
 import { useScaleWizard } from '../../state/scaleWizard';
@@ -6,6 +6,7 @@ import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } 
 import { TOP_VOICES, maxTopVoice, scaleNotes, scaleRefName, type TopVoice } from '../../theory';
 import { buildCanvasModel } from '../canvasModel';
 import { downloadBlob } from '../download';
+import { useModalLayer } from '../focusLayer';
 import { TOP_VOICE_NAMES } from '../ScaleSheet';
 import { Segmented, type SegmentedOption } from '../Segmented';
 import {
@@ -295,7 +296,12 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
+  // The dialog blocks the app until it is answered or dismissed, so it is modal in earnest: the page
+  // behind goes inert and Tab stays inside. Focus opens on the dialog itself rather than on a
+  // control, so its name is read out before the dozen or so decisions it offers.
+  const { ref: dialogRef, onKeyDown } = useModalLayer<HTMLDivElement>({ onClose });
+  // A literal id is a claim on the whole document; these are the dialog's to hand out.
+  const ids = useId();
 
   const setOutput = (patch: Partial<OutputOptions>) =>
     setOutputState((current) => (rememberedOutput = { ...current, ...patch }));
@@ -315,10 +321,6 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
   const nothing = workbench ? chosenCount === 0 : !Object.values(scaleFeatures).some(Boolean);
   const title = workbench ? presetName : scaleRefName(wizard.scale);
   const optionsKey = JSON.stringify({ output, workbenchFeatures, scaleFeatures, ids: [...boxIds], orientation, labelMode, notation, topVoice });
-
-  useEffect(() => {
-    dialogRef.current?.focus();
-  }, []);
 
   // Lay the sheet out whenever an option changes what it contains or how it fits.
   useLayoutEffect(() => {
@@ -418,18 +420,13 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
         className="export-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="export-dialog-title"
+        aria-labelledby={`${ids}title`}
         tabIndex={-1}
         ref={dialogRef}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.stopPropagation();
-            onClose();
-          }
-        }}
+        onKeyDown={onKeyDown}
       >
         <header className="export-dialog-head">
-          <h2 id="export-dialog-title">Export {workbench ? 'preset' : 'scale'}</h2>
+          <h2 id={`${ids}title`}>Export {workbench ? 'preset' : 'scale'}</h2>
           <button type="button" className="box-remove export-close" aria-label="Close export" onClick={onClose}>
             <svg viewBox="0 0 16 16" aria-hidden="true">
               <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
@@ -445,9 +442,11 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
             </div>
 
             {workbench && (
-              <div className="export-group">
+              // The label is what names the checkboxes, and a screen reader only knows that if the
+              // group says so; without it a dozen chord names are read out belonging to nothing.
+              <div className="export-group" role="group" aria-labelledby={`${ids}chords`}>
                 <div className="export-row">
-                  <span className="field-label">
+                  <span className="field-label" id={`${ids}chords`}>
                     Chords ({chosenCount} of {boxes.length})
                   </span>
                   <span className="export-links">
@@ -472,8 +471,10 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
               </div>
             )}
 
-            <div className="export-group">
-              <span className="field-label">Show</span>
+            <div className="export-group" role="group" aria-labelledby={`${ids}show`}>
+              <span className="field-label" id={`${ids}show`}>
+                Show
+              </span>
               <div className="export-features">
                 {workbench
                   ? WORKBENCH_FEATURE_LABELS.map(([name, label]) => (
