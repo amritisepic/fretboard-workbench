@@ -98,25 +98,92 @@ describe('Fretboard', () => {
     expect(await axeRuleIds(renderBoard().svg)).toEqual([]);
   });
 
-  // ---- Known gaps -------------------------------------------------------
-  // Clicking notes onto the neck is the app's primary interaction and it is pointer-only: the
-  // positions are bare <circle onClick>. Plan item 26 (Phase 4) makes them real controls.
-
-  it.fails('lets the keyboard reach a position', () => {
-    const { svg } = renderBoard();
-    const position = svg.querySelector('.position circle') as SVGElement;
-    expect(position.tabIndex).toBeGreaterThanOrEqual(0);
-  });
-
-  it.fails('names each position for a screen reader', () => {
-    const { svg } = renderBoard();
+  it('names every position for a screen reader, saying where it is and what is there', () => {
+    const { svg, dots } = renderBoard();
     const positions = [...svg.querySelectorAll('.position')];
-    expect(positions.every((p) => p.getAttribute('aria-label') ?? p.getAttribute('role'))).toBeTruthy();
+    expect(positions.every((p) => p.getAttribute('role') === 'button')).toBe(true);
+    expect(positions.every((p) => (p.getAttribute('aria-label') ?? '').length > 0)).toBe(true);
+
+    // Strings are numbered as players number them: 1 is the highest-sounding, the reverse of the
+    // index the board draws from.
+    const open = dots.findIndex((d) => d.string === 5 && d.fret === 0);
+    expect(positions[open].getAttribute('aria-label')).toBe('String 1, open, E, not on the map');
+    const clicked = dots.findIndex((d) => d.string === 1 && d.fret === 3);
+    expect(positions[clicked].getAttribute('aria-label')).toBe('String 5, fret 3, C, in chord');
+    expect(positions[clicked].getAttribute('aria-pressed')).toBe('true');
   });
 
-  it.fails('activates a position with the keyboard', () => {
-    const { svg, onToggle } = renderBoard();
-    fireEvent.keyDown(svg.querySelector('.position circle') as Element, { key: 'Enter' });
-    expect(onToggle).toHaveBeenCalled();
+  it('is a single tab stop, landing on the first note of the chord', () => {
+    const { svg, dots } = renderBoard();
+    const stops = [...svg.querySelectorAll('.position')].filter((p) => Number(p.getAttribute('tabindex')) >= 0);
+    expect(stops).toHaveLength(1);
+    const first = dots.findIndex((d) => d.selected);
+    expect(stops[0]).toBe(svg.querySelectorAll('.position')[first]);
+  });
+
+  it('activates the position under the cursor with Enter and with Space', () => {
+    for (const key of ['Enter', ' ']) {
+      const { svg, dots, onToggle } = renderBoard();
+      const index = dots.findIndex((d) => d.string === 2 && d.fret === 5);
+      fireEvent.keyDown(svg.querySelectorAll('.position')[index], { key });
+      expect(onToggle, key).toHaveBeenCalledExactlyOnceWith({ string: 2, fret: 5 });
+    }
+  });
+
+  it('walks the grid with the arrow keys as the board is drawn, in both orientations', () => {
+    // A vertical board runs the frets down the page with the lowest string on the left, so Down
+    // goes towards the bridge and Right crosses to a higher-sounding string. A horizontal board is
+    // the quarter turn of that: Right goes towards the bridge and Up climbs a string.
+    const cases = [
+      { orientation: 'vertical' as const, key: 'ArrowDown', from: { string: 2, fret: 5 }, to: { string: 2, fret: 6 } },
+      { orientation: 'vertical' as const, key: 'ArrowRight', from: { string: 2, fret: 5 }, to: { string: 3, fret: 5 } },
+      { orientation: 'horizontal' as const, key: 'ArrowRight', from: { string: 2, fret: 5 }, to: { string: 2, fret: 6 } },
+      { orientation: 'horizontal' as const, key: 'ArrowUp', from: { string: 2, fret: 5 }, to: { string: 3, fret: 5 } },
+    ];
+    for (const { orientation, key, from, to } of cases) {
+      const { svg, dots } = renderBoard({ orientation });
+      const at = (p: { string: number; fret: number }) => dots.findIndex((d) => d.string === p.string && d.fret === p.fret);
+      const groups = svg.querySelectorAll('.position');
+      fireEvent.keyDown(groups[at(from)], { key });
+      expect(document.activeElement, `${orientation} ${key}`).toBe(groups[at(to)]);
+    }
+  });
+
+  it('stays on the board when an arrow key would run off the edge', () => {
+    const { svg, dots } = renderBoard();
+    const groups = svg.querySelectorAll('.position');
+    const corner = dots.findIndex((d) => d.string === 0 && d.fret === 0);
+    (groups[corner] as SVGElement).focus();
+    fireEvent.keyDown(groups[corner], { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(groups[corner]);
+  });
+
+  // The workbench listens on the window for bare arrow keys (nudge the selected box's root) and for
+  // Space (toggle its fill). Inside the board those keys belong to the note under the cursor, so
+  // they must not reach the window as well.
+  it('keeps the keys it claims away from the app-wide shortcuts', () => {
+    const { svg, dots } = renderBoard();
+    const seen: string[] = [];
+    const listen = (event: KeyboardEvent) => seen.push(event.key);
+    window.addEventListener('keydown', listen);
+    try {
+      const index = dots.findIndex((d) => d.string === 2 && d.fret === 5);
+      const group = svg.querySelectorAll('.position')[index];
+      for (const key of ['ArrowDown', ' ', 'Enter', 'Home', 'End', 'PageDown']) {
+        fireEvent.keyDown(group, { key });
+      }
+    } finally {
+      window.removeEventListener('keydown', listen);
+    }
+    // Only the key the board does not claim gets through.
+    expect(seen).toEqual(['PageDown']);
+  });
+
+  it('is a drawing and not a control in view mode', () => {
+    const { svg } = renderBoard({ interactive: false });
+    const positions = [...svg.querySelectorAll('.position')];
+    expect(positions.some((p) => p.hasAttribute('role'))).toBe(false);
+    expect(positions.some((p) => p.hasAttribute('tabindex'))).toBe(false);
+    expect(positions.some((p) => p.hasAttribute('aria-label'))).toBe(false);
   });
 });

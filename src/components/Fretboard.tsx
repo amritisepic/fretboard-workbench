@@ -1,7 +1,7 @@
-import { memo, useId } from 'react';
+import { memo, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type SVGProps } from 'react';
 import type { Orientation } from '../state/workbench';
-import { pitchName, type FretPosition, type Tuning } from '../theory';
-import type { BoardDot } from './boardModel';
+import { PITCH_CLASS_NAMES, pitchName, type FretPosition, type PitchClass, type Tuning } from '../theory';
+import type { BoardDot, DotKind } from './boardModel';
 import { labelInk, mapShade, mix } from './color';
 
 /** Along the neck: space per fret and for the open strings. */
@@ -39,12 +39,63 @@ export interface FretboardProps {
 /** Radius of the ring drawn around each clicked note. */
 const RING_GAP = 3;
 
+/** How far one arrow key moves, counted in strings and frets rather than pixels. */
+interface Step {
+  readonly string: number;
+  readonly fret: number;
+}
+
+/**
+ * Arrow keys follow the picture rather than the data, so the mapping depends on the orientation.
+ * `alongOf` runs the frets along x on a horizontal board and along y on a vertical one, and
+ * `acrossOf` puts string 0 — the lowest-sounding string — at the bottom of a horizontal board but
+ * at the left of a vertical one. So on a horizontal board Right walks towards the bridge and Up
+ * climbs to a higher-sounding string; on a vertical board Down walks towards the bridge and Right
+ * crosses to a higher-sounding string.
+ */
+const ARROW_STEPS: Readonly<Record<Orientation, Readonly<Record<string, Step | undefined>>>> = {
+  horizontal: {
+    ArrowLeft: { string: 0, fret: -1 },
+    ArrowRight: { string: 0, fret: 1 },
+    ArrowUp: { string: 1, fret: 0 },
+    ArrowDown: { string: -1, fret: 0 },
+  },
+  vertical: {
+    ArrowLeft: { string: -1, fret: 0 },
+    ArrowRight: { string: 1, fret: 0 },
+    ArrowUp: { string: 0, fret: -1 },
+    ArrowDown: { string: 0, fret: 1 },
+  },
+};
+
+/**
+ * How a position that is not in the chord ends its spoken label. The words describe the map rather
+ * than naming chord and scale tones, because `kind` only says how strongly the dot is drawn: a
+ * faint dot is a scale tone under a scale fill but a chord tone under an inversion fill, and the
+ * board is never told which fill it is drawing.
+ */
+const KIND_WORDS: Readonly<Record<DotKind, string>> = {
+  empty: 'not on the map',
+  weak: 'on the map, faint',
+  strong: 'on the map',
+};
+
+/**
+ * `PITCH_CLASS_NAMES` spells with the ♯ glyph, which a screen reader either skips — turning C♯ into
+ * a second C — or reads out as the name of the symbol. Spelling it as a word keeps the label
+ * speakable.
+ */
+const speakNote = (pc: PitchClass) => PITCH_CLASS_NAMES[pc].replace('♯', ' sharp');
+
 /**
  * Horizontal boards run the frets across the page with the highest string on top, as in tab.
  * Vertical boards run them down the page with the lowest string on the left, as in a chord chart.
  * Geometry is worked out along and across the neck, then mapped to x and y.
  *
  * Clicked notes stand apart from map notes: a lit gradient in the box color inside a crisp ring.
+ *
+ * Each position is a toggle button: the whole board is one tab stop, the arrow keys walk the grid
+ * of strings and frets, and Enter or Space clicks the note under the cursor.
  */
 export const Fretboard = memo(function Fretboard({
   tuning,
@@ -92,8 +143,91 @@ export const Fretboard = memo(function Fretboard({
   // Centred across the neck; an octave fret's pair sits a string gap either side of the centre.
   const neckMiddle = (firstString + lastString) / 2;
 
+  const boardRef = useRef<SVGSVGElement>(null);
+  /** Where the roving tabindex sits once the user has moved or clicked, as `string:fret`. */
+  const [cursor, setCursor] = useState<string | null>(null);
+  const keyOf = (position: FretPosition) => `${position.string}:${position.fret}`;
+
+  /**
+   * The board is one tab stop. Tabbing in lands on the position the user last worked on; before
+   * that on the first note of the chord, so a board with a chord on it opens on the chord rather
+   * than in the empty corner by the nut; and on a bare board on the first position. A cursor left
+   * over from a board that has since changed shape — a shorter neck, a capo, a different tuning —
+   * is dropped rather than leaving the board with no tab stop at all.
+   */
+  const landing = dots.find((dot) => dot.selected) ?? dots.at(0);
+  const tabStop =
+    cursor !== null && dots.some((dot) => keyOf(dot) === cursor) ? cursor : landing ? keyOf(landing) : null;
+
+  /** Moves the cursor, unless the move runs off the board: then it stays where it is. */
+  const moveTo = (position: FretPosition) => {
+    const key = keyOf(position);
+    const target = boardRef.current?.querySelector<SVGGElement>(`[data-position="${key}"]`);
+    if (!target) return;
+    setCursor(key);
+    target.focus();
+  };
+
+  /** The fret at one end of a string, for Home and End. The drawn frets start at the capo. */
+  const endFret = (string: number, last: boolean) => {
+    let found: number | null = null;
+    for (const dot of dots) {
+      if (dot.string === string && (found === null || (last ? dot.fret > found : dot.fret < found))) found = dot.fret;
+    }
+    return found;
+  };
+
+  const onPositionKeyDown = (event: ReactKeyboardEvent<SVGGElement>, dot: BoardDot) => {
+    // The workbench listens on the window for arrow keys, which nudge the selected box's root, and
+    // for Space, which turns its fill on and off. Inside the board those keys belong to the note
+    // under the cursor, so every key handled here is stopped before it gets that far; stopping
+    // Space also keeps it from scrolling the page.
+    const step = ARROW_STEPS[orientation][event.key];
+    if (step) {
+      event.preventDefault();
+      event.stopPropagation();
+      moveTo({ string: dot.string + step.string, fret: dot.fret + step.fret });
+    } else if (event.key === 'Home' || event.key === 'End') {
+      const fret = endFret(dot.string, event.key === 'End');
+      if (fret === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      moveTo({ string: dot.string, fret });
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      onToggle({ string: dot.string, fret: dot.fret });
+    }
+  };
+
+  /**
+   * What makes a position a control. In view mode it is undefined: a position is then a drawing,
+   * with no role, no tab stop and no handlers, exactly as nothing there is clickable. The board's
+   * own aria-label still says what is on show.
+   *
+   * Strings are numbered as players number them, 1 being the highest-sounding, which is the reverse
+   * of the index the board draws from.
+   */
+  const controlProps = (dot: BoardDot): SVGProps<SVGGElement> | undefined => {
+    if (!interactive) return undefined;
+    const where = `String ${stringCount - dot.string}, ${dot.fret === 0 ? 'open' : `fret ${dot.fret}`}`;
+    return {
+      role: 'button',
+      tabIndex: keyOf(dot) === tabStop ? 0 : -1,
+      'aria-label': `${where}, ${speakNote(dot.pc)}, ${dot.selected ? 'in chord' : KIND_WORDS[dot.kind]}`,
+      'aria-pressed': dot.selected,
+      onClick: () => {
+        // A click moves the tab stop as well, so Tab comes back to the note just worked on.
+        setCursor(keyOf(dot));
+        onToggle({ string: dot.string, fret: dot.fret });
+      },
+      onKeyDown: (event) => onPositionKeyDown(event, dot),
+    };
+  };
+
   return (
     <svg
+      ref={boardRef}
       className={interactive ? 'fretboard' : 'fretboard is-static'}
       viewBox={`0 0 ${width} ${height}`}
       width={width}
@@ -173,12 +307,12 @@ export const Fretboard = memo(function Fretboard({
 
       {dots.map((dot) => {
         const { x: cx, y: cy } = point(alongOf(dot.fret), acrossOf(dot.string));
-        const toggle = interactive ? () => onToggle({ string: dot.string, fret: dot.fret }) : undefined;
+        const key = keyOf(dot);
         if (dot.selected) {
           return (
-            <g key={`${dot.string}:${dot.fret}`} className="position position-strong is-clicked">
+            <g key={key} data-position={key} className="position position-strong is-clicked" {...controlProps(dot)}>
               <circle className="dot-ring" cx={cx} cy={cy} r={ringRadius} stroke={color} />
-              <circle className="dot-core" cx={cx} cy={cy} r={DOT_RADIUS} fill={`url(#${coreFill})`} onClick={toggle} />
+              <circle className="dot-core" cx={cx} cy={cy} r={DOT_RADIUS} fill={`url(#${coreFill})`} />
               <text className={dot.label.length > 2 ? 'dot-label is-long' : 'dot-label'} x={cx} y={cy} fill={strongInk}>
                 {dot.label}
               </text>
@@ -186,13 +320,12 @@ export const Fretboard = memo(function Fretboard({
           );
         }
         return (
-          <g key={`${dot.string}:${dot.fret}`} className={`position position-${dot.kind}`}>
+          <g key={key} data-position={key} className={`position position-${dot.kind}`} {...controlProps(dot)}>
             <circle
               cx={cx}
               cy={cy}
               r={DOT_RADIUS}
               fill={dot.kind === 'strong' ? color : dot.kind === 'weak' ? weak : undefined}
-              onClick={toggle}
             />
             <text
               className={dot.label.length > 2 ? 'dot-label is-long' : 'dot-label'}

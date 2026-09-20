@@ -743,6 +743,33 @@ button[aria-disabled='true'] {
   transition: fill 0.12s ease;
 }
 
+/* The board is one tab stop and the arrow keys walk it, so the cursor has to be visible on any
+   position, including an empty one that draws nothing.
+   
+   `:focus`, not `:focus-visible`: Chromium does not match :focus-visible on a focusable SVG group,
+   so the styling below would never apply and the user agent's own square 5px outline would be all
+   there was. Showing the ring after a click as well is right here in any case — this is a grid with
+   a roving tabindex, and where the cursor sits is worth seeing however it got there.
+   
+   A square outline would box a round dot, so it is traded for a ring drawn on the dot itself. An
+   empty position's circle is transparent rather than absent, which gives the ring something to sit
+   on. */
+.fretboard .position:focus {
+  outline: none;
+}
+
+.fretboard .position:focus circle:not(.dot-ring) {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+/* Clicked notes already wear a ring in the box color, so the focus ring goes onto that instead of
+   fighting the lit core. */
+.fretboard .is-clicked:focus .dot-ring {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
 .fretboard.is-static .position circle {
   cursor: default;
 }
