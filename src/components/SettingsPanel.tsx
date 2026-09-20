@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TUNING_PRESETS } from '../data/tunings';
 import { usePreferences } from '../state/preferences';
 import { useWorkbench } from '../state/workbench';
@@ -15,36 +15,33 @@ import {
   pcOf,
   toMidi,
 } from '../theory';
+import { usePopoverLayer } from './focusLayer';
 
 const OCTAVES = [0, 1, 2, 3, 4, 5, 6, 7];
 
 const sameTuning = (a: readonly number[], b: readonly number[]) =>
   a.length === b.length && a.every((midi, i) => midi === b[i]);
 
+/**
+ * The settings panel, which is not a modal dialog and does not claim to be one: it hangs off the
+ * top bar's Settings tab with the canvas behind it still live, still clickable and still worth
+ * reading, which is exactly why a press outside closes it. So there is no `aria-modal` here and no
+ * focus trap — only what a non-modal `role="dialog"` still owes: focus moves in when it opens,
+ * Escape closes it, and focus goes back to the tab when it does.
+ */
 export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  const { ref: panelRef, onKeyDown } = usePopoverLayer<HTMLDivElement>({ trigger: '[data-settings-tab]', onClose });
   const tuning = useWorkbench((s) => s.settings.tuning);
   const applyTuning = useWorkbench((s) => s.applyTuning);
   const setStringCount = useWorkbench((s) => s.setStringCount);
   const setStringPitch = useWorkbench((s) => s.setStringPitch);
   const preset = TUNING_PRESETS.find((p) => sameTuning(p.tuning, tuning));
 
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (panelRef.current?.contains(target) || target.closest('[data-settings-tab]')) return;
-      onClose();
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [onClose]);
-
   // Listed highest string first, matching the fretboard.
   const stringsTopDown = tuning.map((_, i) => tuning.length - 1 - i);
 
   return (
-    <div className="settings-panel" role="dialog" aria-label="Settings" ref={panelRef}>
+    <div className="settings-panel" role="dialog" aria-label="Settings" tabIndex={-1} ref={panelRef} onKeyDown={onKeyDown}>
       <section className="settings-section">
         <label className="field-label" htmlFor="tuning-preset">
           Tuning

@@ -1702,6 +1702,8 @@ kbd {
 
 /* ---- Settings panel -------------------------------------------------- */
 
+/* Opening the panel puts focus on it so its name is read out, the way .tour-card takes focus. It is
+   not a tab stop, so the ring would mark a place the keyboard can never be asked to go. */
 .settings-panel {
   position: absolute;
   z-index: 20;
@@ -1714,6 +1716,7 @@ kbd {
   border: 1px solid var(--rule-strong);
   border-radius: 14px 0 14px 14px;
   background: var(--paper);
+  outline: none;
 }
 
 .settings-section + .settings-section {
@@ -1820,6 +1823,8 @@ kbd {
 
 /* ---- Preset explorer ------------------------------------------------- */
 
+/* Focused on open and on its own again once a confirmation it raised has been answered; see
+   .settings-panel for why the ring is off. */
 .explorer-panel {
   position: absolute;
   z-index: 20;
@@ -1833,6 +1838,7 @@ kbd {
   border: 1px solid var(--rule-strong);
   border-radius: 14px;
   background: var(--paper);
+  outline: none;
 }
 
 .explorer-head {
