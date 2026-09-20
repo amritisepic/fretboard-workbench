@@ -256,11 +256,13 @@ button[aria-disabled='true'] {
   margin-top: 6px;
 }
 
+/* Appends a chord at the end of the row of boxes. The empty workbench shows a card rather than a
+   lone circle now, so this is the only size it comes in. */
 .add-button {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
+  width: 52px;
+  height: 52px;
   padding: 0;
   border: 1.5px solid var(--ink);
   border-radius: 50%;
@@ -274,8 +276,8 @@ button[aria-disabled='true'] {
 }
 
 .add-button svg {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
 }
 
 /* ---- Canvas ---------------------------------------------------------- */
@@ -433,16 +435,6 @@ button[aria-disabled='true'] {
   display: flex;
   align-items: center;
   padding: 34px 0 0 28px;
-}
-
-.add-button.is-small {
-  width: 52px;
-  height: 52px;
-}
-
-.add-button.is-small svg {
-  width: 22px;
-  height: 22px;
 }
 
 /* ---- Voice-leading strip --------------------------------------------- */
