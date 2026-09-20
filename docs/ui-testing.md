@@ -32,7 +32,8 @@ defect is written as the assertion that *should* hold, marked as expected to fai
 A gap cannot therefore be fixed quietly, and cannot be added quietly. Every one carries a comment
 naming the plan item that closes it.
 
-There are 16 of them in `npm test` today and one in the browser suite.
+There were 16 of them in `npm test` when this landed. Six have since been closed by the
+accessibility work, leaving 10, plus one in the browser suite.
 
 ## The three kinds of check
 
@@ -46,8 +47,8 @@ Fixtures come from the built-in examples (`openExample('Autumn Leaves')`) rather
 boxes, so a test renders the data a user would actually see and cannot drift from what the app
 produces.
 
-Covered: `Fretboard`, `BoxCard`, `Canvas`, `Segmented`, `ConfirmDialog`, `SettingsPanel`,
-`ExportDialog`.
+Covered: `Fretboard`, `BoxCard`, `Canvas`, `Segmented`, `ColorField`, `FillSwitch`, the harmony
+readings list, `ConfirmDialog`, `SettingsPanel` and `ExportDialog`.
 
 `Fretboard` also carries a DOM budget: one board is 291 elements today (78 positions, each a group
 holding a circle and a label), and the test holds it at 300 so it cannot grow before plan item 6

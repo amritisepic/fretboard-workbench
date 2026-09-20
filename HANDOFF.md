@@ -8,7 +8,8 @@
   - Presets and export/import; offline PWA.
 - **Live site:** https://amritisepic.github.io/fretboard-workbench/ (GitHub Pages). Repo: https://github.com/amritisepic/fretboard-workbench (public).
 - **Project folder:** `C:\Users\amrit\Documents\fretboard-workbench`, deliberately kept out of the user's ME 315 class folder.
-- **Stack:** React 19, TypeScript 7 (strict), Vite 8, Vitest 5, Zustand 5, `idb` 8, `vite-plugin-pwa` 1.3, `@fontsource-variable/inter`, and `fake-indexeddb` for tests.
+- **Stack:** React 19, TypeScript 7 (strict), Vite 8, Vitest 5, Zustand 5, `idb` 8, `vite-plugin-pwa` 1.3, `@fontsource-variable/inter`. Tests add `fake-indexeddb`, jsdom, Testing Library, `axe-core` and Playwright.
+- **First download:** 115 kB gzip of JavaScript, with 28 kB more fetched when it is needed. Everything that opens on a click is split out in `App.tsx`: the presets panel (which carries the 88 examples), the export machinery, the tour, the scale wizard, the settings panel and the sidebar. Anything that renders on load is deliberately not split. The theory engine is still eager because the Zustand store calls `planKeys` synchronously through `state/boxChords.ts`; splitting it means changing the store.
 - **Libraries the spec forbids:** music-theory libraries (no Tonal.js) and charting or diagram libraries. The fretboard is hand-built inline SVG.
 - **The spec is not in the repo.** Its essentials and the user's rulings are summarised below.
 
@@ -209,6 +210,9 @@
 - **Offline PWA.**
 - **Design:** off-white `#FAF9F7`, dark grey `#3A3A3A`, rounded corners, and no gradients or shadows apart from a faint one on the sidebar. The exception is clicked notes, at the user's request.
 - **Keys:** Esc deselects, arrows nudge the root, Space toggles the fill, Delete removes a box after confirming. All shortcuts are off in view mode.
+  - These are window-level shortcuts, and a widget that claims the same key must call `stopPropagation`, not only `preventDefault`: React hands the event on to `window` afterwards. The fretboard and the radiogroups all do, and each has a test for it. Note `isControl` in `useKeyboardShortcuts.ts` matches a `button` element and so never matches an SVG group carrying `role="button"`.
+- **Keyboard access:** every fretboard position is a toggle button. A board is one tab stop, landing on the first note of the chord; arrow keys walk the grid following the drawn orientation; Enter and Space place or remove a note; Home and End run along a string. View mode takes the roles and tab stops away again. Segmented controls, the dot-color swatches and the fill switch follow the ARIA radiogroup pattern through `components/rovingRadioGroup.ts` (one tab stop, arrows that move focus and selection, wrap, Home/End).
+- **Empty workbench:** a card naming what a box is, with "Add a box" and "Open an example". The old full-height bordered frame with a bare "+" is gone.
 
 ## The user's rulings (don't revert)
 - **Out-of-scale spelling ties** are chord-aware (letters stacked from the chord root), then fall back to ♭2 ♭3 ♯4 ♭6 ♭7.
@@ -336,7 +340,7 @@
   - Names are unique within a folder.
   - Opening a preset or starting a new one asks before discarding unsaved work.
   - The name field writes on every keystroke, and Esc reverts to the last saved name.
-- **Updates:** the app asks before reloading (Reload / Later), and says once when it's ready to work offline.
+- **Updates:** the app asks before reloading (Reload / Later). The "Ready to work offline" message was dropped: it could only ever fire on a first visit, asked nothing of the reader, and landed on top of the welcome card.
 
 ## Tooling lessons
 - **The Claude in-app browser pane can't run service workers.** Test offline behaviour with `npm run test:offline`.
