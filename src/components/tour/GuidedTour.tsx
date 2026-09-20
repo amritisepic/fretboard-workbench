@@ -162,10 +162,22 @@ export function GuidedTour({ onPanel, onClose }: { readonly onPanel: (panel: Tou
     };
   }, [measure]);
 
-  // Each step's card is the one thing to read, so focus follows the step rather than staying put.
+  /**
+   * Each step's card is the one thing to read, so focus follows the step rather than staying put.
+   * It has to wait for the card to be placed: a step starts with the card hidden so it can be
+   * measured against its target, and a hidden element cannot take focus, so focusing on the step
+   * alone silently did nothing and left focus on the body — where the card's Escape handler, which
+   * ends the tour, never saw the key.
+   *
+   * Once per step, not on every placement: the card is re-measured on resize and on scroll, and
+   * taking focus back each time would pull it off a button the reader had tabbed to.
+   */
+  const focusedStep = useRef(-1);
   useEffect(() => {
+    if (placement.visibility === 'hidden' || focusedStep.current === index) return;
+    focusedStep.current = index;
     cardRef.current?.focus();
-  }, [index]);
+  }, [index, placement]);
 
   // Should the tour unmount some other way, never leave saving paused.
   useEffect(() => () => pauseSessionSaves(false), []);
