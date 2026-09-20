@@ -1609,8 +1609,11 @@ button.key-choice:hover {
   font-weight: 600;
 }
 
+/* A span rather than a button (see FillSwitch), so it needs the block box and the pointer a button
+   came with. */
 .fill-track {
   position: relative;
+  display: block;
   flex: none;
   width: 50px;
   height: 26px;
@@ -1618,6 +1621,7 @@ button.key-choice:hover {
   border: 1.5px solid var(--ink);
   border-radius: 999px;
   background: transparent;
+  cursor: pointer;
 }
 
 .fill-knob {

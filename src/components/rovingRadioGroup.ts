@@ -43,6 +43,8 @@ export function rovingRadioGroup<T>(values: readonly T[], value: T, onChange: (v
       // and changing the selection re-renders them in place rather than moving them, so the button
       // to focus is there already.
       event.currentTarget.querySelectorAll<HTMLElement>(':scope > [role="radio"]')[next]?.focus();
+      // `:scope >` on purpose: a group may hold decoration beside its radios (FillSwitch's sliding
+      // track), and counting anything but the radios would put focus on the wrong one.
     },
   };
 }
