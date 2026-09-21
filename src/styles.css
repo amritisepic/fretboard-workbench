@@ -601,6 +601,81 @@ button[aria-disabled='true'] {
   color: var(--danger);
 }
 
+/*
+ * The board and the analysis that goes with it. The card grows along the axis its neck is long in,
+ * because that is the axis that costs least: cards with a horizontal neck are wide and short and
+ * wrap into rows, so the height of a row is what limits how many chords reach the screen and the
+ * analysis goes to the right; cards with a vertical neck are narrow and tall and stand side by side
+ * across a row, so width is the limit and the analysis goes underneath. Either way the card stays
+ * compact in the dimension that decides how much of the progression is visible at once.
+ *
+ * Nothing here assumes a board size. The board keeps whatever width and height it draws itself at,
+ * and the analysis takes the space left over.
+ */
+.box-body {
+  display: flex;
+  gap: 10px 14px;
+}
+
+.box-body.is-vertical {
+  flex-direction: column;
+}
+
+.box-body.is-horizontal {
+  align-items: flex-start;
+}
+
+/* When the card is too wide for the window something has to give, and it must not be the board: two
+   boards in a progression drawn at different scales are exactly what this card is for comparing. So
+   the analysis gives way first and by far — the lopsided shrink factors are the whole point — and it
+   stops at its own narrowest wrap, after which the board starts to scale as it always has. */
+.box-body.is-horizontal > .fretboard-scroll {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* A column, not a lane the text can run away down: capped so a long function note wraps into a
+   narrow block instead of stretching the card out to the width of its own sentence. It keeps
+   flexbox's automatic minimum size, so that squeezing it stops once the text has nowhere left to
+   wrap and the board takes the rest of the loss. */
+.box-body.is-horizontal > .box-analysis {
+  flex: 0 200 auto;
+  max-width: 170px;
+}
+
+/*
+ * Beside the board needs room beside the board, and anything narrower than a laptop has none to
+ * spare: at a tablet's width the analysis would take its column out of the neck rather than out of
+ * the margin, and a progression whose boards are drawn at two different scales is worse than one
+ * that costs a little height. So below the same width at which the sidebar stops sitting beside the
+ * canvas, the analysis stops sitting beside the board, and goes under it as it does under a vertical
+ * neck.
+ *
+ * This is a viewport query rather than a wrapped flex line, which would follow the card's real width
+ * instead of guessing from the window's, because the explanation has to know which way to open and
+ * "did that item wrap" is not a question CSS can ask.
+ *
+ * The export sheet is laid out off-screen at the size it will be drawn at, so it keeps the side by
+ * side arrangement whatever screen the export was started from.
+ */
+@media (max-width: 1024px) {
+  .box-body.is-horizontal {
+    flex-direction: column;
+  }
+
+  .box-body.is-horizontal > .box-analysis {
+    max-width: none;
+  }
+
+  .export-sheet .box-body.is-horizontal {
+    flex-direction: row;
+  }
+
+  .export-sheet .box-body.is-horizontal > .box-analysis {
+    max-width: 170px;
+  }
+}
+
 .fretboard-scroll {
   max-width: 100%;
 }
@@ -868,12 +943,6 @@ button[aria-disabled='true'] {
   color: var(--ink-faint);
 }
 
-/* Under the numeral and chord name, on a line of its own. */
-.box-function {
-  position: relative;
-  flex-basis: 100%;
-}
-
 .function-tag {
   display: inline-flex;
   align-items: baseline;
@@ -948,6 +1017,35 @@ button[aria-disabled='true'] {
   font-weight: 400;
   line-height: 1.4;
   text-align: left;
+}
+
+/*
+ * The explanation grows back over the board, which is the one direction certain to have room for it.
+ * Under a vertical neck the tag is at the foot of a tall card, where opening downwards puts the
+ * explanation below the bottom of the window, so it opens upwards; beside a horizontal neck the tag
+ * is against the card's right edge, where opening rightwards takes the last box of a row off the
+ * side of the screen, so it opens leftwards.
+ */
+.box-body.is-vertical .info-explanation {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.box-body.is-horizontal .info-explanation {
+  right: 0;
+  left: auto;
+}
+
+/* Below a laptop's width the analysis is under the board whichever way the neck runs, so it opens
+   upwards there too — and from the left, because a card that starts at the edge of a 390px screen
+   has no room for 300px of explanation to its left. */
+@media (max-width: 1024px) {
+  .box-body.is-horizontal .info-explanation {
+    top: auto;
+    right: auto;
+    bottom: calc(100% + 6px);
+    left: 0;
+  }
 }
 
 .key-band-label.is-split {
