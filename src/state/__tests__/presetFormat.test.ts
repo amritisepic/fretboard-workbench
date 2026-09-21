@@ -12,7 +12,7 @@ import {
 import { createBox } from '../workbench';
 
 const sample = (): PresetData => ({
-  settings: { tuning: [35, 40, 45, 50, 55, 59, 64], fretCount: 22, capo: 1, fretMarkers: false },
+  settings: { tuning: [35, 40, 45, 50, 55, 59, 64], fretCount: 22, capo: 1, fretMarkers: false, boardView: 'chart' },
   key: makeScaleRef('diatonic', 5, 'A'),
   strips: { commonTones: false, voiceLeading: true, labelMode: 'degrees', analysis: true, notation: 'classical' },
   orientation: 'vertical',
@@ -56,6 +56,7 @@ describe('preset data', () => {
     expect(parseEdited((json) => delete json.strips)).toThrow('preset.strips must be an object');
     expect(parseEdited((json) => (json.settings.capo = 12))).toThrow('preset.settings.capo must be a whole number from 0 to 11');
     expect(parseEdited((json) => (json.orientation = 'diagonal'))).toThrow('preset.orientation must be one of');
+    expect(parseEdited((json) => (json.settings.boardView = 'window'))).toThrow('preset.settings.boardView must be one of');
     expect(parseEdited((json) => (json.boxes[0].degreeBasis = 'chord'))).toThrow('preset.boxes[0].degreeBasis must be one of');
   });
 
@@ -68,10 +69,11 @@ describe('preset data', () => {
     expect(behindCapo.boxes[0].positions).toEqual([{ string: 2, fret: 3 }]);
   });
 
-  it('reads presets saved before the capo, the neck orientation, degree counting and the chord limits', () => {
+  it('reads presets saved before the capo, the board view, the neck orientation, degree counting and the chord limits', () => {
     const data = parseEdited((json) => {
       delete json.settings.capo;
       delete json.settings.fretMarkers;
+      delete json.settings.boardView;
       delete json.orientation;
       delete json.boxes[0].degreeBasis;
       delete json.boxes[0].keyPin;
@@ -85,6 +87,7 @@ describe('preset data', () => {
     })();
     expect(data.settings.capo).toBe(0);
     expect(data.settings.fretMarkers).toBe(true);
+    expect(data.settings.boardView).toBe('full');
     expect(data.orientation).toBe('horizontal');
     expect(data.boxes[0].degreeBasis).toBe('key');
     expect(data.boxes[0]).toMatchObject({ keyPin: null, readingPin: null });
@@ -92,13 +95,27 @@ describe('preset data', () => {
     expect(data.boxes[1].positions).toEqual([1, 2, 3, 4, 5, 6].map((string) => ({ string, fret: 2 })));
   });
 
+  it('keeps the whole neck when a preset with no board view is read, written and read again', () => {
+    const json = JSON.parse(JSON.stringify(sample()));
+    delete json.settings.boardView;
+    const opened = parsePresetData(json);
+    expect(opened.settings.boardView).toBe('full');
+    const preset = { name: 'Old', data: opened };
+    expect(parseExportFile(serializeExportFile({ kind: 'preset', preset }))).toEqual({ kind: 'preset', preset });
+  });
+
   it('rewrites a snapshot saved by an older version in the current format', () => {
     const data = sample();
     const old = JSON.parse(snapshotOf('A', data));
     delete old.data.settings.capo;
+    delete old.data.settings.boardView;
     delete old.data.orientation;
     old.data.strips.compare = 'chords';
-    const current: PresetData = { ...data, settings: { ...data.settings, capo: 0 }, orientation: 'horizontal' };
+    const current: PresetData = {
+      ...data,
+      settings: { ...data.settings, capo: 0, boardView: 'full' },
+      orientation: 'horizontal',
+    };
     expect(upgradeSnapshot(JSON.stringify(old))).toBe(snapshotOf('A', current));
     expect(upgradeSnapshot('not json')).toBe('not json');
   });

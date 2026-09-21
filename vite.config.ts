@@ -41,7 +41,14 @@ export default defineConfig({
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
   test: {
+    // Node by default, so the theory and state tests stay fast. Component tests opt into jsdom with
+    // a `@vitest-environment jsdom` docblock; see src/test/setup.ts.
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: ['src/test/setup.ts'],
+    // The design-token tests read the real stylesheet through `?inline`; without this vitest hands
+    // back an empty string for any CSS import. No component test imports CSS, so this costs nothing
+    // elsewhere.
+    css: true,
   },
 });

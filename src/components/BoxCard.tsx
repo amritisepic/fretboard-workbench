@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useWorkbench, type Box, type Orientation } from '../state/workbench';
 import { MAX_CHORD_NOTES, type FretPosition } from '../theory';
 import type { FunctionLabel } from './analysisModel';
 import type { BoxView } from './boardModel';
+import { editableWindow } from './boardModel';
 import { Fretboard } from './Fretboard';
 import { FunctionText } from './FunctionText';
+import { InfoPopover } from './InfoPopover';
 
 /** How long the "chord is full" note stays up after a refused click. */
 const NOTICE_MS = 2500;
 
-/** What harmonic analysis adds under the numeral: the chord's function and a sentence about it. */
+/** What harmonic analysis adds beside the board: the chord's function and a sentence about it. */
 export interface AnalysisTag {
   readonly label: FunctionLabel;
   readonly explanation: string;
@@ -48,6 +50,7 @@ export function BoxCard({
   const fretCount = useWorkbench((s) => s.settings.fretCount);
   const capo = useWorkbench((s) => s.settings.capo);
   const fretMarkers = useWorkbench((s) => s.settings.fretMarkers);
+  const boardView = useWorkbench((s) => s.settings.boardView);
   const presetOrientation = useWorkbench((s) => s.orientation);
   const orientation = neckOverride ?? presetOrientation;
   const selectBox = useWorkbench((s) => s.selectBox);
@@ -92,7 +95,6 @@ export function BoxCard({
         ) : (
           <h2 className="box-title is-placeholder">{viewing ? 'No notes' : 'Click the fretboard to add notes'}</h2>
         )}
-        {tag && tag.label.text && <FunctionTag tag={tag} />}
         {refusedAt !== null && (
           <p className="box-notice" role="status">
             A chord has {MAX_CHORD_NOTES} notes at most. Click one to remove it first.
@@ -115,46 +117,70 @@ export function BoxCard({
           </svg>
         </button>
       )}
-      <div className="fretboard-scroll">
-        <Fretboard
-          tuning={tuning}
-          fretCount={fretCount}
-          capo={capo}
-          orientation={orientation}
-          fretMarkers={fretMarkers}
-          dots={view.dots}
-          color={box.color}
-          interactive={!viewing}
-          onToggle={onToggle}
-        />
+      {/*
+        The board and, when harmonic analysis is on, the function tag beside or under it. The tag is
+        kept out of the header on purpose: a tag long enough to wrap used to push its own board down
+        while its neighbors' stayed put, so the nuts no longer lined up across a row, and comparing
+        shapes across a progression is the whole point of the canvas. Out here the header holds the
+        same elements in every box and every board starts at the same height.
+
+        Which side the tag takes follows the orientation the card is actually drawing, which is the
+        preset's unless an export overrode it. The stylesheet does the placing; the class only says
+        which way the neck runs.
+      */}
+      <div className={`box-body is-${orientation}`}>
+        <div className="fretboard-scroll">
+          <Fretboard
+            tuning={tuning}
+            fretCount={fretCount}
+            capo={capo}
+            orientation={orientation}
+            fretMarkers={fretMarkers}
+            dots={view.dots}
+            // A chord chart crops the neck to a window around the shape; the whole neck is the other
+            // choice, and passing no window is what asks for it.
+            //
+            // Only the selected box gets room to move. A window worked out from the notes is a dead
+            // end for building — nothing reachable inside it can push it up the neck — but paying
+            // for that on every board costs half the density the window was for, measured at three
+            // chords on a laptop against six. One box is edited at a time, and clicking any note
+            // selects its box, so the reach arrives exactly when it is wanted.
+            window={
+              boardView !== 'chart'
+                ? undefined
+                : selected && !viewing
+                  ? editableWindow(view.window, capo, fretCount)
+                  : view.window
+            }
+            color={box.color}
+            interactive={!viewing}
+            onToggle={onToggle}
+          />
+        </div>
+        {tag && tag.label.text && <FunctionTag tag={tag} />}
       </div>
     </section>
   );
 }
 
-/** The function under the numeral; hovering or tapping it shows what it means. */
+/**
+ * The chord's function, beside the board or under it; clicking or tapping it explains what it means.
+ *
+ * It comes after the board in the DOM because that is where it is on the screen in both
+ * orientations — to the right of a horizontal neck, under a vertical one — so reading order and
+ * focus order follow the picture rather than being reshuffled by `order`.
+ */
 function FunctionTag({ tag }: { readonly tag: AnalysisTag }) {
-  const [open, setOpen] = useState(false);
-  const explanationId = useId();
   return (
-    <div className="box-function" onMouseLeave={() => setOpen(false)}>
-      <button
-        type="button"
+    <div className="box-analysis">
+      <InfoPopover
         className="function-tag"
-        aria-expanded={open}
-        aria-describedby={explanationId}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen(!open);
-        }}
-        onBlur={() => setOpen(false)}
+        label={`Chord function, ${tag.label.text}. What this means`}
+        explanation={tag.explanation}
       >
         <FunctionText label={tag.label} />
         {tag.label.note && <span className="function-note">{tag.label.note}</span>}
-      </button>
-      <p id={explanationId} role="tooltip" className={open ? 'function-explanation is-open' : 'function-explanation'}>
-        {tag.explanation}
-      </p>
+      </InfoPopover>
     </div>
   );
 }

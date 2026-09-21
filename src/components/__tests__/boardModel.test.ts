@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createBox, type Box, type FillMode, type Settings } from '../../state/workbench';
-import { makeScaleRef } from '../../theory';
-import { buildBoxView } from '../boardModel';
+import { makeScaleRef, type PitchClass } from '../../theory';
+import { buildBoxView, editableWindow, fretWindow, type BoardDot } from '../boardModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true, boardView: 'chart' };
 
 // C3 on the A string, E3 on the D string, A3 on the G string: C E A with C lowest.
 const amOverC: Box = {
@@ -102,5 +102,100 @@ describe('box view', () => {
     expect(view.title).toBe('Am/C');
     const behind: Box = { ...amOverC, positions: [...amOverC.positions, { string: 0, fret: 1 }] };
     expect(buildBoxView(behind, capoed).title).toBe('Am/C');
+  });
+
+  it('carries the window its own dots ask for', () => {
+    // C on the A string at 3, E on the D string at 2, A on the G string at 2: frets 2 and 3, grown
+    // down to the nut because it is close enough to reach.
+    expect(buildBoxView(amOverC, settings).window).toEqual({ first: 0, last: 4 });
+    // Fill scale lights every string at some fret in every five, so the window is the whole neck.
+    expect(buildBoxView(withFill(amOverC, 'scale'), settings).window).toEqual({ first: 0, last: 24 });
+  });
+});
+
+/** A position with nothing on it, which is what the window has to ignore. */
+const blank = (fret: number, string = 0): BoardDot => ({
+  string,
+  fret,
+  pc: 0 as PitchClass,
+  kind: 'empty',
+  selected: false,
+  label: '',
+});
+const clicked = (fret: number, string = 0): BoardDot => ({ ...blank(fret, string), kind: 'strong', selected: true });
+const filled = (fret: number, string = 0): BoardDot => ({ ...blank(fret, string), kind: 'weak', label: 'A' });
+
+/** Every fret from the capo to the last, as a board's dots cover them. */
+const wholeNeck = (capo: number, fretCount: number) =>
+  Array.from({ length: fretCount - capo + 1 }, (_, i) => blank(capo + i));
+
+describe('fret window', () => {
+  it('starts at the capo and runs the minimum length when nothing is drawn', () => {
+    expect(fretWindow(wholeNeck(0, 12), 0, 12)).toEqual({ first: 0, last: 4 });
+    expect(fretWindow(wholeNeck(3, 12), 3, 12)).toEqual({ first: 3, last: 7 });
+    expect(fretWindow([], 0, 12, 4)).toEqual({ first: 0, last: 3 });
+  });
+
+  it('counts a position the map lit as well as one the user clicked', () => {
+    // The fill is the whole point of the board it is on; cropping it away would hide the map.
+    expect(fretWindow([...wholeNeck(0, 12), filled(9), filled(11)], 0, 12)).toEqual({ first: 8, last: 12 });
+    expect(fretWindow([...wholeNeck(0, 12), clicked(9), filled(11)], 0, 12)).toEqual({ first: 8, last: 12 });
+  });
+
+  it('spans the drawn frets once they are long enough on their own', () => {
+    expect(fretWindow([clicked(5), clicked(9)], 0, 12)).toEqual({ first: 5, last: 9 });
+    expect(fretWindow([clicked(2), clicked(11)], 0, 12)).toEqual({ first: 2, last: 11 });
+  });
+
+  it('grows a short shape down to the capo when it is near enough to reach', () => {
+    // An open-position chord shows the nut rather than floating a fret or two above it.
+    expect(fretWindow([clicked(1), clicked(3)], 0, 12)).toEqual({ first: 0, last: 4 });
+    expect(fretWindow([clicked(2)], 0, 12)).toEqual({ first: 0, last: 4 });
+    expect(fretWindow([clicked(5), clicked(6)], 3, 12)).toEqual({ first: 3, last: 7 });
+  });
+
+  it('grows a short shape centre-ish once there is no nut to reach for', () => {
+    expect(fretWindow([clicked(7), clicked(8)], 0, 12)).toEqual({ first: 6, last: 10 });
+    expect(fretWindow([clicked(9)], 0, 12)).toEqual({ first: 7, last: 11 });
+  });
+
+  it('includes the capo whenever a note is played there', () => {
+    // A note on an open string is at the capo, which is the lowest fret there is.
+    expect(fretWindow([clicked(0), clicked(7)], 0, 12).first).toBe(0);
+    expect(fretWindow([clicked(3), clicked(9)], 3, 12).first).toBe(3);
+  });
+
+  it('slides back down the neck rather than running off the end of it', () => {
+    expect(fretWindow([clicked(12)], 0, 12)).toEqual({ first: 8, last: 12 });
+    expect(fretWindow([clicked(11), clicked(12)], 0, 12)).toEqual({ first: 8, last: 12 });
+  });
+
+  it('stays inside the neck it is given, however short that neck is', () => {
+    expect(fretWindow([], 0, 3)).toEqual({ first: 0, last: 3 });
+    expect(fretWindow([clicked(2)], 0, 2)).toEqual({ first: 0, last: 2 });
+    expect(fretWindow([clicked(5)], 7, 12)).toEqual({ first: 7, last: 11 });
+    // A capo past the end of the neck is nonsense, but it must not produce a backwards window.
+    const degenerate = fretWindow([], 14, 12);
+    expect(degenerate.last).toBeGreaterThanOrEqual(degenerate.first);
+  });
+});
+
+describe('the room a board being edited keeps around the shape', () => {
+  it('reaches further up the neck than down, so a shape can be moved past the window it opened on', () => {
+    // Without reach upwards a new box is stuck on the first five frets forever: the window comes
+    // from the notes, so no click inside it can ever push it higher.
+    expect(editableWindow({ first: 0, last: 4 }, 0, 24)).toEqual({ first: 0, last: 6 });
+    expect(editableWindow({ first: 7, last: 11 }, 0, 24)).toEqual({ first: 6, last: 13 });
+  });
+
+  it('stays on the neck at either end', () => {
+    expect(editableWindow({ first: 0, last: 4 }, 0, 24).first).toBe(0);
+    expect(editableWindow({ first: 3, last: 7 }, 3, 24).first).toBe(3);
+    expect(editableWindow({ first: 20, last: 24 }, 0, 24)).toEqual({ first: 19, last: 24 });
+  });
+
+  it('never hands back a backwards window, whatever neck it is given', () => {
+    const degenerate = editableWindow({ first: 0, last: 4 }, 14, 12);
+    expect(degenerate.last).toBeGreaterThanOrEqual(degenerate.first);
   });
 });

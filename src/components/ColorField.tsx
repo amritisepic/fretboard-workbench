@@ -1,6 +1,8 @@
 import { useWorkbench, type Box } from '../state/workbench';
+import { rovingRadioGroup } from './rovingRadioGroup';
 
-const SWATCHES = [
+/** The dot colors offered in the sidebar. Exported so the contrast tests can check them. */
+export const SWATCHES = [
   { name: 'Red', value: '#C8372D' },
   { name: 'Orange', value: '#C9672A' },
   { name: 'Ochre', value: '#B08A1E' },
@@ -15,25 +17,44 @@ export function ColorField({ box }: { readonly box: Box }) {
   const setColor = useWorkbench((s) => s.setColor);
   const current = box.color.toUpperCase();
   const isCustom = !SWATCHES.some((s) => s.value === current);
+  const roving = rovingRadioGroup(
+    SWATCHES.map((swatch) => swatch.value),
+    current,
+    (color) => setColor(box.id, color),
+  );
 
   return (
     <div className="field">
       <span className="field-label" id={`color-label-${box.id}`}>
         Dot color
       </span>
-      <div className="swatches" role="radiogroup" aria-labelledby={`color-label-${box.id}`}>
-        {SWATCHES.map((swatch) => (
-          <button
-            key={swatch.value}
-            type="button"
-            role="radio"
-            className="swatch"
-            aria-checked={swatch.value === current}
-            aria-label={swatch.name}
-            style={{ backgroundColor: swatch.value }}
-            onClick={() => setColor(box.id, swatch.value)}
-          />
-        ))}
+      {/* The custom-color picker sits beside the radiogroup rather than in it. A radiogroup owns
+          radios and nothing else, and the picker is not a ninth option but a way to name a color
+          the eight do not offer: it has no checked state to move between and opening it hands the
+          keyboard to the browser's color dialog. Keeping it out leaves it its own tab stop, so the
+          route through the field is Tab to the swatches, arrow keys within them, Tab to the picker,
+          rather than arrowing past every swatch to reach it. */}
+      <div className="swatch-row">
+        <div
+          className="swatches"
+          role="radiogroup"
+          aria-labelledby={`color-label-${box.id}`}
+          onKeyDown={roving.onKeyDown}
+        >
+          {SWATCHES.map((swatch, index) => (
+            <button
+              key={swatch.value}
+              type="button"
+              role="radio"
+              className="swatch"
+              aria-checked={swatch.value === current}
+              aria-label={swatch.name}
+              tabIndex={roving.tabIndex(index)}
+              style={{ backgroundColor: swatch.value }}
+              onClick={() => setColor(box.id, swatch.value)}
+            />
+          ))}
+        </div>
         <label
           className={isCustom ? 'swatch swatch-custom is-active' : 'swatch swatch-custom'}
           style={isCustom ? { backgroundColor: current } : undefined}

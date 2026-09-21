@@ -26,6 +26,8 @@ export type DegreeBasis = 'key' | 'scale';
 export type FillMode = 'inversion' | 'scale';
 /** How each box draws its neck: frets across the page, or strings down it like a chord chart. */
 export type Orientation = 'horizontal' | 'vertical';
+/** How much of the neck a board draws: a window around the shape, or every fret of it. */
+export type BoardView = 'chart' | 'full';
 /** How harmonic analysis writes functions: V7/IV and slash chords, or V⁷/IV with figured bass. */
 export type HarmonyNotation = 'jazz' | 'classical';
 
@@ -66,6 +68,8 @@ export interface Settings {
   readonly capo: number;
   /** Light grey inlay dots at frets 3, 5, 7, 9 and 12, repeating up the neck. */
   readonly fretMarkers: boolean;
+  /** Whether a board shows a chord-chart window around the shape, or the whole neck. */
+  readonly boardView: BoardView;
 }
 
 /** Strips between adjacent boxes. Global to the preset; a strip shows while any part is on. */
@@ -156,6 +160,7 @@ export interface WorkbenchState {
    */
   setCapo(capo: number): void;
   setFretMarkers(on: boolean): void;
+  setBoardView(view: BoardView): void;
   /** Ignores blank names. */
   setPresetName(name: string): void;
   /** Replaces everything the preset stores and deselects. */
@@ -193,7 +198,13 @@ export const DEFAULT_STRIPS: StripSettings = {
 };
 
 const defaultContent = (): Pick<WorkbenchState, 'settings' | 'key' | 'strips' | 'orientation' | 'boxes'> => ({
-  settings: { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0, fretMarkers: true },
+  settings: {
+    tuning: TUNING_PRESETS[0].tuning,
+    fretCount: DEFAULT_FRET_COUNT,
+    capo: 0,
+    fretMarkers: true,
+    boardView: 'chart',
+  },
   key: makeScaleRef('diatonic', 0, 'C'),
   strips: DEFAULT_STRIPS,
   orientation: 'vertical',
@@ -317,6 +328,7 @@ export const useWorkbench = create<WorkbenchState>()((set, get) => {
         };
       }),
     setFretMarkers: (fretMarkers) => set((state) => ({ settings: { ...state.settings, fretMarkers } })),
+    setBoardView: (boardView) => set((state) => ({ settings: { ...state.settings, boardView } })),
 
     setPresetName: (name) =>
       set((state) => {

@@ -38,8 +38,10 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: 'Names, numerals and functions',
-    body: 'Each box names its chord and gives its roman numeral in the key. With harmonic analysis on, the chord’s function sits underneath; hover or tap it for an explanation.',
-    target: '.canvas > .box-group:first-child .box-header',
+    body:
+      'Each box names its chord and gives its roman numeral in the key. With harmonic analysis on, the chord’s function sits by the neck — beside it on a horizontal board, under it on a vertical one; tap it for an explanation.',
+    // The whole card, because the function tag left the header when it moved next to the board.
+    target: '.canvas > .box-group:first-child .box',
     screen: 'workbench',
   },
   {
@@ -99,8 +101,8 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: 'What the canvas shows',
-    body: 'Draw the necks vertically like chord charts or horizontally like tab, and switch common tones, voice leading and harmonic analysis on or off.',
-    target: '[data-tour="neck"], [data-tour="strips"], [data-tour="analysis"]',
+    body: 'Draw the necks vertically like chord charts or horizontally like tab, show each chord in a window around its shape or on the whole neck, and switch common tones, voice leading and harmonic analysis on or off.',
+    target: '[data-tour="neck"], [data-tour="board"], [data-tour="strips"], [data-tour="analysis"]',
     screen: 'workbench',
   },
   {

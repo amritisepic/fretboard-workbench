@@ -1,5 +1,6 @@
+import { useId } from 'react';
 import { boxChord } from '../state/boxChords';
-import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
+import { useWorkbench, type BoardView, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { keyName } from '../theory';
 import { planFoundKey } from './findKeyModel';
 import { ScaleSelects } from './ScaleSelects';
@@ -15,14 +16,19 @@ const ORIENTATION_OPTIONS: readonly SegmentedOption<Orientation>[] = [
   { value: 'vertical', label: 'Vertical' },
 ];
 
+const BOARD_VIEW_OPTIONS: readonly SegmentedOption<BoardView>[] = [
+  { value: 'chart', label: 'Chord chart' },
+  { value: 'full', label: 'Full neck' },
+];
+
 const NOTATION_OPTIONS: readonly SegmentedOption<HarmonyNotation>[] = [
   { value: 'jazz', label: 'Jazz' },
   { value: 'classical', label: 'Classical' },
 ];
 
 /**
- * Preset-wide controls above the boxes: the key and shifting everything (edit mode only), the neck,
- * and what the strips between boxes show.
+ * Preset-wide controls above the boxes: the key and shifting everything (edit mode only), the neck
+ * and how much of it each board draws, and what the strips between boxes show.
  */
 export function CanvasToolbar() {
   const key = useWorkbench((s) => s.key);
@@ -31,10 +37,14 @@ export function CanvasToolbar() {
   const transposeAll = useWorkbench((s) => s.transposeAll);
   const orientation = useWorkbench((s) => s.orientation);
   const setOrientation = useWorkbench((s) => s.setOrientation);
+  const boardView = useWorkbench((s) => s.settings.boardView);
+  const setBoardView = useWorkbench((s) => s.setBoardView);
   const strips = useWorkbench((s) => s.strips);
   const setStrips = useWorkbench((s) => s.setStrips);
   const viewing = useWorkbench((s) => s.viewing);
   const hasChord = useWorkbench((s) => s.boxes.some((box) => boxChord(box, s.settings).chord !== null));
+
+  const findKeyReasonId = useId();
 
   const findKey = () => {
     const { boxes, settings } = useWorkbench.getState();
@@ -52,16 +62,20 @@ export function CanvasToolbar() {
             <button
               type="button"
               className="button is-compact"
-              disabled={!hasChord}
-              title={
-                hasChord
-                  ? 'Find the key of the progression, and give each chord the scale closest to it'
-                  : 'Add chords to find their key'
-              }
-              onClick={findKey}
+              // See the Export button in TopBar: a `disabled` button cannot be focused or hovered, so
+              // the reason it is unavailable reaches nobody on a touch screen.
+              aria-disabled={!hasChord}
+              aria-describedby={hasChord ? undefined : findKeyReasonId}
+              title={hasChord ? 'Find the key of the progression, and give each chord the scale closest to it' : undefined}
+              onClick={hasChord ? findKey : undefined}
             >
               Find key
             </button>
+            {!hasChord && (
+              <span className="visually-hidden" id={findKeyReasonId}>
+                Add chords to find their key.
+              </span>
+            )}
           </div>
           <div className="toolbar-group" role="group" aria-labelledby="shift-label">
             <span className="toolbar-label" id="shift-label">
@@ -93,6 +107,12 @@ export function CanvasToolbar() {
           Neck
         </span>
         <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
+      </div>
+      <div className="toolbar-group" role="group" aria-labelledby="board-label" data-tour="board">
+        <span className="toolbar-label" id="board-label">
+          Board
+        </span>
+        <Segmented label="Board view" options={BOARD_VIEW_OPTIONS} value={boardView} onChange={setBoardView} />
       </div>
       <div className="toolbar-group" role="group" aria-label="Lines between boxes" data-tour="strips">
         <ToolbarSwitch
@@ -149,7 +169,9 @@ export function ToolbarSwitch({
 }) {
   return (
     <span className="toolbar-switch">
-      <span className="toolbar-label" id={id}>
+      {/* Not `toolbar-label`: that treatment marks a group heading ("Key", "Shift", "Neck", "Board"),
+          and a switch's own name is not a heading. Seven uppercase headings in one row shout at each other. */}
+      <span className="toolbar-switch-label" id={id}>
         {label}
       </span>
       <button

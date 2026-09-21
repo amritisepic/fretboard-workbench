@@ -57,7 +57,10 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+/* `aria-disabled` is styled the same as `disabled`: see TopBar's Export button for why a control
+   that is unavailable still keeps its place in the tab order. */
+button:disabled,
+button[aria-disabled='true'] {
   cursor: default;
   opacity: 0.35;
 }
@@ -214,20 +217,52 @@ button:disabled {
   padding: 28px;
 }
 
+/* Centred in the workspace and no wider than its own text, so an empty workbench reads as a short
+   note about what to do next rather than as a frame around nothing. */
 .empty-state {
   display: grid;
   place-items: center;
   height: 100%;
-  min-height: 360px;
-  border: 1px solid var(--rule-strong);
-  border-radius: var(--radius-lg);
+  min-height: 280px;
 }
 
+.empty-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(420px, 100%);
+  padding: 26px 28px 24px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.empty-body {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* Appends a chord at the end of the row of boxes. The empty workbench shows a card rather than a
+   lone circle now, so this is the only size it comes in. */
 .add-button {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
+  width: 52px;
+  height: 52px;
   padding: 0;
   border: 1.5px solid var(--ink);
   border-radius: 50%;
@@ -241,8 +276,8 @@ button:disabled {
 }
 
 .add-button svg {
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
 }
 
 /* ---- Canvas ---------------------------------------------------------- */
@@ -402,16 +437,6 @@ button:disabled {
   padding: 34px 0 0 28px;
 }
 
-.add-button.is-small {
-  width: 52px;
-  height: 52px;
-}
-
-.add-button.is-small svg {
-  width: 22px;
-  height: 22px;
-}
-
 /* ---- Voice-leading strip --------------------------------------------- */
 
 .strip {
@@ -527,6 +552,7 @@ button:disabled {
 
 /* The fretboard sets the box width; header text wraps rather than widening the box. */
 .box-header {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -576,12 +602,98 @@ button:disabled {
   color: var(--danger);
 }
 
+/*
+ * The board and the analysis that goes with it. The card grows along the axis its neck is long in,
+ * because that is the axis that costs least: cards with a horizontal neck are wide and short and
+ * wrap into rows, so the height of a row is what limits how many chords reach the screen and the
+ * analysis goes to the right; cards with a vertical neck are narrow and tall and stand side by side
+ * across a row, so width is the limit and the analysis goes underneath. Either way the card stays
+ * compact in the dimension that decides how much of the progression is visible at once.
+ *
+ * Nothing here assumes a board size. The board keeps whatever width and height it draws itself at,
+ * and the analysis takes the space left over.
+ */
+.box-body {
+  display: flex;
+  gap: 10px 14px;
+}
+
+.box-body.is-vertical {
+  flex-direction: column;
+}
+
+.box-body.is-horizontal {
+  align-items: flex-start;
+}
+
+/* When the card is too wide for the window something has to give, and it must not be the board: two
+   boards in a progression drawn at different scales are exactly what this card is for comparing. So
+   the analysis gives way first and by far — the lopsided shrink factors are the whole point — and it
+   stops at its own narrowest wrap, after which the board starts to scale as it always has. */
+.box-body.is-horizontal > .fretboard-scroll {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* A column, not a lane the text can run away down: capped so a long function note wraps into a
+   narrow block instead of stretching the card out to the width of its own sentence. It keeps
+   flexbox's automatic minimum size, so that squeezing it stops once the text has nowhere left to
+   wrap and the board takes the rest of the loss. */
+.box-body.is-horizontal > .box-analysis {
+  flex: 0 200 auto;
+  max-width: 170px;
+}
+
+/*
+ * Beside the board needs room beside the board, and anything narrower than a laptop has none to
+ * spare: at a tablet's width the analysis would take its column out of the neck rather than out of
+ * the margin, and a progression whose boards are drawn at two different scales is worse than one
+ * that costs a little height. So below the same width at which the sidebar stops sitting beside the
+ * canvas, the analysis stops sitting beside the board, and goes under it as it does under a vertical
+ * neck.
+ *
+ * This is a viewport query rather than a wrapped flex line, which would follow the card's real width
+ * instead of guessing from the window's, because the explanation has to know which way to open and
+ * "did that item wrap" is not a question CSS can ask.
+ *
+ * The export sheet is laid out off-screen at the size it will be drawn at, so it keeps the side by
+ * side arrangement whatever screen the export was started from.
+ */
+@media (max-width: 1024px) {
+  .box-body.is-horizontal {
+    flex-direction: column;
+  }
+
+  .box-body.is-horizontal > .box-analysis {
+    max-width: none;
+  }
+
+  .export-sheet .box-body.is-horizontal {
+    flex-direction: row;
+  }
+
+  .export-sheet .box-body.is-horizontal > .box-analysis {
+    max-width: 170px;
+  }
+}
+
 .fretboard-scroll {
   max-width: 100%;
 }
 
+/* Taken out of the flow. It is the one thing that can still appear in a header, and a header that
+   grows for the 2.5 seconds it is up would push that card's neck down while its neighbours stayed
+   put — the misalignment the analysis was moved out of the header to stop, back again in miniature.
+   It is a transient status, so it sits over the card instead of in it. */
 .box-notice {
-  flex-basis: 100%;
+  position: absolute;
+  z-index: 4;
+  top: 100%;
+  right: 0;
+  left: 0;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
   color: var(--notice);
   font-size: 12.5px;
 }
@@ -632,6 +744,15 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* A switch's own name, as ordinary text. The uppercase `toolbar-label` treatment is reserved for the
+   headings that group several controls. */
+.toolbar-switch-label {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .workspace.is-viewing {
@@ -726,25 +847,71 @@ button:disabled {
   font-weight: 650;
 }
 
-.fretboard .position circle {
+/* A window that starts up the neck has no nut, so this number is the only thing saying where on the
+   neck the shape is. It is read before anything else on the board and is weighted to match. */
+.fretboard .fret-number.is-position {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fretboard .position {
   cursor: pointer;
+}
+
+.fretboard .position circle {
   transition: fill 0.12s ease;
 }
 
-.fretboard.is-static .position circle {
+/* The board is one tab stop and the arrow keys walk it, so the cursor has to be visible on any
+   position, including an empty one that draws nothing.
+   
+   `:focus`, not `:focus-visible`: Chromium does not match :focus-visible on a focusable SVG group,
+   so the styling below would never apply and the user agent's own square 5px outline would be all
+   there was. Showing the ring after a click as well is right here in any case — this is a grid with
+   a roving tabindex, and where the cursor sits is worth seeing however it got there.
+   
+   A square outline would box a round dot, so on a drawn note it is traded for a ring on the dot
+   itself. An empty position has no dot to ring, so it wears its own cell as the ring. */
+.fretboard .position:focus {
+  outline: none;
+}
+
+.fretboard .position:focus circle:not(.dot-ring) {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+/* Clicked notes already wear a ring in the box color, so the focus ring goes onto that instead of
+   fighting the lit core. */
+.fretboard .is-clicked:focus .dot-ring {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.fretboard.is-static .position {
   cursor: default;
 }
 
-.fretboard .position-empty circle {
+/* An empty position is the one rect covering its cell, so hover and focus are drawn on the cell
+   rather than on a dot that is not there. That is a plainer shape than the dashed circle it
+   replaces, but it says the true thing: the whole cell is what the pointer has to hit. */
+.fretboard .position-empty {
   fill: transparent;
 }
 
 @media (hover: hover) {
-  .fretboard:not(.is-static) .position-empty:hover circle {
-    stroke: var(--ink);
-    stroke-dasharray: 2.5 2.5;
-    stroke-opacity: 0.45;
+  .fretboard:not(.is-static) .position-empty:hover {
+    fill: var(--ink);
+    fill-opacity: 0.07;
   }
+}
+
+.fretboard .position-empty:focus {
+  fill: var(--ink);
+  fill-opacity: 0.07;
+  stroke: var(--ink);
+  stroke-width: 2.5;
 }
 
 .fretboard .inlay {
@@ -807,12 +974,6 @@ button:disabled {
   color: var(--ink-faint);
 }
 
-/* Under the numeral and chord name, on a line of its own. */
-.box-function {
-  position: relative;
-  flex-basis: 100%;
-}
-
 .function-tag {
   display: inline-flex;
   align-items: baseline;
@@ -827,11 +988,12 @@ button:disabled {
   text-align: left;
 }
 
-.box.is-viewing .function-tag {
-  cursor: help;
+.function-tag {
+  cursor: pointer;
 }
 
-.function-tag:hover {
+.function-tag:hover,
+.function-tag[aria-expanded='true'] {
   border-color: var(--ink);
 }
 
@@ -861,12 +1023,20 @@ button:disabled {
   font-weight: 500;
 }
 
-.function-explanation {
+/* The trigger and its explanation, positioned together. */
+.info-popover {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+}
+
+/* Only in the DOM while it is open, so nothing has to hide it. */
+.info-explanation {
   position: absolute;
   z-index: 6;
   top: calc(100% + 6px);
   left: 0;
-  display: none;
+  display: block;
   width: max-content;
   max-width: min(300px, 80vw);
   padding: 8px 10px;
@@ -877,17 +1047,36 @@ button:disabled {
   font-size: 12.5px;
   font-weight: 400;
   line-height: 1.4;
+  text-align: left;
 }
 
-@media (hover: hover) {
-  .box-function:hover .function-explanation {
-    display: block;
+/*
+ * The explanation grows back over the board, which is the one direction certain to have room for it.
+ * Under a vertical neck the tag is at the foot of a tall card, where opening downwards puts the
+ * explanation below the bottom of the window, so it opens upwards; beside a horizontal neck the tag
+ * is against the card's right edge, where opening rightwards takes the last box of a row off the
+ * side of the screen, so it opens leftwards.
+ */
+.box-body.is-vertical .info-explanation {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.box-body.is-horizontal .info-explanation {
+  right: 0;
+  left: auto;
+}
+
+/* Below a laptop's width the analysis is under the board whichever way the neck runs, so it opens
+   upwards there too — and from the left, because a card that starts at the edge of a 390px screen
+   has no room for 300px of explanation to its left. */
+@media (max-width: 1024px) {
+  .box-body.is-horizontal .info-explanation {
+    top: auto;
+    right: auto;
+    bottom: calc(100% + 6px);
+    left: 0;
   }
-}
-
-.function-tag:focus-visible + .function-explanation,
-.function-explanation.is-open {
-  display: block;
 }
 
 .key-band-label.is-split {
@@ -1305,6 +1494,15 @@ button.key-choice:hover {
 
 /* ---- Color ----------------------------------------------------------- */
 
+/* The custom-color picker is a control of its own and not one of the radios, so it sits outside the
+   radiogroup (see ColorField); the row puts it back on the same line as the swatches it follows. */
+.swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
 .swatches {
   display: flex;
   flex-wrap: wrap;
@@ -1320,10 +1518,26 @@ button.key-choice:hover {
   border-radius: 50%;
 }
 
+/* A ring of shadow rather than an outline, so that it can share a swatch with the focus ring: the
+   group's one tab stop is its checked swatch, so that is exactly where focus lands, and an outline
+   here would out-specify the one :focus-visible draws and leave focus invisible. */
 .swatch[aria-checked='true'],
 .swatch-custom.is-active {
-  outline: 1.5px solid var(--ink);
-  outline-offset: 2px;
+  box-shadow:
+    0 0 0 1.5px var(--paper),
+    0 0 0 3px var(--ink);
+}
+
+/* Outside the checked ring, so the two read as two rings rather than one thick one. */
+.swatch:focus-visible {
+  outline-offset: 4px;
+}
+
+/* The color input covers the custom swatch but is transparent, and the label clips what it holds,
+   so a focus ring on the input would be clipped away; the label wears it on the input's behalf. */
+.swatch-custom:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
 }
 
 .swatch-custom {
@@ -1546,8 +1760,11 @@ button.key-choice:hover {
   font-weight: 600;
 }
 
+/* A span rather than a button (see FillSwitch), so it needs the block box and the pointer a button
+   came with. */
 .fill-track {
   position: relative;
+  display: block;
   flex: none;
   width: 50px;
   height: 26px;
@@ -1555,6 +1772,7 @@ button.key-choice:hover {
   border: 1.5px solid var(--ink);
   border-radius: 999px;
   background: transparent;
+  cursor: pointer;
 }
 
 .fill-knob {
@@ -1596,8 +1814,25 @@ kbd {
   font-size: 11px;
 }
 
+/* The keys that also work on a control, shown beside it instead of spelled out in a sentence. The
+   control itself carries `aria-keyshortcuts`, so this is decoration and is hidden from assistive
+   technology. */
+.shortcut {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.fill-head .shortcut {
+  margin-top: 0;
+  margin-right: auto;
+  margin-left: 8px;
+}
+
 /* ---- Settings panel -------------------------------------------------- */
 
+/* Opening the panel puts focus on it so its name is read out, the way .tour-card takes focus. It is
+   not a tab stop, so the ring would mark a place the keyboard can never be asked to go. */
 .settings-panel {
   position: absolute;
   z-index: 20;
@@ -1610,6 +1845,7 @@ kbd {
   border: 1px solid var(--rule-strong);
   border-radius: 14px 0 14px 14px;
   background: var(--paper);
+  outline: none;
 }
 
 .settings-section + .settings-section {
@@ -1716,6 +1952,8 @@ kbd {
 
 /* ---- Preset explorer ------------------------------------------------- */
 
+/* Focused on open and on its own again once a confirmation it raised has been answered; see
+   .settings-panel for why the ring is off. */
 .explorer-panel {
   position: absolute;
   z-index: 20;
@@ -1729,6 +1967,7 @@ kbd {
   border: 1px solid var(--rule-strong);
   border-radius: 14px;
   background: var(--paper);
+  outline: none;
 }
 
 .explorer-head {

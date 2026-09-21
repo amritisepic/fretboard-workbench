@@ -8,7 +8,8 @@
   - Presets and export/import; offline PWA.
 - **Live site:** https://amritisepic.github.io/fretboard-workbench/ (GitHub Pages). Repo: https://github.com/amritisepic/fretboard-workbench (public).
 - **Project folder:** `C:\Users\amrit\Documents\fretboard-workbench`, deliberately kept out of the user's ME 315 class folder.
-- **Stack:** React 19, TypeScript 7 (strict), Vite 8, Vitest 5, Zustand 5, `idb` 8, `vite-plugin-pwa` 1.3, `@fontsource-variable/inter`, and `fake-indexeddb` for tests.
+- **Stack:** React 19, TypeScript 7 (strict), Vite 8, Vitest 5, Zustand 5, `idb` 8, `vite-plugin-pwa` 1.3, `@fontsource-variable/inter`. Tests add `fake-indexeddb`, jsdom, Testing Library, `axe-core` and Playwright.
+- **First download:** 115 kB gzip of JavaScript, with 28 kB more fetched when it is needed. Everything that opens on a click is split out in `App.tsx`: the presets panel (which carries the 88 examples), the export machinery, the tour, the scale wizard, the settings panel and the sidebar. Anything that renders on load is deliberately not split. The theory engine is still eager because the Zustand store calls `planKeys` synchronously through `state/boxChords.ts`; splitting it means changing the store.
 - **Libraries the spec forbids:** music-theory libraries (no Tonal.js) and charting or diagram libraries. The fretboard is hand-built inline SVG.
 - **The spec is not in the repo.** Its essentials and the user's rulings are summarised below.
 
@@ -21,10 +22,12 @@
 - **Docs:**
   - `docs/harmonic-analysis-plan.md`: the plan, the user's decisions (§5), and what was built, with every building decision and the corpus results (§7)
   - `docs/harmonic-patterns.md`: the pattern catalogue, with known gaps in its §7
+  - `docs/ui-testing.md`: what the interface tests cover, the measured layout budgets, and every known interface defect on record
 - **Work from 2026-09-15** is on `master` and deployed. It was fast-forwarded from `scale-wizard-examples-export-tour` the same day, and the live site's bundle was checked for the new features. It covers the scale wizard, built-in examples, PDF/PNG export, the guided tour, vertical necks by default and the delete-warnings switch. See "Added on 2026-09-15" below.
 
 ## Open work, roughly in priority order
-0. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
+0. **Bug: the top bar covers its own controls between 761px and 910px.** `.topbar` is a three-column grid whose outer columns are `minmax(0, 1fr)`, so the left column shrinks below its content and spills over the ones beside it; `.topbar-tab` has `z-index: 21` and lands on top. At 770px Save, the preset name field, Edit and View are all unclickable — tapping View opens the Presets panel. Up to 910px the name field is still covered, so the preset can't be renamed. Phones (760px and below) use a different grid and are fine, as is 920px and up. Found by `e2e/metrics.spec.ts`, which asserts it as a `test.fail`. Tablet portrait and split-screen windows land in this range.
+0b. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
    - the standards' chord changes, written from memory rather than checked against a chart
    - export in Safari and Firefox, which was never tried
    - real printing of an exported PDF
@@ -68,8 +71,11 @@
 
 ## Commands
 - `npm.cmd run dev`: http://localhost:5173 (listens on `localhost`, not `127.0.0.1`).
-- `npm.cmd test`: 277 tests in 26 files, about 20 s. Most of the time is the exhaustive pitch-set tests.
-- `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`) and `tsconfig.json` (covers `src` only). There is no `@types/node`, so tests in `src` can't import `node:` modules. `scripts/` isn't typechecked.
+- `npm.cmd test`: 339 tests in 32 files, about 22 s. Most of the time is the exhaustive pitch-set tests. 16 are `it.fails`: interface defects on record, see `docs/ui-testing.md`.
+- `npm.cmd run test:e2e`: the browser suite (screenshots and layout measurements) in Chromium at 390, 768 and 1440 px. It builds and previews first, so allow a minute. `test:e2e:update` rewrites the screenshot baselines. Not part of `npm test` and not in CI yet.
+  - The first run on this machine needs `npx playwright install chromium`.
+  - Screenshot baselines are per platform (`-linux.png`, committed, matching CI). A Windows run writes its own `-win32.png`; don't commit those.
+- `npm.cmd run typecheck`: runs `tsconfig.theory.json` (no DOM allowed in `src/theory` and `src/data`), `tsconfig.json` (covers `src` only) and `tsconfig.e2e.json` (covers `e2e/` and `playwright.config.ts`). `@types/node` is installed but only `tsconfig.e2e.json` enables it, so tests in `src` still can't import `node:` modules. `scripts/` isn't typechecked.
 - `npm.cmd run eval:corpus`: evaluates the analysis against the corpora in `corpora/`.
   - It writes `corpora/reports/latest.md`, or `latest-<corpus>.md` when limited to some corpora, plus a timestamped copy.
   - Environment variables: `CORPUS_ONLY` (for example `rs200` or `billboard,when-in-rome`), `CORPUS_LIMIT` (pieces per corpus) and `CORPUS_WINDOW` (chords per window; the default 0 reads whole pieces).
@@ -177,7 +183,10 @@
 - **`scripts/corpus/`:**
   - `evaluate.eval.ts`, the evaluation runner, run by `vitest.corpus.config.ts`
   - `legacy/`: the key finder from commit `0ce8623`, kept only as the "old key finder" comparison
-- **Tests:** in `__tests__` folders under `theory`, `components`, `state` and `corpus`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
+- **Tests:** in `__tests__` folders under `theory`, `components`, `state`, `corpus` and `design`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
+  - Component tests are `.test.tsx` and open with `// @vitest-environment jsdom`; everything else stays in Node. Setup is `src/test/setup.ts`, shared fixtures `src/test/fixtures.ts` (which builds progressions out of the built-in examples), axe helpers `src/test/axe.ts`.
+  - `src/design/` holds the contrast arithmetic and the design-token checks. The test reads the real stylesheet through `?inline`, which is why `vite.config.ts` sets `test.css: true`.
+  - `e2e/` holds the browser suite: `states.ts` (the six states both suites cover), `visual.spec.ts` (18 screenshot baselines), `measure.ts` and `metrics.spec.ts` (the layout budgets).
   - `theory/__tests__/harmonicAnalysis.test.ts` is the harness of 60 labelled progressions.
   - `theory/__tests__/chordSymbols.ts` builds chords from symbols ("B♭m7", "C/G", "F♯7(11)") for tests.
 
@@ -201,6 +210,9 @@
 - **Offline PWA.**
 - **Design:** off-white `#FAF9F7`, dark grey `#3A3A3A`, rounded corners, and no gradients or shadows apart from a faint one on the sidebar. The exception is clicked notes, at the user's request.
 - **Keys:** Esc deselects, arrows nudge the root, Space toggles the fill, Delete removes a box after confirming. All shortcuts are off in view mode.
+  - These are window-level shortcuts, and a widget that claims the same key must call `stopPropagation`, not only `preventDefault`: React hands the event on to `window` afterwards. The fretboard and the radiogroups all do, and each has a test for it. Note `isControl` in `useKeyboardShortcuts.ts` matches a `button` element and so never matches an SVG group carrying `role="button"`.
+- **Keyboard access:** every fretboard position is a toggle button. A board is one tab stop, landing on the first note of the chord; arrow keys walk the grid following the drawn orientation; Enter and Space place or remove a note; Home and End run along a string. View mode takes the roles and tab stops away again. Segmented controls, the dot-color swatches and the fill switch follow the ARIA radiogroup pattern through `components/rovingRadioGroup.ts` (one tab stop, arrows that move focus and selection, wrap, Home/End).
+- **Empty workbench:** a card naming what a box is, with "Add a box" and "Open an example". The old full-height bordered frame with a bare "+" is gone.
 
 ## The user's rulings (don't revert)
 - **Out-of-scale spelling ties** are chord-aware (letters stacked from the chord root), then fall back to ♭2 ♭3 ♯4 ♭6 ♭7.
@@ -236,6 +248,11 @@
 - **Degree labels** count from the key in effect by default. Each box can switch to its reference scale, and the strips follow that choice.
 - **Capo** keeps the tuning. Shapes move with it, so chords, scales, the key and key pins transpose. Toolbar Shift transposes everything by a semitone.
 - **Neck orientation switch** rotates the fretboards (vertical = chord-chart style); it doesn't change the box layout.
+- **Board switch** (canvas toolbar, next to Neck, shown in view mode too): **Chord chart** crops each board to a window around its shape, the way a printed chart does; **Full neck** draws all the frets as before. Saved with the preset; new presets default to Chord chart, and a preset saved before the field existed opens Full neck, since that is how it was made.
+  - The window is `fretWindow` in `components/boardModel.ts`, carried on `BoxView.window`. It covers the drawn positions (clicked notes and whatever a fill lights), at least five frets wide, growing towards the nut when the shape is near it so an open chord shows the nut rather than floating above it. A window that does not reach the capo draws a position marker — the first fret's number — instead of a nut.
+  - **Only the selected box gets room to move** (`editableWindow`, two frets up and one down). A window worked out from the notes is a dead end for building, because nothing reachable inside it can push it up the neck; paying for that on every board cost half the density the window was for (three chords on a laptop against six). Clicking any note selects its box, so the reach arrives when it is wanted and the rest of the canvas stays tight.
+  - The scale wizard passes no window and is unaffected.
+- **Harmonic analysis sits by the neck**, not in the header: beside the board when the neck is horizontal, under it when vertical. Keeping it out of the header is what makes every header the same height, so the boards in a row start at the same place — a tag that wrapped to two lines used to push its own board 17px down. The refused-click notice is positioned rather than in the flow for the same reason.
 - **Strips:**
   - Scales are compared when both boxes are set to fill scale.
   - Common tones, Voice leading and Harmonic analysis are separate switches. The Names/Degrees choice shows while common tones or voice leading is on, and Jazz/Classical shows while harmonic analysis is on.
@@ -328,7 +345,7 @@
   - Names are unique within a folder.
   - Opening a preset or starting a new one asks before discarding unsaved work.
   - The name field writes on every keystroke, and Esc reverts to the last saved name.
-- **Updates:** the app asks before reloading (Reload / Later), and says once when it's ready to work offline.
+- **Updates:** the app asks before reloading (Reload / Later). The "Ready to work offline" message was dropped: it could only ever fire on a first visit, asked nothing of the reader, and landed on top of the welcome card.
 
 ## Tooling lessons
 - **The Claude in-app browser pane can't run service workers.** Test offline behaviour with `npm run test:offline`.

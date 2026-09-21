@@ -43,18 +43,29 @@ export function HarmonyField({
         <p className="field-note">Click notes to analyse the chord.</p>
       ) : (
         <>
-          <ul className="reading-list" role="radiogroup" aria-label="Readings of the chord">
+          {/* Toggle buttons in a real list, not a radiogroup. It was marked up as one, but a radio
+              cannot be unchecked by pressing it again and that is exactly what choosing the current
+              reading does here: it clears the pin and hands the box back to the analysis. The role
+              also sat on the <ul>, which took away the list semantics and left the <li> elements as
+              non-radio children of a group that owns radios only. Buttons in a list each carry
+              their own tab stop, which is what a list of buttons should do. */}
+          <ul className="reading-list" aria-label="Readings of the chord">
             {readings.map((reading) => {
               const chosen = reading === analysis.reading;
               const label = functionLabel(analysis, reading, notation);
+              const pinned = chosen && analysis.pinned;
               return (
                 <li key={reading.pinId}>
                   <button
                     type="button"
-                    role="radio"
-                    aria-checked={chosen}
+                    aria-pressed={pinned}
+                    aria-label={
+                      pinned
+                        ? `${label.text} in ${keyName(reading.local.ref)}, pinned. Choose again to let the analysis decide.`
+                        : `Read the chord as ${label.text} in ${keyName(reading.local.ref)}`
+                    }
                     className={chosen ? 'reading-option is-chosen' : 'reading-option'}
-                    onClick={() => pinReading(box, view, analysis, chosen && analysis.pinned ? null : reading)}
+                    onClick={() => pinReading(box, view, analysis, pinned ? null : reading)}
                   >
                     <span className="reading-head">
                       <FunctionText label={label} />

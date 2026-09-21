@@ -1,0 +1,25 @@
+{
+  // The browser tests. They run in Node through Playwright, not in the app's bundle, so they are
+  // checked on their own rather than being pulled into tsconfig.json's `src` project.
+  //
+  // This is the only project with Node types. tsconfig.json and tsconfig.theory.json both set
+  // `types` explicitly, so installing @types/node for Playwright's config cannot leak `process` or
+  // `node:` modules into the app or the theory engine.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}

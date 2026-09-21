@@ -50,7 +50,15 @@ export function exampleChordSymbols(example: ExampleProgression): string[] {
  * notes would be named otherwise under that scale keeps its written name as the box's chord pick.
  */
 export function buildExample(example: ExampleProgression, folder: ExampleFolder): PresetData {
-  const settings: Settings = { tuning: TUNING_PRESETS[0].tuning, fretCount: DEFAULT_FRET_COUNT, capo: 0, fretMarkers: true };
+  // The examples are what a first-time reader meets, so they open the way a new preset does: a
+  // chord-chart window around each shape rather than the whole neck.
+  const settings: Settings = {
+    tuning: TUNING_PRESETS[0].tuning,
+    fretCount: DEFAULT_FRET_COUNT,
+    capo: 0,
+    fretMarkers: true,
+    boardView: 'chart',
+  };
   const key = parseExampleKey(example.key);
 
   let previous: Midi[] | null = null;
