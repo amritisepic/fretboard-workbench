@@ -100,7 +100,8 @@ describe('BoxCard', () => {
     const { container } = renderCard({ box: full });
     const view = getBoxView(full, state().settings);
     const index = view.dots.findIndex((d) => d.string === 6 && d.fret === 7);
-    fireEvent.click(container.querySelectorAll('.position')[index].querySelector('circle') as Element);
+    // A position with nothing drawn on it is one rect and has no circle inside it to aim at.
+    fireEvent.click(container.querySelectorAll('.position')[index]);
     expect(screen.getByRole('status').textContent).toContain(`${MAX_CHORD_NOTES} notes at most`);
   });
 

@@ -847,8 +847,19 @@ button[aria-disabled='true'] {
   font-weight: 650;
 }
 
-.fretboard .position circle {
+/* A window that starts up the neck has no nut, so this number is the only thing saying where on the
+   neck the shape is. It is read before anything else on the board and is weighted to match. */
+.fretboard .fret-number.is-position {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fretboard .position {
   cursor: pointer;
+}
+
+.fretboard .position circle {
   transition: fill 0.12s ease;
 }
 
@@ -860,9 +871,8 @@ button[aria-disabled='true'] {
    there was. Showing the ring after a click as well is right here in any case — this is a grid with
    a roving tabindex, and where the cursor sits is worth seeing however it got there.
    
-   A square outline would box a round dot, so it is traded for a ring drawn on the dot itself. An
-   empty position's circle is transparent rather than absent, which gives the ring something to sit
-   on. */
+   A square outline would box a round dot, so on a drawn note it is traded for a ring on the dot
+   itself. An empty position has no dot to ring, so it wears its own cell as the ring. */
 .fretboard .position:focus {
   outline: none;
 }
@@ -879,20 +889,29 @@ button[aria-disabled='true'] {
   stroke-width: 2.5;
 }
 
-.fretboard.is-static .position circle {
+.fretboard.is-static .position {
   cursor: default;
 }
 
-.fretboard .position-empty circle {
+/* An empty position is the one rect covering its cell, so hover and focus are drawn on the cell
+   rather than on a dot that is not there. That is a plainer shape than the dashed circle it
+   replaces, but it says the true thing: the whole cell is what the pointer has to hit. */
+.fretboard .position-empty {
   fill: transparent;
 }
 
 @media (hover: hover) {
-  .fretboard:not(.is-static) .position-empty:hover circle {
-    stroke: var(--ink);
-    stroke-dasharray: 2.5 2.5;
-    stroke-opacity: 0.45;
+  .fretboard:not(.is-static) .position-empty:hover {
+    fill: var(--ink);
+    fill-opacity: 0.07;
   }
+}
+
+.fretboard .position-empty:focus {
+  fill: var(--ink);
+  fill-opacity: 0.07;
+  stroke: var(--ink);
+  stroke-width: 2.5;
 }
 
 .fretboard .inlay {

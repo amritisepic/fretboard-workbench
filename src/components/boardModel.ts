@@ -33,9 +33,84 @@ export interface BoardDot {
   readonly label: string;
 }
 
+/** An inclusive run of frets, as a chord chart shows: `first` and `last` are both drawn. */
+export interface FretWindow {
+  readonly first: number;
+  readonly last: number;
+}
+
+/** How many frets a window covers when the shape it holds is shorter than that. */
+const MIN_WINDOW_FRETS = 5;
+
+/**
+ * A position counts towards the window when something is drawn on it. That is wider than "the user
+ * clicked it": a scale or arpeggio fill lights positions nobody clicked, and a window that cropped
+ * them would hide most of the map the fill exists to show.
+ */
+const isDrawn = (dot: BoardDot) => dot.selected || dot.kind !== 'empty';
+
+/**
+ * The run of frets worth drawing for a set of dots — the 4-or-5-fret window a printed chord chart
+ * uses, rather than the whole neck, nearly all of which is empty grid on a typical voicing.
+ *
+ * Where a short shape's window grows is a choice. It grows downwards, towards the capo, whenever
+ * the whole of the growth fits in the gap between the shape and the capo, so an open-position chord
+ * shows the nut instead of floating a fret or two above it; the nut is the landmark a player reads
+ * the position from, and it is free to include when the shape is that close to it. Higher up there
+ * is no landmark to reach for, so the growth is split and the shape sits centre-ish in its window.
+ *
+ * A note on an open string is at `capo`, which is the lowest fret there is, so it pins `first` to
+ * the capo by itself and needs no rule of its own. A fill that lights the whole neck spans
+ * everything, and the window is then the whole neck, which is the honest answer.
+ */
+export function fretWindow(
+  dots: readonly BoardDot[],
+  capo: number,
+  fretCount: number,
+  minFrets: number = MIN_WINDOW_FRETS,
+): FretWindow {
+  // Everything below is clamped to this range rather than trusting the arguments, which is what
+  // makes `last < first` impossible however odd a neck it is handed.
+  const lowest = capo;
+  const highest = Math.max(capo, fretCount);
+  const span = Math.max(1, Math.min(minFrets, highest - lowest + 1));
+
+  let first = Infinity;
+  let last = -Infinity;
+  for (const dot of dots) {
+    if (!isDrawn(dot)) continue;
+    if (dot.fret < first) first = dot.fret;
+    if (dot.fret > last) last = dot.fret;
+  }
+
+  // Nothing is drawn: an untouched box, or one whose notes all fall off this neck. The window then
+  // starts where the playable neck does, so the first click lands in the open position.
+  if (first > last) return { first: lowest, last: Math.min(highest, lowest + span - 1) };
+
+  first = Math.min(Math.max(first, lowest), highest);
+  last = Math.min(Math.max(last, lowest), highest);
+
+  const short = span - (last - first + 1);
+  if (short > 0) {
+    const room = first - lowest;
+    const down = room <= short ? room : Math.floor(short / 2);
+    first -= down;
+    last += short - down;
+    // Growing upwards can run past the last fret. The window slides back down the neck rather than
+    // handing back a window shorter than it was asked for.
+    if (last > highest) {
+      first = Math.max(lowest, first - (last - highest));
+      last = highest;
+    }
+  }
+  return { first, last };
+}
+
 export interface BoxView {
   /** One entry per string × playable fret: from the capo (or the open string) to the last fret. */
   readonly dots: readonly BoardDot[];
+  /** The frets worth drawing: the run the board's notes occupy, widened to a readable minimum. */
+  readonly window: FretWindow;
   /** Every plausible chord name, best first. */
   readonly candidates: readonly ChordCandidate[];
   /** The chord in use: the sidebar override while it matches, otherwise the best candidate. */
@@ -89,7 +164,18 @@ export function buildBoxView(box: Box, settings: Settings, key: ScaleRef = box.s
   if (setSize(chordPcs) > 0) {
     title = chord ? chordName(chord, ctx) : pcsOf(chordPcs).map((pc) => spell(pc, ctx)).join(' ');
   }
-  return { dots, candidates, chord, ctx, degreeCtx, chordPcs, scalePcs, title, scaleName: scaleRefName(box.scale) };
+  return {
+    dots,
+    window: fretWindow(dots, capo, fretCount),
+    candidates,
+    chord,
+    ctx,
+    degreeCtx,
+    chordPcs,
+    scalePcs,
+    title,
+    scaleName: scaleRefName(box.scale),
+  };
 }
 
 function dotKind(box: Box, pc: PitchClass, selected: boolean, chordPcs: PcSet, scalePcs: PcSet): DotKind {
