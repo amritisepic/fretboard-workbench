@@ -99,8 +99,8 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: 'What the canvas shows',
-    body: 'Draw the necks vertically like chord charts or horizontally like tab, and switch common tones, voice leading and harmonic analysis on or off.',
-    target: '[data-tour="neck"], [data-tour="strips"], [data-tour="analysis"]',
+    body: 'Draw the necks vertically like chord charts or horizontally like tab, show each chord in a window around its shape or on the whole neck, and switch common tones, voice leading and harmonic analysis on or off.',
+    target: '[data-tour="neck"], [data-tour="board"], [data-tour="strips"], [data-tour="analysis"]',
     screen: 'workbench',
   },
   {

@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { boxChord } from '../state/boxChords';
-import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
+import { useWorkbench, type BoardView, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { keyName } from '../theory';
 import { planFoundKey } from './findKeyModel';
 import { ScaleSelects } from './ScaleSelects';
@@ -16,14 +16,19 @@ const ORIENTATION_OPTIONS: readonly SegmentedOption<Orientation>[] = [
   { value: 'vertical', label: 'Vertical' },
 ];
 
+const BOARD_VIEW_OPTIONS: readonly SegmentedOption<BoardView>[] = [
+  { value: 'chart', label: 'Chord chart' },
+  { value: 'full', label: 'Full neck' },
+];
+
 const NOTATION_OPTIONS: readonly SegmentedOption<HarmonyNotation>[] = [
   { value: 'jazz', label: 'Jazz' },
   { value: 'classical', label: 'Classical' },
 ];
 
 /**
- * Preset-wide controls above the boxes: the key and shifting everything (edit mode only), the neck,
- * and what the strips between boxes show.
+ * Preset-wide controls above the boxes: the key and shifting everything (edit mode only), the neck
+ * and how much of it each board draws, and what the strips between boxes show.
  */
 export function CanvasToolbar() {
   const key = useWorkbench((s) => s.key);
@@ -32,6 +37,8 @@ export function CanvasToolbar() {
   const transposeAll = useWorkbench((s) => s.transposeAll);
   const orientation = useWorkbench((s) => s.orientation);
   const setOrientation = useWorkbench((s) => s.setOrientation);
+  const boardView = useWorkbench((s) => s.settings.boardView);
+  const setBoardView = useWorkbench((s) => s.setBoardView);
   const strips = useWorkbench((s) => s.strips);
   const setStrips = useWorkbench((s) => s.setStrips);
   const viewing = useWorkbench((s) => s.viewing);
@@ -101,6 +108,12 @@ export function CanvasToolbar() {
         </span>
         <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
       </div>
+      <div className="toolbar-group" role="group" aria-labelledby="board-label" data-tour="board">
+        <span className="toolbar-label" id="board-label">
+          Board
+        </span>
+        <Segmented label="Board view" options={BOARD_VIEW_OPTIONS} value={boardView} onChange={setBoardView} />
+      </div>
       <div className="toolbar-group" role="group" aria-label="Lines between boxes" data-tour="strips">
         <ToolbarSwitch
           id="common-tones-label"
@@ -156,8 +169,8 @@ export function ToolbarSwitch({
 }) {
   return (
     <span className="toolbar-switch">
-      {/* Not `toolbar-label`: that treatment marks a group heading ("Key", "Shift", "Neck"), and a
-          switch's own name is not a heading. Six uppercase headings in one row shout at each other. */}
+      {/* Not `toolbar-label`: that treatment marks a group heading ("Key", "Shift", "Neck", "Board"),
+          and a switch's own name is not a heading. Seven uppercase headings in one row shout at each other. */}
       <span className="toolbar-switch-label" id={id}>
         {label}
       </span>
