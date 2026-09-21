@@ -38,8 +38,10 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: 'Names, numerals and functions',
-    body: 'Each box names its chord and gives its roman numeral in the key. With harmonic analysis on, the chord’s function sits underneath; hover or tap it for an explanation.',
-    target: '.canvas > .box-group:first-child .box-header',
+    body:
+      'Each box names its chord and gives its roman numeral in the key. With harmonic analysis on, the chord’s function sits by the neck — beside it on a horizontal board, under it on a vertical one; tap it for an explanation.',
+    // The whole card, because the function tag left the header when it moved next to the board.
+    target: '.canvas > .box-group:first-child .box',
     screen: 'workbench',
   },
   {

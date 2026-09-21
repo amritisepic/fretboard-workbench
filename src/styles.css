@@ -552,6 +552,7 @@ button[aria-disabled='true'] {
 
 /* The fretboard sets the box width; header text wraps rather than widening the box. */
 .box-header {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -680,8 +681,19 @@ button[aria-disabled='true'] {
   max-width: 100%;
 }
 
+/* Taken out of the flow. It is the one thing that can still appear in a header, and a header that
+   grows for the 2.5 seconds it is up would push that card's neck down while its neighbours stayed
+   put — the misalignment the analysis was moved out of the header to stop, back again in miniature.
+   It is a transient status, so it sits over the card instead of in it. */
 .box-notice {
-  flex-basis: 100%;
+  position: absolute;
+  z-index: 4;
+  top: 100%;
+  right: 0;
+  left: 0;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
   color: var(--notice);
   font-size: 12.5px;
 }
