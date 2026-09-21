@@ -4,7 +4,7 @@ import { makeScaleRef, type FretPosition, type ScaleRef } from '../../theory';
 import { buildCanvasModel } from '../canvasModel';
 import { buildStripView } from '../stripModel';
 
-const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true };
+const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true, boardView: 'chart' };
 const names: StripSettings = { commonTones: true, voiceLeading: true, labelMode: 'names', analysis: false, notation: 'jazz' };
 const box = (positions: FretPosition[], scale: ScaleRef, scaleMode = false): Box => ({
   ...createBox(scale),

@@ -32,6 +32,7 @@ export const testSettings: Settings = {
   fretCount: DEFAULT_FRET_COUNT,
   capo: 0,
   fretMarkers: true,
+  boardView: 'chart',
 };
 
 /** A box holding the given positions, in C major, for rendering a board on its own. */
