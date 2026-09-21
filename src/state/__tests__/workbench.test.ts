@@ -19,13 +19,14 @@ describe('workbench store', () => {
     useWorkbench.setState(initial, true);
   });
 
-  it('starts empty with standard tuning, 12 frets, no capo, vertical necks and in edit mode', () => {
+  it('starts empty with standard tuning, 12 frets, no capo, vertical chart necks and in edit mode', () => {
     expect(state().boxes).toEqual([]);
     expect(formatTuning(state().settings.tuning)).toBe('E2 A2 D3 G3 B3 E4');
     expect(state().settings.fretCount).toBe(12);
     expect(state().viewing).toBe(false);
     expect(state().settings.capo).toBe(0);
     expect(state().settings.fretMarkers).toBe(true);
+    expect(state().settings.boardView).toBe('chart');
     expect(state().orientation).toBe('vertical');
   });
 
@@ -163,6 +164,13 @@ describe('workbench store', () => {
     expect(state().orientation).toBe('horizontal');
   });
 
+  it('switches the board between the chord-chart window and the whole neck', () => {
+    state().setBoardView('full');
+    expect(state().settings.boardView).toBe('full');
+    state().setBoardView('chart');
+    expect(state().settings.boardView).toBe('chart');
+  });
+
   it('sets the key and the found scales and chord picks in one change', () => {
     const a = state().addBox();
     const b = state().addBox();
@@ -255,10 +263,12 @@ describe('workbench store', () => {
     expect(state().document).toEqual({ presetId: null, name: 'Blues in F', savedSnapshot: null });
 
     state().setOrientation('horizontal');
+    state().setBoardView('full');
     const { settings, key, strips, orientation, boxes } = state();
     state().newDocument();
     expect(state().boxes).toEqual([]);
     expect(state().orientation).toBe('vertical');
+    expect(state().settings.boardView).toBe('chart');
     expect(state().document.name).toBe('Untitled preset');
     state().loadDocument({
       presetId: 'p2',
@@ -267,6 +277,7 @@ describe('workbench store', () => {
       data: { settings, key, strips, orientation, boxes },
     });
     expect(state().orientation).toBe('horizontal');
+    expect(state().settings.boardView).toBe('full');
     expect(state().boxes).toBe(boxes);
     expect(state().selectedBoxId).toBeNull();
     expect(state().document).toEqual({ presetId: 'p2', name: 'Loaded', savedSnapshot: 's' });

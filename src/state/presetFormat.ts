@@ -16,6 +16,7 @@ import {
 } from '../theory';
 import { newId } from './ids';
 import type {
+  BoardView,
   Box,
   DegreeBasis,
   FillMode,
@@ -37,14 +38,16 @@ const MAX_FOLDER_DEPTH = 32;
 const LABEL_MODES: readonly LabelMode[] = ['names', 'degrees'];
 const FILL_MODES: readonly FillMode[] = ['inversion', 'scale'];
 const ORIENTATIONS: readonly Orientation[] = ['horizontal', 'vertical'];
+const BOARD_VIEWS: readonly BoardView[] = ['chart', 'full'];
 const DEGREE_BASES: readonly DegreeBasis[] = ['key', 'scale'];
 const NOTATIONS: readonly HarmonyNotation[] = ['jazz', 'classical'];
 
 /**
  * Everything a preset stores (spec §7). Its name is kept alongside. Fields added after version 1
- * (the capo, fret markers, the orientation, each box's degree basis, and separate common-tone and
- * voice-leading switches) are optional when reading, and fields since removed (the strips' chords/scales choice, and
- * their single visibility switch, which now sets both parts) are handled, so older files still load.
+ * (the capo, fret markers, the board view, the orientation, each box's degree basis, and separate
+ * common-tone and voice-leading switches) are optional when reading, and fields since removed (the
+ * strips' chords/scales choice, and their single visibility switch, which now sets both parts) are
+ * handled, so older files still load.
  */
 export interface PresetData {
   readonly settings: Settings;
@@ -161,6 +164,11 @@ function parseSettings(value: unknown, path: string): Settings {
     fretCount: clampFretCount(fretCount),
     capo: settings.capo === undefined ? 0 : whole(settings.capo, `${path}.capo`, 0, MAX_CAPO),
     fretMarkers: settings.fretMarkers === undefined ? true : flag(settings.fretMarkers, `${path}.fretMarkers`),
+    // A preset saved before this field was made when every board drew the whole neck, so that is
+    // what its author arranged and exported, and reading it as 'full' hands it back unchanged. New
+    // presets start at 'chart' instead; this is the same reasoning that opens a file with no
+    // orientation horizontally rather than at today's default.
+    boardView: settings.boardView === undefined ? 'full' : choice(settings.boardView, `${path}.boardView`, BOARD_VIEWS),
   };
 }
 
