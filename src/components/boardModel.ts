@@ -63,6 +63,38 @@ const isDrawn = (dot: BoardDot) => dot.selected || dot.kind !== 'empty';
  * the capo by itself and needs no rule of its own. A fill that lights the whole neck spans
  * everything, and the window is then the whole neck, which is the honest answer.
  */
+/**
+ * Frets of room a board keeps on each side of the shape while it can still be edited.
+ *
+ * A chart window hugs the notes, which is what makes it readable and is right for a board being
+ * read. It is a dead end for a board being built on, though: an empty box opens on the first five
+ * frets, the window is worked out from the notes, and so nothing the user can reach can ever push
+ * it further up the neck.
+ *
+ * The room is asymmetric because the two directions are not alike. Going up needs it: without it
+ * there is no way past the fifth fret at all. Going down needs less, because a window already
+ * reaches the nut whenever the shape is near it, and because three frets of room in both directions
+ * cost half the density the window was for — measured, it put a laptop back to three chords on
+ * screen, which is where the whole neck had it.
+ *
+ * The board goes back to hugging the shape the moment it stops being edited, so what is read and
+ * what is exported is always the tight window.
+ */
+export const EDIT_REACH_UP = 2;
+export const EDIT_REACH_DOWN = 1;
+
+/** `window` with somewhere to go, for a board that can be clicked. */
+export function editableWindow(window: FretWindow, capo: number, fretCount: number): FretWindow {
+  const lowest = Math.max(0, capo);
+  const highest = Math.max(lowest, fretCount);
+  // Both ends are clamped into the neck rather than trusted, and `last` is held at or above `first`,
+  // so a window from somewhere else cannot come back backwards — a capo past the last fret would
+  // otherwise push `first` up while `last` stayed where it was.
+  const onNeck = (fret: number) => Math.min(Math.max(fret, lowest), highest);
+  const first = onNeck(window.first - EDIT_REACH_DOWN);
+  return { first, last: Math.max(first, onNeck(window.last + EDIT_REACH_UP)) };
+}
+
 export function fretWindow(
   dots: readonly BoardDot[],
   capo: number,

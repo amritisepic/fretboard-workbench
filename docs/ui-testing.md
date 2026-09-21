@@ -96,15 +96,17 @@ Three usages fail today and are on the record in `KNOWN_FAILURES`:
 ## The browser suite (`e2e/`)
 
 Chromium at three widths, matching the stylesheet's breakpoints: `phone` 390×844, `tablet` 768×1024,
-`desktop` 1440×900. Six states, named in `e2e/states.ts`: empty, a four-chord progression, the
-31-chord standard, the sidebar open, the export dialog, and view mode.
+`desktop` 1440×900. Seven states, named in `e2e/states.ts`: empty, a four-chord progression, the
+31-chord standard, the sidebar open, the export dialog, view mode, and a progression whose analysis
+tags are of differing length — every other fixture happened to have one-line tags, so a row of
+boards lined up and the misalignment measured zero.
 
 The service worker is blocked in the test context. The offline notice appears on its own timer once
 the worker registers and clears itself five seconds later, which would make every screenshot a race.
 
 ### Screenshots (`e2e/visual.spec.ts`)
 
-18 baselines, one per state per width. They exist to put a layout change in front of a reviewer, not
+21 baselines, one per state per width. They exist to put a layout change in front of a reviewer, not
 to claim the layout is good — most of what they show is what the plan intends to change. A
 deliberate change is accepted with `npm run test:e2e:update`, and the new picture lands in the diff.
 
@@ -114,19 +116,32 @@ a missing snapshot and writes its own, which should not be committed.
 
 ### Measurements (`e2e/metrics.spec.ts`, `e2e/measure.ts`)
 
-The numbers the design work has to move, with today's value as the budget. Measured 2026-09-17:
+The numbers the design work has to move, with the value measured after each phase as the budget.
 
-| | phone | tablet | desktop |
-|---|---|---|---|
-| Screen spent on chrome before the first chord | 27.4% (231px) | 29.0% (297px) | 28.1% (253px) |
-| Toolbar content width ÷ width available | **3.86** | 1.00 | 1.00 |
-| Fretboard that is empty grid, four chords | 73.2% | 73.2% | 73.2% |
-| Fretboard that is empty grid, *Autumn Leaves* | **94.6%** | 94.6% | 94.6% |
-| Chords of *Autumn Leaves* on screen at once | 1 of 31 | 2 of 31 | 3 of 31 |
-| Elements in the document, *Autumn Leaves* | 11,446 | 11,444 | 11,415 |
-| — of those, inside fretboards | 9,021 | 9,021 | 9,021 |
-| Controls under 24 CSS px, four chords | 316 of 366 | 316 of 366 | 316 of 366 |
-| Smallest control on screen | 21.6px | 21.6px | 21.6px |
+| | before phase 1 | after phase 1 |
+|---|---|---|
+| Fret wires drawn on one board | 12 | **4–6** |
+| Board that is empty grid, four chords | 73.2% | **34.9%** |
+| Board that is empty grid, *Autumn Leaves* | 94.6% | **85.6%** |
+| Elements in the document, *Autumn Leaves* | 11,429 | **4,496** |
+| — of those, inside fretboards | 9,021 | **2,052** |
+| Chords of *Autumn Leaves* on screen (phone / tablet / laptop) | 1 / 2 / 3 | **1 / 3 / 6** |
+| Boards in a row starting together (*All Blues*) | 17px apart | **0px** |
+| Smallest place a note can be put | 21.6px | **26px** |
+| Controls under 24px, four chords | 316 of 366 | **4 of 155** |
+| Screen spent on chrome before the first chord | 27–29% | unchanged |
+| Toolbar content width ÷ width available, phone | 3.86 | **4.4** |
+
+Two of those need saying plainly rather than being read as wins.
+
+The **phone toolbar got worse**: adding the Board switch to a toolbar that already did not fit made
+the overflow worse, and about three quarters of the controls now sit off the side with no scrollbar.
+Plan item 14 is where that is fixed; the budget records the cost rather than hiding it.
+
+The **smallest control on screen is still 16.7px**, and that is deliberate: every fretboard position
+now clears 24, so `smallestBoardTarget` has its own floor at 24, while `smallestTarget` has moved on
+to the next worst thing — the strip switches at 22px, the function chip at 21.6 and the key-bar
+choices at 16.7. Those belong to the phases that rebuild the key bar and the control vocabulary.
 
 A toolbar overflow above 1 means the toolbar scrolls sideways with `scrollbar-width: none`, so the
 controls past the edge cannot be found at all. On a phone that is roughly three quarters of them.

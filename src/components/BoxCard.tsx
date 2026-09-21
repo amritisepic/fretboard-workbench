@@ -3,6 +3,7 @@ import { useWorkbench, type Box, type Orientation } from '../state/workbench';
 import { MAX_CHORD_NOTES, type FretPosition } from '../theory';
 import type { FunctionLabel } from './analysisModel';
 import type { BoxView } from './boardModel';
+import { editableWindow } from './boardModel';
 import { Fretboard } from './Fretboard';
 import { FunctionText } from './FunctionText';
 import { InfoPopover } from './InfoPopover';
@@ -49,6 +50,7 @@ export function BoxCard({
   const fretCount = useWorkbench((s) => s.settings.fretCount);
   const capo = useWorkbench((s) => s.settings.capo);
   const fretMarkers = useWorkbench((s) => s.settings.fretMarkers);
+  const boardView = useWorkbench((s) => s.settings.boardView);
   const presetOrientation = useWorkbench((s) => s.orientation);
   const orientation = neckOverride ?? presetOrientation;
   const selectBox = useWorkbench((s) => s.selectBox);
@@ -135,6 +137,21 @@ export function BoxCard({
             orientation={orientation}
             fretMarkers={fretMarkers}
             dots={view.dots}
+            // A chord chart crops the neck to a window around the shape; the whole neck is the other
+            // choice, and passing no window is what asks for it.
+            //
+            // Only the selected box gets room to move. A window worked out from the notes is a dead
+            // end for building — nothing reachable inside it can push it up the neck — but paying
+            // for that on every board costs half the density the window was for, measured at three
+            // chords on a laptop against six. One box is edited at a time, and clicking any note
+            // selects its box, so the reach arrives exactly when it is wanted.
+            window={
+              boardView !== 'chart'
+                ? undefined
+                : selected && !viewing
+                  ? editableWindow(view.window, capo, fretCount)
+                  : view.window
+            }
             color={box.color}
             interactive={!viewing}
             onToggle={onToggle}

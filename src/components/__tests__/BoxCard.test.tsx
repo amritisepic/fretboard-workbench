@@ -98,10 +98,16 @@ describe('BoxCard', () => {
     expect(full.positions).toHaveLength(MAX_CHORD_NOTES);
 
     const { container } = renderCard({ box: full });
+    // The card draws a chord-chart window rather than the whole neck, so the position to aim at has
+    // to be one the window contains: the seventh string, at a fret the other six already sit across.
+    // Addressed by name rather than by counting, because how many positions come before it depends
+    // on how wide the window is, and the window widens when the box is selected.
     const view = getBoxView(full, state().settings);
-    const index = view.dots.findIndex((d) => d.string === 6 && d.fret === 7);
+    const target = container.querySelector(`[data-position="6:${view.window.first}"]`);
+    expect(target, 'the window should reach the seventh string').not.toBeNull();
+
     // A position with nothing drawn on it is one rect and has no circle inside it to aim at.
-    fireEvent.click(container.querySelectorAll('.position')[index]);
+    fireEvent.click(target as Element);
     expect(screen.getByRole('status').textContent).toContain(`${MAX_CHORD_NOTES} notes at most`);
   });
 

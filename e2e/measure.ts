@@ -24,6 +24,13 @@ export interface Measurements {
   readonly targetsTotal: number;
   /** The smallest tap target on screen, so the worst case is visible and not just the count. */
   readonly smallestTarget: number;
+  /**
+   * The smallest fretboard position. Kept apart from `smallestTarget` because the two are different
+   * pieces of work: the board is what the chord-chart window fixed, while the controls that are
+   * still small — the strip switches, the function chip, the key-bar choices — belong to the phases
+   * that rebuild the key bar and the control vocabulary.
+   */
+  readonly smallestBoardTarget: number;
   /** Fret wires a board draws. A chord chart shows a window of four or five, not the whole neck. */
   readonly fretsDrawn: number;
   /**
@@ -64,11 +71,13 @@ export async function measure(page: Page): Promise<Measurements> {
       return r.width > 0 && shown > r.height / 2 && r.left < window.innerWidth && r.right > 0;
     }).length;
 
-    // Anything a pointer is meant to hit. Fretboard positions are counted because clicking them is
-    // the app's main interaction, even though they are not real controls yet.
+    // Anything a pointer is meant to hit, fretboard positions included: clicking them is the app's
+    // main interaction. `.position` rather than the circle inside it — a position with nothing drawn
+    // on it is a single rect now, and those are exactly the cells you click to add a note, so
+    // counting only the drawn notes would measure the easy half and call it a pass.
     const controls = [
       ...document.querySelectorAll<HTMLElement | SVGElement>(
-        'button, select, input, [role="switch"], [role="radio"], [role="menuitem"], .fretboard .position circle',
+        'button, select, input, [role="switch"], [role="radio"], [role="menuitem"], .fretboard .position',
       ),
     ];
     const sizes = controls
@@ -89,7 +98,13 @@ export async function measure(page: Page): Promise<Measurements> {
     };
     const starts = firstRow.map(startOf);
 
+    const positionSides = [...document.querySelectorAll('.fretboard .position')]
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0)
+      .map((r) => Math.min(r.width, r.height));
+
     return {
+      smallestBoardTarget: positionSides.length > 0 ? Number(Math.min(...positionSides).toFixed(1)) : 0,
       fretsDrawn: board ? board.querySelectorAll('.wire').length : 0,
       nutSpread: starts.length > 1 ? Math.round(Math.max(...starts) - Math.min(...starts)) : 0,
       chromeAboveFirstChord: Math.round(chromeAboveFirstChord),

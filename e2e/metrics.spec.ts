@@ -30,6 +30,8 @@ type Budget = {
   readonly smallestTarget: number;
   /** Fret wires a board draws. A chord chart shows a window, not the whole neck. */
   readonly fretsDrawn: number;
+  /** The smallest fretboard position, in CSS px. A floor: WCAG 2.2 asks for 24. */
+  readonly smallestBoardTarget: number;
   /** How far apart the boards in a row start, in pixels. Zero since the analysis left the header. */
   readonly nutSpread: number;
 };
@@ -51,13 +53,14 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     // the toolbar is what has to give: plan item 14 moves the display switches into one popover and
     // takes every width back to 1. Until then this records the cost rather than hiding it.
     toolbarOverflow: 4.45,
-    boardWaste: 0.735,
-    boardWasteOnLong: 0.95,
+    boardWaste: 0.37,
+    boardWasteOnLong: 0.87,
     chordsVisibleOnLong: 1,
-    domNodesOnLong: 11_500,
-    targetsUnder24: 320,
-    smallestTarget: 21.5,
-    fretsDrawn: 12,
+    domNodesOnLong: 4_700,
+    targetsUnder24: 20,
+    smallestTarget: 16.5,
+    fretsDrawn: 7,
+    smallestBoardTarget: 24,
     nutSpread: 1,
   },
   tablet: {
@@ -65,25 +68,27 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     // The toolbar is allowed to wrap above 760px, so it fits — at the cost of the extra row that
     // shows up in chromeFraction.
     toolbarOverflow: 1,
-    boardWaste: 0.735,
-    boardWasteOnLong: 0.95,
-    chordsVisibleOnLong: 2,
-    domNodesOnLong: 11_500,
-    targetsUnder24: 320,
-    smallestTarget: 21.5,
-    fretsDrawn: 12,
+    boardWaste: 0.37,
+    boardWasteOnLong: 0.87,
+    chordsVisibleOnLong: 3,
+    domNodesOnLong: 4_700,
+    targetsUnder24: 20,
+    smallestTarget: 16.5,
+    fretsDrawn: 7,
+    smallestBoardTarget: 24,
     nutSpread: 1,
   },
   desktop: {
     chromeFraction: 0.285,
     toolbarOverflow: 1,
-    boardWaste: 0.735,
-    boardWasteOnLong: 0.95,
-    chordsVisibleOnLong: 3,
-    domNodesOnLong: 11_500,
-    targetsUnder24: 320,
-    smallestTarget: 21.5,
-    fretsDrawn: 12,
+    boardWaste: 0.37,
+    boardWasteOnLong: 0.87,
+    chordsVisibleOnLong: 6,
+    domNodesOnLong: 4_700,
+    targetsUnder24: 20,
+    smallestTarget: 16.5,
+    fretsDrawn: 7,
+    smallestBoardTarget: 24,
     nutSpread: 1,
   },
 };
@@ -173,6 +178,11 @@ test.describe('layout budgets', () => {
 
     // The whole neck for a shape that spans three frets is the thing this phase is about.
     expect(m.fretsDrawn, 'fret wires drawn on one board').toBeLessThanOrEqual(budget.fretsDrawn);
+    // Every place a note can go is now at least the WCAG minimum; the controls still under it are
+    // the strip switches, the function chip and the key-bar choices, which later phases rebuild.
+    expect(m.smallestBoardTarget, 'the smallest place a note can be put').toBeGreaterThanOrEqual(
+      budget.smallestBoardTarget,
+    );
     // A card above one board being taller than the card above another shifts its neck down, and
     // comparing shapes across a row is what the app is for.
     expect(m.nutSpread, 'pixels between the highest and lowest board start in a row').toBeLessThanOrEqual(

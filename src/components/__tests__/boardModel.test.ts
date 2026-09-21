@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBox, type Box, type FillMode, type Settings } from '../../state/workbench';
 import { makeScaleRef, type PitchClass } from '../../theory';
-import { buildBoxView, fretWindow, type BoardDot } from '../boardModel';
+import { buildBoxView, editableWindow, fretWindow, type BoardDot } from '../boardModel';
 
 const settings: Settings = { tuning: [40, 45, 50, 55, 59, 64], fretCount: 24, capo: 0, fretMarkers: true, boardView: 'chart' };
 
@@ -176,6 +176,26 @@ describe('fret window', () => {
     expect(fretWindow([clicked(5)], 7, 12)).toEqual({ first: 7, last: 11 });
     // A capo past the end of the neck is nonsense, but it must not produce a backwards window.
     const degenerate = fretWindow([], 14, 12);
+    expect(degenerate.last).toBeGreaterThanOrEqual(degenerate.first);
+  });
+});
+
+describe('the room a board being edited keeps around the shape', () => {
+  it('reaches further up the neck than down, so a shape can be moved past the window it opened on', () => {
+    // Without reach upwards a new box is stuck on the first five frets forever: the window comes
+    // from the notes, so no click inside it can ever push it higher.
+    expect(editableWindow({ first: 0, last: 4 }, 0, 24)).toEqual({ first: 0, last: 6 });
+    expect(editableWindow({ first: 7, last: 11 }, 0, 24)).toEqual({ first: 6, last: 13 });
+  });
+
+  it('stays on the neck at either end', () => {
+    expect(editableWindow({ first: 0, last: 4 }, 0, 24).first).toBe(0);
+    expect(editableWindow({ first: 3, last: 7 }, 3, 24).first).toBe(3);
+    expect(editableWindow({ first: 20, last: 24 }, 0, 24)).toEqual({ first: 19, last: 24 });
+  });
+
+  it('never hands back a backwards window, whatever neck it is given', () => {
+    const degenerate = editableWindow({ first: 0, last: 4 }, 14, 12);
     expect(degenerate.last).toBeGreaterThanOrEqual(degenerate.first);
   });
 });
