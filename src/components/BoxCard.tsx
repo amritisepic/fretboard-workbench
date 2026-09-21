@@ -10,7 +10,7 @@ import { InfoPopover } from './InfoPopover';
 /** How long the "chord is full" note stays up after a refused click. */
 const NOTICE_MS = 2500;
 
-/** What harmonic analysis adds under the numeral: the chord's function and a sentence about it. */
+/** What harmonic analysis adds beside the board: the chord's function and a sentence about it. */
 export interface AnalysisTag {
   readonly label: FunctionLabel;
   readonly explanation: string;
@@ -93,7 +93,6 @@ export function BoxCard({
         ) : (
           <h2 className="box-title is-placeholder">{viewing ? 'No notes' : 'Click the fretboard to add notes'}</h2>
         )}
-        {tag && tag.label.text && <FunctionTag tag={tag} />}
         {refusedAt !== null && (
           <p className="box-notice" role="status">
             A chord has {MAX_CHORD_NOTES} notes at most. Click one to remove it first.
@@ -116,27 +115,47 @@ export function BoxCard({
           </svg>
         </button>
       )}
-      <div className="fretboard-scroll">
-        <Fretboard
-          tuning={tuning}
-          fretCount={fretCount}
-          capo={capo}
-          orientation={orientation}
-          fretMarkers={fretMarkers}
-          dots={view.dots}
-          color={box.color}
-          interactive={!viewing}
-          onToggle={onToggle}
-        />
+      {/*
+        The board and, when harmonic analysis is on, the function tag beside or under it. The tag is
+        kept out of the header on purpose: a tag long enough to wrap used to push its own board down
+        while its neighbors' stayed put, so the nuts no longer lined up across a row, and comparing
+        shapes across a progression is the whole point of the canvas. Out here the header holds the
+        same elements in every box and every board starts at the same height.
+
+        Which side the tag takes follows the orientation the card is actually drawing, which is the
+        preset's unless an export overrode it. The stylesheet does the placing; the class only says
+        which way the neck runs.
+      */}
+      <div className={`box-body is-${orientation}`}>
+        <div className="fretboard-scroll">
+          <Fretboard
+            tuning={tuning}
+            fretCount={fretCount}
+            capo={capo}
+            orientation={orientation}
+            fretMarkers={fretMarkers}
+            dots={view.dots}
+            color={box.color}
+            interactive={!viewing}
+            onToggle={onToggle}
+          />
+        </div>
+        {tag && tag.label.text && <FunctionTag tag={tag} />}
       </div>
     </section>
   );
 }
 
-/** The function under the numeral; clicking or tapping it explains what it means. */
+/**
+ * The chord's function, beside the board or under it; clicking or tapping it explains what it means.
+ *
+ * It comes after the board in the DOM because that is where it is on the screen in both
+ * orientations — to the right of a horizontal neck, under a vertical one — so reading order and
+ * focus order follow the picture rather than being reshuffled by `order`.
+ */
 function FunctionTag({ tag }: { readonly tag: AnalysisTag }) {
   return (
-    <div className="box-function">
+    <div className="box-analysis">
       <InfoPopover
         className="function-tag"
         label={`Chord function, ${tag.label.text}. What this means`}

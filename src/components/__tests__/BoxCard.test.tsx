@@ -109,10 +109,47 @@ describe('BoxCard', () => {
     expect(await axeRuleIds(container)).toEqual([]);
   });
 
+  it('keeps the function tag out of the header, so a tagged box and an untagged one line their boards up', () => {
+    const box = seedBox();
+    // jsdom draws nothing, so the height itself cannot be measured; the structure that guarantees it
+    // can be. A header holding the same elements whether or not the box has a tag lays out to the
+    // same height, and the board below it therefore starts at the same place in every card.
+    const tagged = renderCard({ box, tag: TAG });
+    const untagged = renderCard({ box, tag: null });
+    const header = (rendered: { container: HTMLElement }) => {
+      const found = rendered.container.querySelector('.box-header');
+      if (!found) throw new Error('the card drew no header');
+      return found;
+    };
+
+    expect(tagged.container.querySelector('.function-tag')).not.toBeNull();
+    expect(header(tagged).querySelector('.function-tag')).toBeNull();
+    expect(header(tagged).innerHTML).toBe(header(untagged).innerHTML);
+  });
+
+  it('places the analysis by the orientation the card draws, not by the preset, so exports follow their own', () => {
+    // The preset is vertical, so the tag goes under the board...
+    expect(state().orientation).toBe('vertical');
+    const down = renderCard({ tag: TAG });
+    expect(down.container.querySelector('.box-body')?.className).toContain('is-vertical');
+    expect(down.container.querySelector('.box-body > .box-analysis')).not.toBeNull();
+
+    // ...while an export drawing the same box horizontally puts it beside the board instead.
+    const across = renderCard({ tag: TAG, orientation: 'horizontal' });
+    expect(across.container.querySelector('.box-body')?.className).toContain('is-horizontal');
+  });
+
+  it('draws the analysis after the board, so reading and focus order follow the picture', () => {
+    const { container } = renderCard({ tag: TAG });
+    const body = container.querySelector('.box-body');
+    const children = [...(body?.children ?? [])].map((child) => child.className);
+    expect(children).toEqual(['fretboard-scroll', 'box-analysis']);
+  });
+
   // ---- Known gaps -------------------------------------------------------
 
-  // The header prints the numeral in its own chip and again inside the function tag below it
-  // ("I" above "I7"). Plan item 12 (Phase 2) collapses them into one chip.
+  // The header prints the numeral in its own chip and the function tag by the board prints it again
+  // ("I" on the card, "I7" by the neck). Plan item 12 (Phase 2) collapses them into one chip.
   it.fails('does not restate the numeral in the function tag', () => {
     const { container } = renderCard({ tag: TAG });
     const numeral = container.querySelector('.box-numeral')?.textContent?.trim();
@@ -121,8 +158,6 @@ describe('BoxCard', () => {
     expect(numeral && fn?.startsWith(numeral)).toBeFalsy();
   });
 
-  // The header prints the numeral in its own chip and again inside the function tag below it
-  // ("I" above "I7"). Plan item 12 (Phase 2) collapses them into one chip.
 });
 
 describe('the chord function explanation', () => {
