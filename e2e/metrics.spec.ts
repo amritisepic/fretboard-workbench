@@ -28,6 +28,10 @@ type Budget = {
   readonly targetsUnder24: number;
   /** The smallest tap target, in CSS px. A floor: 24 is the minimum, 44 the touch guideline. */
   readonly smallestTarget: number;
+  /** Fret wires a board draws. A chord chart shows a window, not the whole neck. */
+  readonly fretsDrawn: number;
+  /** How far apart the boards in a row start, in pixels. Zero is the only right answer; 17 today. */
+  readonly nutSpread: number;
 };
 
 /**
@@ -48,6 +52,8 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     domNodesOnLong: 11_500,
     targetsUnder24: 320,
     smallestTarget: 21.5,
+    fretsDrawn: 12,
+    nutSpread: 18,
   },
   tablet: {
     chromeFraction: 0.295,
@@ -60,6 +66,8 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     domNodesOnLong: 11_500,
     targetsUnder24: 320,
     smallestTarget: 21.5,
+    fretsDrawn: 12,
+    nutSpread: 18,
   },
   desktop: {
     chromeFraction: 0.285,
@@ -70,6 +78,8 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     domNodesOnLong: 11_500,
     targetsUnder24: 320,
     smallestTarget: 21.5,
+    fretsDrawn: 12,
+    nutSpread: 18,
   },
 };
 
@@ -148,6 +158,21 @@ test.describe('layout budgets', () => {
         .map((el) => (el.textContent || el.getAttribute('aria-label') || el.tagName).trim()),
     );
     expect(covered, 'top-bar controls covered by another element').toEqual([]);
+  });
+
+  test('a board draws a window, and the boards in a row start together', async ({ page }, testInfo) => {
+    const budget = BUDGETS[testInfo.project.name];
+    await goTo(page, STATES.tags);
+    const m = await measure(page);
+    record('All Blues', m);
+
+    // The whole neck for a shape that spans three frets is the thing this phase is about.
+    expect(m.fretsDrawn, 'fret wires drawn on one board').toBeLessThanOrEqual(budget.fretsDrawn);
+    // A card above one board being taller than the card above another shifts its neck down, and
+    // comparing shapes across a row is what the app is for.
+    expect(m.nutSpread, 'pixels between the highest and lowest board start in a row').toBeLessThanOrEqual(
+      budget.nutSpread,
+    );
   });
 
   test('controls are big enough to hit', async ({ page }, testInfo) => {

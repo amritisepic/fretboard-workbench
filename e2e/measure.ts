@@ -24,6 +24,15 @@ export interface Measurements {
   readonly targetsTotal: number;
   /** The smallest tap target on screen, so the worst case is visible and not just the count. */
   readonly smallestTarget: number;
+  /** Fret wires a board draws. A chord chart shows a window of four or five, not the whole neck. */
+  readonly fretsDrawn: number;
+  /**
+   * How far apart the nuts of the boards in the top row sit along the axis the frets run down, in
+   * pixels. Comparing shapes across a progression is what the app is for, so the boards in a row
+   * have to start at the same place: anything above a pixel or two means a card above one board is
+   * taller than the card above another.
+   */
+  readonly nutSpread: number;
 }
 
 /**
@@ -67,7 +76,22 @@ export async function measure(page: Page): Promise<Measurements> {
       .filter((r) => r.width > 0 && r.height > 0)
       .map((r) => Math.min(r.width, r.height));
 
+    // Boards in the first row: the ones whose top edge matches the topmost board.
+    const boards = [...document.querySelectorAll('.fretboard')];
+    const tops = boards.map((b) => b.getBoundingClientRect().top);
+    const rowTop = tops.length > 0 ? Math.min(...tops) : 0;
+    const firstRow = boards.filter((_, i) => Math.abs(tops[i] - rowTop) < 200);
+    // A nut is only drawn when the window includes the open strings; a board showing a window up
+    // the neck has none, and then the neck's own start is what has to line up.
+    const startOf = (board: Element) => {
+      const nut = board.querySelector('.nut') ?? board.querySelector('.wire');
+      return nut ? nut.getBoundingClientRect().top : board.getBoundingClientRect().top;
+    };
+    const starts = firstRow.map(startOf);
+
     return {
+      fretsDrawn: board ? board.querySelectorAll('.wire').length : 0,
+      nutSpread: starts.length > 1 ? Math.round(Math.max(...starts) - Math.min(...starts)) : 0,
       chromeAboveFirstChord: Math.round(chromeAboveFirstChord),
       viewportHeight,
       chromeFraction: Number((chromeAboveFirstChord / viewportHeight).toFixed(3)),

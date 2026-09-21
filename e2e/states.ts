@@ -17,11 +17,17 @@ export const STATES = {
   export: 'export-dialog',
   /** View mode: the whole progression scaled to fit. */
   view: 'view-mode',
+  /**
+   * Analysis tags of differing length, one of which wraps to a second line. The ordinary fixtures
+   * all have one-line tags and so never showed that a taller card pushes its board down.
+   */
+  tags: 'analysis-tags',
 } as const;
 
 const EXAMPLES = {
   short: { folder: 'Pop progressions', name: 'I–V–vi–IV' },
   long: { folder: 'Jazz standards', name: 'Autumn Leaves' },
+  tags: { folder: 'Jazz standards', name: 'All Blues' },
 } as const;
 
 /** localStorage as a returning user has it: the tour seen, so nothing offers itself on load. */
@@ -70,6 +76,9 @@ export async function goTo(page: Page, state: (typeof STATES)[keyof typeof STATE
       return;
     case STATES.long:
       await openExample(page, 'long');
+      return;
+    case STATES.tags:
+      await openExample(page, 'tags');
       return;
     case STATES.sidebar:
       await openExample(page, 'short');
