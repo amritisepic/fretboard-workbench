@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { bestFit, pageGeometry, paginate, trialWidths } from '../export/exportLayout';
+import {
+  MIN_LEGIBLE_SCALE,
+  MIN_PRINT_POINTS,
+  SMALLEST_SHEET_TEXT_PX,
+  bestFit,
+  isLegible,
+  pageGeometry,
+  paginate,
+  printedPoints,
+  trialWidths,
+} from '../export/exportLayout';
 import { buildPdf } from '../export/pdfWriter';
 
 describe('export layout', () => {
@@ -57,5 +67,33 @@ describe('PDF writer', () => {
     const entries = [...text.slice(startxref).matchAll(/(\d{10}) 00000 n /g)].map((m) => Number(m[1]));
     expect(entries).toHaveLength(9);
     entries.forEach((offset, i) => expect(text.slice(offset).startsWith(`${i + 1} 0 obj`)).toBe(true));
+  });
+});
+
+describe('the legibility floor', () => {
+  it('measures printed text in points, at 96 CSS pixels to the inch', () => {
+    // 12 CSS px is 9 pt at full size, and half of that at half size.
+    expect(printedPoints(12, 1)).toBe(9);
+    expect(printedPoints(12, 0.5)).toBe(4.5);
+  });
+
+  it('puts the floor where the smallest text on the sheet still prints at the minimum', () => {
+    expect(printedPoints(SMALLEST_SHEET_TEXT_PX, MIN_LEGIBLE_SCALE)).toBeCloseTo(MIN_PRINT_POINTS, 6);
+    // The old default laid the page out at 60% of screen size, which printed those labels at 4.7 pt.
+    expect(printedPoints(SMALLEST_SHEET_TEXT_PX, 0.6)).toBeLessThan(MIN_PRINT_POINTS);
+    expect(isLegible(0.6)).toBe(false);
+    expect(isLegible(MIN_LEGIBLE_SCALE)).toBe(true);
+    expect(isLegible(1)).toBe(true);
+  });
+
+  it('fits a tall progression onto a page only when the fit stays readable', () => {
+    const a4 = pageGeometry({ paper: 'a4', orientation: 'portrait', marginMm: 12, fit: 'page', scalePercent: 100 });
+    // Thirty-one chords stacked on one A4 page: the scale that fits is far under the floor, which is
+    // the reading the dialog uses to paginate instead of shrinking.
+    const tall = bestFit([{ width: 900, contentWidth: 900, contentHeight: 6000 }], a4.contentWidthPx, a4.contentHeightPx);
+    expect(isLegible(tall.scale)).toBe(false);
+    // Four chords in a row fit on the same page at a size that is still readable.
+    const short = bestFit([{ width: 900, contentWidth: 900, contentHeight: 700 }], a4.contentWidthPx, a4.contentHeightPx);
+    expect(isLegible(short.scale)).toBe(true);
   });
 });

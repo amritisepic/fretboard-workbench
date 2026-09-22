@@ -11,9 +11,24 @@
   --radius-lg: 16px;
   --radius: 12px;
   --radius-sm: 8px;
+  /* Every transition in this file is this long. The three ad-hoc durations it replaced were 120ms,
+     150ms and 180ms, which nobody can tell apart, and a single token is what lets the reduced-motion
+     block below turn the lot off without an `!important` anywhere. */
+  --motion: 150ms;
   --font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
   color-scheme: light;
+}
+
+/* Someone who has asked their system to reduce motion is telling every app to stop moving things,
+   and this one has never listened. Zeroing the duration rather than removing the transitions keeps
+   the rules in one piece, and keeps this file's long-standing promise of no `!important`. The
+   smooth scroll that follows a new chord is JavaScript, so it reads the same preference in
+   `motion.ts` instead. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0s;
+  }
 }
 
 *,
@@ -268,7 +283,7 @@ button[aria-disabled='true'] {
   border-radius: 50%;
   background: transparent;
   color: var(--ink);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion) ease;
 }
 
 .add-button:hover {
@@ -581,9 +596,9 @@ button[aria-disabled='true'] {
   background: transparent;
   color: var(--ink-faint);
   transition:
-    color 0.15s ease,
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+    color var(--motion) ease,
+    border-color var(--motion) ease,
+    background-color var(--motion) ease;
 }
 
 .box-remove svg {
@@ -860,7 +875,7 @@ button[aria-disabled='true'] {
 }
 
 .fretboard .position circle {
-  transition: fill 0.12s ease;
+  transition: fill var(--motion) ease;
 }
 
 /* The board is one tab stop and the arrow keys walk it, so the cursor has to be visible on any
@@ -932,7 +947,7 @@ button[aria-disabled='true'] {
   stroke-width: 1.25;
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform 0.18s ease;
+  transition: transform var(--motion) ease;
 }
 
 @media (hover: hover) {
@@ -1335,7 +1350,7 @@ button.key-choice:hover {
   border: 0;
   background: transparent;
   color: var(--ink);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion) ease;
 }
 
 .root-step:first-child {
@@ -1713,7 +1728,7 @@ button.key-choice:hover {
   border: 1.5px solid var(--ink);
   border-radius: 999px;
   background: transparent;
-  transition: background-color 0.15s ease;
+  transition: background-color var(--motion) ease;
 }
 
 .toggle-knob {
@@ -1725,8 +1740,8 @@ button.key-choice:hover {
   border-radius: 50%;
   background: var(--ink);
   transition:
-    transform 0.15s ease,
-    background-color 0.15s ease;
+    transform var(--motion) ease,
+    background-color var(--motion) ease;
 }
 
 .toggle[aria-checked='true'] {
@@ -1783,7 +1798,7 @@ button.key-choice:hover {
   height: 16px;
   border-radius: 50%;
   background: var(--ink);
-  transition: transform 0.18s ease;
+  transition: transform var(--motion) ease;
 }
 
 .fill-track[data-mode='scale'] .fill-knob {
@@ -2560,6 +2575,29 @@ kbd {
   overflow: auto;
   padding: 18px 22px 22px;
   border-right: 1px solid var(--rule);
+  /* A control cut in half at the scroll fold, with nothing to say the column scrolls, is how this
+     column used to end. The two radial gradients are painted in the scrollport rather than on the
+     content, so each one shows only while there is content past that edge: the shadow appears when
+     something is hidden and goes when nothing is. The two linear gradients scroll with the content
+     and cover the shadow at the ends. */
+  background:
+    linear-gradient(var(--paper) 40%, rgb(250 249 247 / 0)) top / 100% 22px no-repeat local,
+    linear-gradient(rgb(250 249 247 / 0), var(--paper) 60%) bottom / 100% 22px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgb(58 58 58 / 0.14), rgb(58 58 58 / 0)) top / 100% 9px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, rgb(58 58 58 / 0.14), rgb(58 58 58 / 0)) bottom / 100% 9px no-repeat scroll;
+  /* Tabbing to a control the column has to scroll to must not leave it flush against the fold. */
+  scroll-padding-block: 22px;
+}
+
+/* Everything past the format, which is mounted only while "More options" is open. */
+.export-advanced {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+}
+
+.export-more {
+  justify-self: start;
 }
 
 .export-group {

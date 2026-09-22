@@ -11,9 +11,12 @@ import { TOP_VOICE_NAMES } from '../ScaleSheet';
 import { Segmented, type SegmentedOption } from '../Segmented';
 import {
   MAX_FIT_SCALE,
+  MIN_LEGIBLE_SCALE,
+  MIN_PRINT_POINTS,
   PAPER_SIZES,
   PX_PER_POINT,
   bestFit,
+  isLegible,
   pageGeometry,
   paginate,
   trialWidths,
@@ -46,8 +49,6 @@ interface OutputOptions {
 const SCALE_SHEET_WIDTH = 760;
 /** An image export wraps boxes at this width unless a row count is chosen. */
 const IMAGE_WIDTH = 1400;
-/** "Page width" without a row count lays boxes out wide enough to print at this share of screen size. */
-const WIDTH_FIT_SCALE = 0.6;
 const PREVIEW_DPI = 72;
 const PREVIEW_DELAY_MS = 250;
 /** Browsers refuse canvases much larger than this on a side. */
@@ -127,6 +128,11 @@ interface Layout {
   readonly width: number;
   /** CSS pixels on the page per CSS pixel of the sheet (PDF only). */
   readonly scale: number;
+  /**
+   * Whether pages break between rows rather than everything being squeezed onto one. True for every
+   * fit but "One page", and true for "One page" as well once one page would mean illegible text.
+   */
+  readonly paginated: boolean;
 }
 
 interface RenderedPage {
@@ -184,22 +190,41 @@ function planLayout(sheet: HTMLElement, workbench: boolean, output: OutputOption
   }
 
   const { contentWidthPx: boxWidth, contentHeightPx: boxHeight } = geometry;
+
+  /**
+   * Rows filling the page width at the legibility floor, breaking pages between them. This is both
+   * the "Page width" fit and where "One page" lands when one page cannot be read: the content is
+   * laid out wide enough that shrinking it to the page leaves the smallest text at the floor.
+   *
+   * A single chord group wider than the page can still come out below the floor. Nothing can be
+   * done about that from here — a box is not divisible — so the preview says so instead.
+   */
+  const fillPageWidth = (): Layout => {
+    const width = perRow ?? (workbench ? Math.min(singleRow, Math.max(widestGroup, boxWidth / MIN_LEGIBLE_SCALE)) : SCALE_SHEET_WIDTH);
+    const trial = measureAt(width);
+    return { width, scale: Math.min(boxWidth / Math.max(trial.width, trial.contentWidth), MAX_FIT_SCALE), paginated: true };
+  };
+
   let layout: Layout;
   if (output.format === 'png') {
-    layout = { width: perRow ?? (workbench ? Math.min(singleRow, Math.max(IMAGE_WIDTH, widestGroup)) : SCALE_SHEET_WIDTH), scale: 1 };
+    layout = {
+      width: perRow ?? (workbench ? Math.min(singleRow, Math.max(IMAGE_WIDTH, widestGroup)) : SCALE_SHEET_WIDTH),
+      scale: 1,
+      paginated: false,
+    };
   } else if (output.page.fit === 'page') {
     const widths = perRow !== null ? [perRow] : workbench ? trialWidths(widestGroup, singleRow) : [SCALE_SHEET_WIDTH];
     const { trial, scale } = bestFit(widths.map(measureAt), boxWidth, boxHeight);
-    layout = { width: trial.width, scale };
+    layout = isLegible(scale) ? { width: trial.width, scale, paginated: false } : fillPageWidth();
   } else if (output.page.fit === 'width') {
-    const width = perRow ?? (workbench ? Math.min(singleRow, Math.max(widestGroup, boxWidth / WIDTH_FIT_SCALE)) : SCALE_SHEET_WIDTH);
-    const trial = measureAt(width);
-    layout = { width, scale: Math.min(boxWidth / Math.max(trial.width, trial.contentWidth), MAX_FIT_SCALE) };
+    layout = fillPageWidth();
   } else {
+    // A scale the user chose is theirs to keep, whatever it prints at; the hint under the slider is
+    // where the floor is named rather than enforced.
     const scale = output.page.scalePercent / 100;
     const available = boxWidth / scale;
     const width = workbench ? Math.max(widestGroup, perRow !== null ? Math.min(perRow, available) : available) : SCALE_SHEET_WIDTH;
-    layout = { width, scale };
+    layout = { width, scale, paginated: true };
   }
   sheet.style.width = `${layout.width}px`;
   return layout;
@@ -211,13 +236,14 @@ function canvasSize(width: number, height: number): { width: number; height: num
   return { width: Math.max(1, Math.round(width * shrink)), height: Math.max(1, Math.round(height * shrink)) };
 }
 
-async function renderPdfPages(sheet: HTMLElement, layout: Layout, output: OutputOptions, geometry: PageGeometry, dpi: number) {
+async function renderPdfPages(sheet: HTMLElement, layout: Layout, geometry: PageGeometry, dpi: number) {
   const copy = await snapshot(sheet);
   const height = sheet.scrollHeight;
   const contentWidth = Math.max(layout.width, sheet.scrollWidth);
   const { scale } = layout;
-  const slices =
-    output.page.fit === 'page' ? [{ start: 0, end: height }] : paginate(height, geometry.contentHeightPx / scale, breakPoints(sheet));
+  const slices = layout.paginated
+    ? paginate(height, geometry.contentHeightPx / scale, breakPoints(sheet))
+    : [{ start: 0, end: height }];
   const regionWidth = Math.min(contentWidth, geometry.contentWidthPx / scale);
   const pixelsPerCss = (scale * dpi) / 96;
   const pages: RenderedPage[] = [];
@@ -295,6 +321,10 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
   const [preview, setPreview] = useState<Preview | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
+  // Closed on every open: the dialog's job is one screen with a format, a picture of the result and
+  // a Download button, and remembering that someone once opened the options would put the wall of
+  // controls back in front of everyone who did.
+  const [showMore, setShowMore] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   // The dialog blocks the app until it is answered or dismissed, so it is modal in earnest: the page
   // behind goes inert and Tab stays inside. Focus opens on the dialog itself rather than on a
@@ -327,7 +357,9 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
     const sheet = sheetRef.current;
     if (!sheet || nothing) return;
     const next = planLayout(sheet, workbench, output, geometry);
-    setLayout((current) => (current && current.width === next.width && current.scale === next.scale ? current : next));
+    setLayout((current) =>
+      current && current.width === next.width && current.scale === next.scale && current.paginated === next.paginated ? current : next,
+    );
     // The page geometry follows the output options, which optionsKey already covers.
   }, [optionsKey, boxes, settings, globalKey, wizard.scale, nothing, workbench]);
 
@@ -343,11 +375,13 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
       void (async () => {
         try {
           if (output.format === 'pdf') {
-            const pages = await renderPdfPages(sheet, layout, output, geometry, PREVIEW_DPI);
+            const pages = await renderPdfPages(sheet, layout, geometry, PREVIEW_DPI);
             if (cancelled) return;
             setPreview({
               images: pages.map((page) => previewPage(geometry, page)),
-              summary: `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} · ${PAPER_SIZES[output.page.paper].label} ${output.page.orientation} · ${Math.round(layout.scale * 100)}%`,
+              summary: `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} · ${PAPER_SIZES[output.page.paper].label} ${output.page.orientation} · ${Math.round(layout.scale * 100)}%${
+                isLegible(layout.scale) ? '' : ` · smallest text under ${MIN_PRINT_POINTS} pt`
+              }`,
               landscape: output.page.orientation === 'landscape',
             });
           } else {
@@ -378,7 +412,7 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
     try {
       const base = exportFileName(title).replace(/\.json$/, '');
       if (output.format === 'pdf') {
-        const pages = await renderPdfPages(sheet, layout, output, geometry, output.dpi);
+        const pages = await renderPdfPages(sheet, layout, geometry, output.dpi);
         const pdfPages = [];
         for (const page of pages) {
           const blob = await canvasBlob(page.canvas, 'image/jpeg', 0.92);
@@ -441,182 +475,201 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
               <Segmented label="Format" options={FORMAT_OPTIONS} value={output.format} onChange={(format) => setOutput({ format })} />
             </div>
 
-            {workbench && (
-              // The label is what names the checkboxes, and a screen reader only knows that if the
-              // group says so; without it a dozen chord names are read out belonging to nothing.
-              <div className="export-group" role="group" aria-labelledby={`${ids}chords`}>
-                <div className="export-row">
-                  <span className="field-label" id={`${ids}chords`}>
-                    Chords ({chosenCount} of {boxes.length})
-                  </span>
-                  <span className="export-links">
-                    <button type="button" className="link-button" onClick={() => setBoxIds(new Set(boxes.map((b) => b.id)))}>
-                      All
-                    </button>
-                    <button type="button" className="link-button" onClick={() => setBoxIds(new Set())}>
-                      None
-                    </button>
-                  </span>
-                </div>
-                <div className="export-boxes">
-                  {titles.map((entry, i) => (
-                    <label key={entry.id} className="export-check" title={entry.title}>
-                      <input type="checkbox" checked={boxIds.has(entry.id)} onChange={(event) => toggleBox(entry.id, event.target.checked)} />
-                      <span>
-                        <span className="export-index">{i + 1}</span> {entry.title}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="export-group" role="group" aria-labelledby={`${ids}show`}>
-              <span className="field-label" id={`${ids}show`}>
-                Show
-              </span>
-              <div className="export-features">
-                {workbench
-                  ? WORKBENCH_FEATURE_LABELS.map(([name, label]) => (
-                      <label key={name} className="export-check">
-                        <input type="checkbox" checked={workbenchFeatures[name]} onChange={(event) => setWorkbenchFeature(name, event.target.checked)} />
-                        <span>{label}</span>
-                      </label>
-                    ))
-                  : SCALE_FEATURE_LABELS.map(([name, label]) => (
-                      <label key={name} className="export-check">
-                        <input type="checkbox" checked={scaleFeatures[name]} onChange={(event) => setScaleFeature(name, event.target.checked)} />
-                        <span>{label}</span>
-                      </label>
-                    ))}
-              </div>
+            <div className="export-group">
+              {/* Everything past the format is mounted only once it is asked for. Rendering it
+                  hidden would leave every control in the tab order and in the accessibility tree,
+                  which is the same fourteen decisions wearing a different coat. */}
+              <button
+                type="button"
+                className="button export-more"
+                aria-expanded={showMore}
+                aria-controls={`${ids}more`}
+                onClick={() => setShowMore((open) => !open)}
+              >
+                {showMore ? 'Fewer options' : 'More options'}
+              </button>
             </div>
 
-            {(workbench || scaleFeatures.fretboard) && (
-              <div className="export-group">
-                <span className="field-label">Fretboard</span>
-                <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
-                {!workbench && <Segmented label="Fretboard labels" options={LABEL_OPTIONS} value={labelMode} onChange={setLabelMode} />}
-              </div>
-            )}
-
-            {!workbench && scaleFeatures.chords && (
-              <div className="export-group">
-                <span className="field-label">Chord table</span>
-                <Segmented label="Numeral notation" options={NOTATION_OPTIONS} value={notation} onChange={setNotation} />
-                <select
-                  className="select full"
-                  aria-label="Top voice"
-                  value={topVoice}
-                  onChange={(event) => setTopVoice(TOP_VOICES.find((v) => v === Number(event.target.value)) ?? topVoice)}
-                >
-                  {TOP_VOICES.filter((voice) => voice <= highestVoice).map((voice) => (
-                    <option key={voice} value={voice}>
-                      Up to the {voice}th: {TOP_VOICE_NAMES[voice]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {output.format === 'pdf' ? (
-              <>
-                <div className="export-group">
-                  <span className="field-label">Page</span>
-                  <div className="export-pair">
-                    <select className="select" aria-label="Paper size" value={output.page.paper} onChange={(event) => setPage({ paper: paperOf(event.target.value) })}>
-                      {Object.entries(PAPER_SIZES).map(([id, size]) => (
-                        <option key={id} value={id}>
-                          {size.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="select"
-                      aria-label="Margins"
-                      value={output.page.marginMm}
-                      onChange={(event) => setPage({ marginMm: Number(event.target.value) })}
-                    >
-                      {MARGINS.map((margin) => (
-                        <option key={margin.value} value={margin.value}>
-                          {margin.label}
-                        </option>
-                      ))}
-                    </select>
+            {showMore && (
+              <div className="export-advanced" id={`${ids}more`}>
+              {workbench && (
+                // The label is what names the checkboxes, and a screen reader only knows that if the
+                // group says so; without it a dozen chord names are read out belonging to nothing.
+                <div className="export-group" role="group" aria-labelledby={`${ids}chords`}>
+                  <div className="export-row">
+                    <span className="field-label" id={`${ids}chords`}>
+                      Chords ({chosenCount} of {boxes.length})
+                    </span>
+                    <span className="export-links">
+                      <button type="button" className="link-button" onClick={() => setBoxIds(new Set(boxes.map((b) => b.id)))}>
+                        All
+                      </button>
+                      <button type="button" className="link-button" onClick={() => setBoxIds(new Set())}>
+                        None
+                      </button>
+                    </span>
                   </div>
-                  <Segmented
-                    label="Page orientation"
-                    options={PAGE_ORIENTATION_OPTIONS}
-                    value={output.page.orientation}
-                    onChange={(orientationValue) => setPage({ orientation: orientationValue })}
-                  />
+                  <div className="export-boxes">
+                    {titles.map((entry, i) => (
+                      <label key={entry.id} className="export-check" title={entry.title}>
+                        <input type="checkbox" checked={boxIds.has(entry.id)} onChange={(event) => toggleBox(entry.id, event.target.checked)} />
+                        <span>
+                          <span className="export-index">{i + 1}</span> {entry.title}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <div className="export-group">
-                  <span className="field-label">Scaling</span>
-                  <Segmented label="Fit" options={FIT_OPTIONS} value={output.page.fit} onChange={(fit) => setPage({ fit })} />
-                  {output.page.fit === 'custom' && (
-                    <div className="export-row">
-                      <input
-                        className="mode-range"
-                        type="range"
-                        min={25}
-                        max={200}
-                        step={5}
-                        value={output.page.scalePercent}
-                        aria-label="Scale"
-                        onChange={(event) => setPage({ scalePercent: Number(event.target.value) })}
-                      />
-                      <output className="export-value">{output.page.scalePercent}%</output>
-                    </div>
-                  )}
-                  <p className="hint">
-                    {output.page.fit === 'page'
-                      ? 'Everything on one page, as large as it fits.'
-                      : output.page.fit === 'width'
-                        ? 'Rows fill the page width, at 60% of screen size unless you choose boxes per row. Pages break between rows.'
-                        : 'A fixed size; 100% is screen size. Pages break between rows.'}
-                  </p>
-                </div>
-                <div className="export-group">
-                  <span className="field-label">Quality</span>
-                  <Segmented
-                    label="Resolution"
-                    options={DPI_OPTIONS}
-                    value={output.dpi === 150 ? '150' : '300'}
-                    onChange={(dpi) => setOutput({ dpi: dpi === '150' ? 150 : 300 })}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="export-group">
-                <span className="field-label">Size</span>
-                <Segmented
-                  label="Pixel size"
-                  options={RATIO_OPTIONS}
-                  value={output.pixelRatio === 1 ? '1' : output.pixelRatio === 2 ? '2' : '3'}
-                  onChange={(ratio) => setOutput({ pixelRatio: ratio === '1' ? 1 : ratio === '2' ? 2 : 3 })}
-                />
-              </div>
-            )}
+              )}
 
-            {workbench && (
-              <div className="export-group">
-                <label className="field-label" htmlFor="export-per-row">
-                  Boxes per row
-                </label>
-                <select
-                  id="export-per-row"
-                  className="select full"
-                  value={output.boxesPerRow}
-                  onChange={(event) => setOutput({ boxesPerRow: Number(event.target.value) })}
-                >
-                  <option value={0}>Automatic</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
+              <div className="export-group" role="group" aria-labelledby={`${ids}show`}>
+                <span className="field-label" id={`${ids}show`}>
+                  Show
+                </span>
+                <div className="export-features">
+                  {workbench
+                    ? WORKBENCH_FEATURE_LABELS.map(([name, label]) => (
+                        <label key={name} className="export-check">
+                          <input type="checkbox" checked={workbenchFeatures[name]} onChange={(event) => setWorkbenchFeature(name, event.target.checked)} />
+                          <span>{label}</span>
+                        </label>
+                      ))
+                    : SCALE_FEATURE_LABELS.map(([name, label]) => (
+                        <label key={name} className="export-check">
+                          <input type="checkbox" checked={scaleFeatures[name]} onChange={(event) => setScaleFeature(name, event.target.checked)} />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                </div>
+              </div>
+
+              {(workbench || scaleFeatures.fretboard) && (
+                <div className="export-group">
+                  <span className="field-label">Fretboard</span>
+                  <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
+                  {!workbench && <Segmented label="Fretboard labels" options={LABEL_OPTIONS} value={labelMode} onChange={setLabelMode} />}
+                </div>
+              )}
+
+              {!workbench && scaleFeatures.chords && (
+                <div className="export-group">
+                  <span className="field-label">Chord table</span>
+                  <Segmented label="Numeral notation" options={NOTATION_OPTIONS} value={notation} onChange={setNotation} />
+                  <select
+                    className="select full"
+                    aria-label="Top voice"
+                    value={topVoice}
+                    onChange={(event) => setTopVoice(TOP_VOICES.find((v) => v === Number(event.target.value)) ?? topVoice)}
+                  >
+                    {TOP_VOICES.filter((voice) => voice <= highestVoice).map((voice) => (
+                      <option key={voice} value={voice}>
+                        Up to the {voice}th: {TOP_VOICE_NAMES[voice]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {output.format === 'pdf' ? (
+                <>
+                  <div className="export-group">
+                    <span className="field-label">Page</span>
+                    <div className="export-pair">
+                      <select className="select" aria-label="Paper size" value={output.page.paper} onChange={(event) => setPage({ paper: paperOf(event.target.value) })}>
+                        {Object.entries(PAPER_SIZES).map(([id, size]) => (
+                          <option key={id} value={id}>
+                            {size.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className="select"
+                        aria-label="Margins"
+                        value={output.page.marginMm}
+                        onChange={(event) => setPage({ marginMm: Number(event.target.value) })}
+                      >
+                        {MARGINS.map((margin) => (
+                          <option key={margin.value} value={margin.value}>
+                            {margin.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Segmented
+                      label="Page orientation"
+                      options={PAGE_ORIENTATION_OPTIONS}
+                      value={output.page.orientation}
+                      onChange={(orientationValue) => setPage({ orientation: orientationValue })}
+                    />
+                  </div>
+                  <div className="export-group">
+                    <span className="field-label">Scaling</span>
+                    <Segmented label="Fit" options={FIT_OPTIONS} value={output.page.fit} onChange={(fit) => setPage({ fit })} />
+                    {output.page.fit === 'custom' && (
+                      <div className="export-row">
+                        <input
+                          className="mode-range"
+                          type="range"
+                          min={25}
+                          max={200}
+                          step={5}
+                          value={output.page.scalePercent}
+                          aria-label="Scale"
+                          onChange={(event) => setPage({ scalePercent: Number(event.target.value) })}
+                        />
+                        <output className="export-value">{output.page.scalePercent}%</output>
+                      </div>
+                    )}
+                    <p className="hint">
+                      {output.page.fit === 'page'
+                        ? `Everything on one page, as large as it fits — unless that would print text under ${MIN_PRINT_POINTS} pt, when the page count grows instead.`
+                        : output.page.fit === 'width'
+                          ? `Rows fill the page width at the largest size that keeps every label at ${MIN_PRINT_POINTS} pt or more. Pages break between rows.`
+                          : `A fixed size; 100% is screen size. Below ${Math.round(MIN_LEGIBLE_SCALE * 100)}% the smallest labels print under ${MIN_PRINT_POINTS} pt. Pages break between rows.`}
+                    </p>
+                  </div>
+                  <div className="export-group">
+                    <span className="field-label">Quality</span>
+                    <Segmented
+                      label="Resolution"
+                      options={DPI_OPTIONS}
+                      value={output.dpi === 150 ? '150' : '300'}
+                      onChange={(dpi) => setOutput({ dpi: dpi === '150' ? 150 : 300 })}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="export-group">
+                  <span className="field-label">Size</span>
+                  <Segmented
+                    label="Pixel size"
+                    options={RATIO_OPTIONS}
+                    value={output.pixelRatio === 1 ? '1' : output.pixelRatio === 2 ? '2' : '3'}
+                    onChange={(ratio) => setOutput({ pixelRatio: ratio === '1' ? 1 : ratio === '2' ? 2 : 3 })}
+                  />
+                </div>
+              )}
+
+              {workbench && (
+                <div className="export-group">
+                  <label className="field-label" htmlFor="export-per-row">
+                    Boxes per row
+                  </label>
+                  <select
+                    id="export-per-row"
+                    className="select full"
+                    value={output.boxesPerRow}
+                    onChange={(event) => setOutput({ boxesPerRow: Number(event.target.value) })}
+                  >
+                    <option value={0}>Automatic</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               </div>
             )}
           </div>

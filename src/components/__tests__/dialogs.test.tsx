@@ -261,18 +261,36 @@ describe('SettingsPanel', () => {
 describe('ExportDialog', () => {
   beforeEach(resetStores);
 
-  it('offers the format, the chords and what to show', () => {
+  it('opens on the format alone, with everything else behind More options', () => {
     openExample(FIXTURES.short);
     render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: 'Export preset' });
     expect(within(dialog).getByRole('radiogroup', { name: 'Format' })).toBeDefined();
+    // Not merely hidden: a control that is in the document is in the tab order and in the
+    // accessibility tree, and counts against the number of decisions this dialog asks for.
+    expect(within(dialog).queryByLabelText('Paper size')).toBeNull();
+    expect(within(dialog).queryByRole('checkbox', { name: 'Harmonic analysis' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'More options' })).toHaveProperty('ariaExpanded', 'false');
+  });
+
+  it('gives every option back when More options is opened', () => {
+    openExample(FIXTURES.short);
+    render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const dialog = screen.getByRole('dialog', { name: 'Export preset' });
     expect(within(dialog).getByLabelText('Paper size')).toBeDefined();
+    expect(within(dialog).getByLabelText('Margins')).toBeDefined();
     expect(within(dialog).getByRole('checkbox', { name: 'Harmonic analysis' })).toBeDefined();
+    expect(within(dialog).getByRole('radiogroup', { name: 'Fit' })).toBeDefined();
+    expect(within(dialog).getByRole('radiogroup', { name: 'Resolution' })).toBeDefined();
+    expect(within(dialog).getByLabelText('Boxes per row')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Fewer options' })).toHaveProperty('ariaExpanded', 'true');
   });
 
   it('lists every chord, all of them chosen to start with', () => {
     const count = openExample(FIXTURES.short);
     const { container } = render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     const boxes = [...container.querySelectorAll<HTMLInputElement>('.export-boxes input[type="checkbox"]')];
     expect(boxes).toHaveLength(count);
     expect(boxes.every((b) => b.checked)).toBe(true);
@@ -303,19 +321,20 @@ describe('ExportDialog', () => {
   it('groups the export checkboxes under the heading that names them', () => {
     openExample(FIXTURES.short);
     render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     expect(screen.getByRole('group', { name: /^Chords/ })).toBeDefined();
     expect(screen.getByRole('group', { name: 'Show' })).toBeDefined();
   });
 
-  // ---- Known gaps -------------------------------------------------------
-
-  // Counted so the number is visible and has to be argued down rather than drifting up. Plan items
-  // 32 and 33 (Phase 5) put everything past format and download behind "More options".
-  it.fails('asks for no more than six decisions before a file can be downloaded', () => {
+  it('asks for no more than six decisions before a file can be downloaded', () => {
     openExample(FIXTURES.short);
     const { container } = render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
     const options = container.querySelector('.export-options') as Element;
-    const controls = options.querySelectorAll('[role="radiogroup"], select, input[type="range"], .export-show input');
+    // The count was written against `.export-show input`, a class this dialog has never had, so the
+    // checkboxes it was meant to catch were never counted. `.export-features input` is what they
+    // are, and the number is the honest one: eight feature checkboxes used to sit in this column
+    // alongside eight other controls, and every one of them was a question asked before Download.
+    const controls = options.querySelectorAll('[role="radiogroup"], select, input[type="range"], .export-features input');
     expect(controls.length).toBeLessThanOrEqual(6);
   });
 });

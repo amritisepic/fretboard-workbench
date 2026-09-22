@@ -6,6 +6,7 @@ import { BoxCard } from './BoxCard';
 import { buildCanvasModel, type CanvasEntry, type KeyChoice } from './canvasModel';
 import { CanvasToolbar } from './CanvasToolbar';
 import { KEY_REGION_COLORS, bandShade } from './color';
+import { scrollBehavior } from './motion';
 import { pinReading } from './readingChoice';
 import { buildStripView } from './stripModel';
 import { useFitToFrame } from './useFitToFrame';
@@ -53,7 +54,7 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
   useEffect(() => {
     if (boxCount > previousCount.current && !viewing) {
       const groups = canvasRef.current?.querySelectorAll('.box-group');
-      groups?.[groups.length - 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      groups?.[groups.length - 1]?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
     }
     previousCount.current = boxCount;
   }, [boxCount, viewing]);

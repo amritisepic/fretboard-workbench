@@ -26,6 +26,38 @@ export const PX_PER_POINT = 96 / 72;
 /** The largest a fitted export enlarges short content. */
 export const MAX_FIT_SCALE = 2;
 
+/**
+ * The smallest text an export sheet draws, in CSS pixels: the fret numbers and the string names
+ * beside a neck.
+ *
+ * A dot label drops to 8.5px once the note name runs past two characters, which is a defect of its
+ * own that plan item 22 closes by deleting that size. A floor set from it today would force a page
+ * count nobody wants, for a glyph that is on its way out.
+ */
+export const SMALLEST_SHEET_TEXT_PX = 10.5;
+
+/**
+ * The size below which printed text is fine print rather than something read at arm's length. Six
+ * points is the usual floor, and a chord chart is read on a music stand.
+ */
+export const MIN_PRINT_POINTS = 6;
+
+/** What `cssPixels` of text measures on paper, in points, when the sheet is printed at `scale`. */
+export const printedPoints = (cssPixels: number, scale: number): number => (cssPixels / PX_PER_POINT) * scale;
+
+/**
+ * The smallest scale an export may shrink to before the page count has to grow instead.
+ *
+ * The sheet's smallest text is 7.9 points at full size, so six points is about 76% of it. Fitting
+ * everything onto one page is a promise about the page count, and it is the wrong promise to keep
+ * when keeping it means printing a chart nobody can read.
+ */
+export const MIN_LEGIBLE_SCALE = MIN_PRINT_POINTS / printedPoints(SMALLEST_SHEET_TEXT_PX, 1);
+
+/** Whether `scale` keeps the sheet's smallest text at or above the print floor. */
+export const isLegible = (scale: number): boolean =>
+  printedPoints(SMALLEST_SHEET_TEXT_PX, scale) >= MIN_PRINT_POINTS - 0.001;
+
 export interface PageGeometry {
   /** The page in points. */
   readonly width: number;
