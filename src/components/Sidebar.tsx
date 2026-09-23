@@ -5,7 +5,7 @@ import { formatSpelled, functionScale, keyName, scaleRefName, scaleRefPcSet } fr
 import { getBoxView } from './boardModel';
 import { ChordNameField } from './ChordNameField';
 import { ColorField } from './ColorField';
-import { FillSwitch } from './FillSwitch';
+import { FillField } from './FillField';
 import { HarmonyField } from './HarmonyField';
 import { RankingList } from './RankingList';
 import { buildRankingView } from './rankingModel';
@@ -126,7 +126,7 @@ export function Sidebar({ box }: { readonly box: Box }) {
         )}
       </div>
       <div className="sidebar-footer">
-        <FillSwitch
+        <FillField
           fill={box.fill}
           onSetOn={(on) => setFillOn(box.id, on)}
           onSetMode={(mode) => setFillMode(box.id, mode)}

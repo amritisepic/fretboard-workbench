@@ -82,7 +82,10 @@ export async function goTo(page: Page, state: (typeof STATES)[keyof typeof STATE
       return;
     case STATES.sidebar:
       await openExample(page, 'short');
-      await page.locator('.box').first().click();
+      // By the chord's name, not the middle of the card. The middle of a card is a fretboard cell, and
+      // a click there adds a note: the first chord of this fixture was being turned from G into Em/G
+      // on its way to the sidebar, and the baseline was a picture of a chord nobody had written.
+      await page.locator('.box .box-title').first().click();
       await page.locator('.sidebar').waitFor();
       await settle(page);
       return;
@@ -96,11 +99,11 @@ export async function goTo(page: Page, state: (typeof STATES)[keyof typeof STATE
       return;
     case STATES.view:
       await openExample(page, 'long');
-      // `force` because between 761px and 910px the Presets tab overflows its grid column and
-      // covers the Edit/View switch, so a real click lands on Presets instead. That is a bug, not a
-      // test problem: metrics.spec.ts asserts it separately, and this only keeps the screenshot of
-      // view mode obtainable in the meantime.
-      await page.getByRole('radio', { name: 'View' }).click({ force: true });
+      // A real click, at the switch's position. It used to be forced, because the Presets tab covered
+      // the Edit/View switch between 761px and 910px and a click there landed on Presets — which made
+      // the tablet "view mode" screenshot quietly one of edit mode. The wait is what would have said so.
+      await page.getByRole('radio', { name: 'View' }).click();
+      await page.locator('.canvas-frame.is-viewing').waitFor();
       await settle(page);
       return;
   }

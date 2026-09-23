@@ -1,0 +1,196 @@
+/* The scale wizard's own screen. Loaded with the wizard's chunk (src/components/ScaleWizard.tsx),
+   not on first paint: someone who never opens the wizard never downloads it. */
+
+/* ---- Scale wizard ---------------------------------------------------------- */
+
+.wizard-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  max-width: 1080px;
+}
+
+.wizard-section {
+  min-width: 0;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border: 1px solid var(--rule-mid);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.wizard-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.wizard-section-head.is-alone {
+  margin-bottom: 0;
+}
+
+.wizard-section-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.wizard-section .segmented button {
+  padding: var(--space-1) var(--space-3);
+}
+
+.scale-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.scale-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.scale-summary {
+  color: var(--ink-soft);
+  font-size: var(--text-md);
+}
+
+.chromatic-scroll,
+.chord-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.chromatic {
+  border-collapse: separate;
+  border-spacing: 4px;
+}
+
+.chromatic th {
+  padding-right: var(--space-2);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chromatic td {
+  min-width: 46px;
+  height: 40px;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  font-size: var(--text-md);
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.chromatic .note-cell {
+  color: var(--ink-faint);
+}
+
+.chromatic .note-cell.is-in {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+}
+
+/* The tonic matches the tonic's dots on the fretboard. */
+.chromatic .note-cell.is-tonic {
+  border-color: var(--tonic);
+  background: var(--tonic);
+  color: var(--on-tonic);
+}
+
+.chromatic .degree-cell {
+  border-style: dashed;
+}
+
+.chromatic .degree-cell.is-in {
+  border-style: solid;
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+.scale-board {
+  overflow-x: auto;
+}
+
+.scale-board .fretboard {
+  max-width: none;
+}
+
+.top-voice {
+  width: 260px;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+.mode-stop:disabled {
+  opacity: 0.3;
+}
+
+.chord-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.chord-table thead th {
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--rule-mid);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chord-table td,
+.chord-table tbody th {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.chord-table tbody tr:last-child td,
+.chord-table tbody tr:last-child th {
+  border-bottom: 0;
+}
+
+.chord-table thead th:first-child,
+.chord-table td:first-child {
+  padding-left: 0;
+}
+
+.chord-numeral {
+  font-weight: 600;
+}
+
+.chord-table .chord-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.chord-tones {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.chord-tone {
+  min-width: 2.3em;
+}

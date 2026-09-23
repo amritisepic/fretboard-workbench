@@ -1,3 +1,4 @@
+import '../../styles/tour.css';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { exampleDocument } from '../../state/examples';
 import { pauseSessionSaves } from '../../state/persistence';
@@ -230,7 +231,7 @@ export function GuidedTour({ onPanel, onClose }: { readonly onPanel: (panel: Tou
           ) : (
             <>
               {!last && (
-                <button type="button" className="link-button" onClick={finish}>
+                <button type="button" className="button is-tertiary tour-end" onClick={finish}>
                   End tour
                 </button>
               )}

@@ -17,7 +17,11 @@ export interface Snapshot {
   draw(region: Region, pixelWidth: number, pixelHeight: number): Promise<HTMLCanvasElement>;
 }
 
-/** Export pages are white; the rest of the palette stays as on screen. */
+/**
+ * Export pages are white. The rest of the palette is the light theme's whatever the screen shows —
+ * the stylesheet declares its tokens on `.export-root` as well as on `:root` for exactly that — since
+ * the page is printed on paper.
+ */
 const PAGE_OVERRIDES = '.export-root { --paper: #ffffff; background: #ffffff; }';
 
 let stylesPromise: Promise<string> | null = null;

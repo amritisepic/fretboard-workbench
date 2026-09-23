@@ -9,7 +9,7 @@
 - **Live site:** https://amritisepic.github.io/fretboard-workbench/ (GitHub Pages). Repo: https://github.com/amritisepic/fretboard-workbench (public).
 - **Project folder:** `C:\Users\amrit\Documents\fretboard-workbench`, deliberately kept out of the user's ME 315 class folder.
 - **Stack:** React 19, TypeScript 7 (strict), Vite 8, Vitest 5, Zustand 5, `idb` 8, `vite-plugin-pwa` 1.3, `@fontsource-variable/inter`. Tests add `fake-indexeddb`, jsdom, Testing Library, `axe-core` and Playwright.
-- **First download:** 115 kB gzip of JavaScript, with 28 kB more fetched when it is needed. Everything that opens on a click is split out in `App.tsx`: the presets panel (which carries the 88 examples), the export machinery, the tour, the scale wizard, the settings panel and the sidebar. Anything that renders on load is deliberately not split. The theory engine is still eager because the Zustand store calls `planKeys` synchronously through `state/boxChords.ts`; splitting it means changing the store.
+- **First download:** 114.6 kB gzip of JavaScript and 7.5 kB of CSS, with about 30 kB more fetched when it is needed; `npm run check:budgets` holds both. Everything that opens on a click is split out in `App.tsx`: the presets panel (which carries the 88 examples), the export machinery, the tour, the scale wizard, the settings panel and the sidebar. Anything that renders on load is deliberately not split. The theory engine is still eager because the Zustand store calls `planKeys` synchronously through `state/boxChords.ts`; splitting it means changing the store.
 - **Libraries the spec forbids:** music-theory libraries (no Tonal.js) and charting or diagram libraries. The fretboard is hand-built inline SVG.
 - **The spec is not in the repo.** Its essentials and the user's rulings are summarised below.
 
@@ -23,11 +23,24 @@
   - `docs/harmonic-analysis-plan.md`: the plan, the user's decisions (§5), and what was built, with every building decision and the corpus results (§7)
   - `docs/harmonic-patterns.md`: the pattern catalogue, with known gaps in its §7
   - `docs/ui-testing.md`: what the interface tests cover, the measured layout budgets, and every known interface defect on record
+- **The design plan (Phases 0–6)** was carried out on `claude/fretboard-design-review-bpx5lx`: Phase 0 and 1 merged to `master` as PR #2 on 2026-09-21, and Phases 2–6 on 2026-09-23. See "The design plan, carried out" below, `docs/ui-testing.md` for every before-and-after number, and `CLAUDE.md` for the design contract the build now enforces.
 - **Work from 2026-09-15** is on `master` and deployed. It was fast-forwarded from `scale-wizard-examples-export-tour` the same day, and the live site's bundle was checked for the new features. It covers the scale wizard, built-in examples, PDF/PNG export, the guided tour, vertical necks by default and the delete-warnings switch. See "Added on 2026-09-15" below.
 
 ## Open work, roughly in priority order
-0. **Bug: the top bar covers its own controls between 761px and 910px.** `.topbar` is a three-column grid whose outer columns are `minmax(0, 1fr)`, so the left column shrinks below its content and spills over the ones beside it; `.topbar-tab` has `z-index: 21` and lands on top. At 770px Save, the preset name field, Edit and View are all unclickable — tapping View opens the Presets panel. Up to 910px the name field is still covered, so the preset can't be renamed. Phones (760px and below) use a different grid and are fine, as is 920px and up. Found by `e2e/metrics.spec.ts`, which asserts it as a `test.fail`. Tablet portrait and split-screen windows land in this range.
-0b. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
+0. **Look at the rebuilt interface on real devices**, in both themes: a phone in portrait, a tablet, and a laptop. Every number in `docs/ui-testing.md` was measured in headless Chromium; nobody has used it on a phone yet, or in Safari or Firefox. In particular:
+   - dark mode on a stage-lit phone (colors set from JavaScript need `light-dark()`: Chrome 123, Safari 17.5, Firefox 120)
+   - the Display popover on touch
+   - the one-line strips on a phone
+   - the key-bar choice buttons, now the bar's full height
+0a. **Design targets not met, on the record:**
+   - first-paint JavaScript is 114.6 kB against the plan's 60, because the theory engine is eager (the store calls `planKeys` synchronously)
+   - 31 chords are about 4,170 elements against the plan's 2,000, because every fretboard position is a real control
+   - fretboard positions are 26px, clearing the 24px WCAG floor but not the 44px touch guideline the plan hoped for under `(pointer: coarse)`
+0b. **Small things known and left:**
+   - between 1025 and about 1050px, and at 761–800px, the preset name is shortened with an ellipsis
+   - boxes saved with the four old swatch colors (orange, ochre, green, teal) show as custom colors; `labelInk` still gives them readable labels
+   - the PWA manifest's `theme_color` is the light paper color, since a manifest cannot vary it by theme
+0c. **Review the 2026-09-15 decisions with the user** (listed under "Added on 2026-09-15"), in particular:
    - the standards' chord changes, written from memory rather than checked against a chart
    - export in Safari and Firefox, which was never tried
    - real printing of an exported PDF
@@ -88,7 +101,8 @@
 - **Subpath build like Pages:** set `$env:BASE_PATH = '/fretboard-workbench/'` before `build`, and before `preview` too.
 
 ## Deployment
-- **Workflow:** `.github/workflows/deploy.yml`. Every push to `master`, or a manual run from the Actions tab, runs `npm ci`, `npm test`, then `npm run build` with `BASE_PATH=/<repository-name>/`, and publishes `dist` with the Pages actions. Pull requests get no checks.
+- **Workflow:** `.github/workflows/deploy.yml`. Every push to `master`, or a manual run from the Actions tab, runs `npm ci`, `npm test`, then `npm run build` with `BASE_PATH=/<repository-name>/`, and publishes `dist` with the Pages actions.
+- **Checks:** `.github/workflows/ci.yml` runs on every push and pull request: unit tests (with axe and the design-token checks), the build with its typecheck, the bundle budgets, the PWA check, and the browser suite (screenshots, layout budgets, overlays, themes), uploading the Playwright report when it fails.
 - **Base path:** `vite.config.ts` uses `process.env.BASE_PATH ?? '/'` as Vite's `base`. A user site or a custom domain needs `BASE_PATH` set to `/`.
 - **Pages setup, already done:**
   - Source is set to "GitHub Actions".
@@ -127,7 +141,7 @@
   - `scale-wizard-examples-export-tour` (local and `origin`) points at `ea8967c`. It was fast-forwarded into `master` and deployed on 2026-09-15.
   - `handoff-merged` (local) holds the commit that marks it merged; `master` was fast-forwarded to it.
 - **Branch workflow:** when asked to commit while on `master`, create a branch first. Merge by fast-forwarding (`git merge --ff-only`) and pushing `master` when the user asks. That keeps history linear, keeps SHAs, and marks a matching PR as merged. `gh pr create` opens PRs.
-- **Commit messages** end with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`. Write them to a file and use `git commit -F`, because PowerShell splits quoted text.
+- **Commit messages** end with the `Co-Authored-By` line the session gives. Write them to a file and use `git commit -F`, because PowerShell splits quoted text.
 - **Commit only when asked.**
 
 ## How the user wants to work
@@ -169,8 +183,9 @@
   - `persistence.ts` also has `pauseSessionSaves`, which the tour uses
 - **`src/components/`:**
   - top of screen: `TopBar` (with the Edit/View switch), `PresetNameField`, `ExplorerPanel`, `SettingsPanel` (with the fret-marker switch)
-  - canvas: `Canvas` (key-bar splits and choosers), `useRowStarts`, `useFitToFrame` (view mode), `CanvasToolbar` (with the Harmonic analysis switch and Jazz/Classical), `BoxCard` (function tag and explanation), `Fretboard` (SVG with inlays), `VoiceLeadingStrip` (with the analysis lane), `FunctionText`
-  - sidebar: `Sidebar`, `RootBox`, `ScalePicker`/`ScaleSelects`, `ChordNameField`, `HarmonyField` (readings, pins, key at this box), `ColorField`, `RankingList` (marks the suggested scale), `FillSwitch`
+  - canvas: `Canvas` (one key bar per chord, over that chord, with the scale when it differs and the key-choice buttons), `useRowStarts`, `useFitToFrame` (view mode, with a legibility floor past which it scrolls), `CanvasToolbar` (Key, Find key and Shift in the bar; everything about how things are drawn in the Display popover), `BoxCard` (function tag and explanation), `Fretboard` (SVG with inlays), `VoiceLeadingStrip` (with the analysis lane), `FunctionText`
+  - sidebar: `Sidebar`, `RootBox`, `ScalePicker`/`ScaleSelects`, `ChordNameField`, `HarmonyField` (readings, pins, key at this box), `ColorField`, `RankingList` (marks the suggested scale, with a visible legend), `FillField` (a Switch for the fill and a Segmented for its type)
+  - the control vocabulary: `Switch`, `Segmented` (with `rovingRadioGroup.ts`), and three button levels in CSS; `InfoPopover`; `focusLayer.ts` (`useModalLayer`, `usePopoverLayer`)
   - other: `UpdateNotice`, `ConfirmDialog`, `useKeyboardShortcuts`, `readingChoice.ts` (pinning a reading moves an unedited scale with it)
   - scale wizard: `ScaleWizard` (screen and controls), `ScaleSheet` (heading, chromatic grid, fretboard, chord table, shared with export), `scaleWizardModel.ts`
   - `export/`: `ExportDialog` (options, preview, download), `WorkbenchSheet` and `ScaleExportSheet` (static layouts drawn off screen), `rasterize.ts` (element → SVG foreignObject with inlined CSS and Inter → canvas), `exportLayout.ts` (pages, fit, pagination), `pdfWriter.ts` (JPEG pages into a PDF)
@@ -183,10 +198,11 @@
 - **`scripts/corpus/`:**
   - `evaluate.eval.ts`, the evaluation runner, run by `vitest.corpus.config.ts`
   - `legacy/`: the key finder from commit `0ce8623`, kept only as the "old key finder" comparison
+- **Styles:** seven sheets in `src/styles/`. `base.css` holds the tokens (every color as `light-dark()`, the six type sizes, the seven spacing steps) and the control vocabulary; `workbench.css`, `sidebar.css` and `panels.css` load on first paint; `wizard.css`, `export.css` and `tour.css` arrive with their components' chunks. `src/state/theme.ts` and a few lines in `index.html` apply the theme before first paint.
 - **Tests:** in `__tests__` folders under `theory`, `components`, `state`, `corpus` and `design`. `vite.config.ts` holds both the Vitest settings and the PWA settings.
   - Component tests are `.test.tsx` and open with `// @vitest-environment jsdom`; everything else stays in Node. Setup is `src/test/setup.ts`, shared fixtures `src/test/fixtures.ts` (which builds progressions out of the built-in examples), axe helpers `src/test/axe.ts`.
-  - `src/design/` holds the contrast arithmetic and the design-token checks. The test reads the real stylesheet through `?inline`, which is why `vite.config.ts` sets `test.css: true`.
-  - `e2e/` holds the browser suite: `states.ts` (the six states both suites cover), `visual.spec.ts` (18 screenshot baselines), `measure.ts` and `metrics.spec.ts` (the layout budgets).
+  - `src/design/` holds the contrast arithmetic and the design-token checks: contrast in both themes, the type and space scales, the theme switching, motion. They read every sheet through `src/design/styles.ts` and `?inline`, which is why `vite.config.ts` sets `test.css: true`.
+  - `e2e/` holds the browser suite: `states.ts` (the seven states), `visual.spec.ts` (21 screenshot baselines), `measure.ts` and `metrics.spec.ts` (the layout budgets), `overlays.spec.ts` (focus and inert in a real browser), `theme.spec.ts`.
   - `theory/__tests__/harmonicAnalysis.test.ts` is the harness of 60 labelled progressions.
   - `theory/__tests__/chordSymbols.ts` builds chords from symbols ("B♭m7", "C/G", "F♯7(11)") for tests.
 
@@ -205,10 +221,10 @@
 
   There's also a collapsed "maximally distant" list. The scale the chord's function suggests is marked "Suggested".
 - **Strips** between boxes: separate Common tones, Voice leading and Harmonic analysis switches.
-- **Key bar and scale bar** above the boxes, with roman numerals counted from the key bar.
+- **Key bar** above each box, carrying the reference scale too when it differs from the key, with roman numerals counted from the key.
 - **Presets and folders** in IndexedDB, with JSON export/import and Export all.
 - **Offline PWA.**
-- **Design:** off-white `#FAF9F7`, dark grey `#3A3A3A`, rounded corners, and no gradients or shadows apart from a faint one on the sidebar. The exception is clicked notes, at the user's request.
+- **Design:** off-white `#FAF9F7`, dark grey `#3A3A3A`, rounded corners, and no gradients or shadows apart from a faint one on the sidebar and the scroll shadows on the export options. The exception is clicked notes, at the user's request, whose highlight is now a small spot at the top that stays clear of the label. A dark theme follows the system or a choice in Settings. `CLAUDE.md` holds the rest of the design contract.
 - **Keys:** Esc deselects, arrows nudge the root, Space toggles the fill, Delete removes a box after confirming. All shortcuts are off in view mode.
   - These are window-level shortcuts, and a widget that claims the same key must call `stopPropagation`, not only `preventDefault`: React hands the event on to `window` afterwards. The fretboard and the radiogroups all do, and each has a test for it. Note `isControl` in `useKeyboardShortcuts.ts` matches a `button` element and so never matches an SVG group carrying `role="button"`.
 - **Keyboard access:** every fretboard position is a toggle button. A board is one tab stop, landing on the first note of the chord; arrow keys walk the grid following the drawn orientation; Enter and Space place or remove a note; Home and End run along a string. View mode takes the roles and tab stops away again. Segmented controls, the dot-color swatches and the fill switch follow the ARIA radiogroup pattern through `components/rovingRadioGroup.ts` (one tab stop, arrows that move focus and selection, wrap, Home/End).
@@ -242,35 +258,68 @@
   - A diatonic target stays in the home key (A7 → Dm7 in C: D minor over A7, C major over Dm7).
   - A scale that alters the key still changes the collection but keeps the tonic: A♭ Lydian in C major shows C minor. A minor key's raised 7th on V/vii doesn't count as an alteration.
   - A box's scale is evidence for its reading only when the scale holds the chord.
-  - Ambiguous boxes split the key band and scale band ("B♭ minor | B♭ major?", at most two) and mark the numeral tentative. Clicking a choice pins that reading, and clicking the pinned one again unpins.
+  - Ambiguous boxes split the key bar ("B♭ minor | B♭ major?", at most two) and mark the numeral tentative. Clicking a choice pins that reading, and clicking the pinned one again unpins.
   - The sidebar's Harmony section lists every reading with its explanation and can fix the key at the box.
   - Test 10 (first amendment) still passes. The run-of-chords test was amended again for tonicization.
 - **Degree labels** count from the key in effect by default. Each box can switch to its reference scale, and the strips follow that choice.
 - **Capo** keeps the tuning. Shapes move with it, so chords, scales, the key and key pins transpose. Toolbar Shift transposes everything by a semitone.
 - **Neck orientation switch** rotates the fretboards (vertical = chord-chart style); it doesn't change the box layout.
-- **Board switch** (canvas toolbar, next to Neck, shown in view mode too): **Chord chart** crops each board to a window around its shape, the way a printed chart does; **Full neck** draws all the frets as before. Saved with the preset; new presets default to Chord chart, and a preset saved before the field existed opens Full neck, since that is how it was made.
+- **Board switch** (in the Display popover, next to Neck, available in view mode too): **Chord chart** crops each board to a window around its shape, the way a printed chart does; **Full neck** draws all the frets as before. Saved with the preset; new presets default to Chord chart, and a preset saved before the field existed opens Full neck, since that is how it was made.
   - The window is `fretWindow` in `components/boardModel.ts`, carried on `BoxView.window`. It covers the drawn positions (clicked notes and whatever a fill lights), at least five frets wide, growing towards the nut when the shape is near it so an open chord shows the nut rather than floating above it. A window that does not reach the capo draws a position marker — the first fret's number — instead of a nut.
   - **Only the selected box gets room to move** (`editableWindow`, two frets up and one down). A window worked out from the notes is a dead end for building, because nothing reachable inside it can push it up the neck; paying for that on every board cost half the density the window was for (three chords on a laptop against six). Clicking any note selects its box, so the reach arrives when it is wanted and the rest of the canvas stays tight.
   - The scale wizard passes no window and is unaffected.
 - **Harmonic analysis sits by the neck**, not in the header: beside the board when the neck is horizontal, under it when vertical. Keeping it out of the header is what makes every header the same height, so the boards in a row start at the same place — a tag that wrapped to two lines used to push its own board 17px down. The refused-click notice is positioned rather than in the flow for the same reason.
 - **Strips:**
   - Scales are compared when both boxes are set to fill scale.
-  - Common tones, Voice leading and Harmonic analysis are separate switches. The Names/Degrees choice shows while common tones or voice leading is on, and Jazz/Classical shows while harmonic analysis is on.
+  - Common tones, Voice leading and Harmonic analysis are separate switches in the Display popover. The Names/Degrees choice shows while common tones or voice leading is on, and Jazz/Classical while harmonic analysis is on; both appear inside the popover, so nothing on screen moves when they do.
+  - A strip draws only the voices that move, as a labelled arrow each (`B♭ ↘ A −1`); held voices are a dot each, and a summary line counts the work. The screen-reader text names every voice either way.
   - Old presets' single "visible" switch sets both.
 - **Ranking:** rows all start on the chord root. Tier-0 modes of the key in effect are pinned first. The tier-1 limit is 8.
 - **Edit / View** switch in the top bar:
   - View mode hides the sidebar, the add button, each box's "x" and the Key/Find key/Shift controls, and disables note clicks and shortcuts.
-  - It scales the whole canvas to fit. `useFitToFrame` tries layout widths up to a single row, box groups keep their natural width, and it enlarges at most 1.5×.
+  - It scales the whole canvas to fit. `useFitToFrame` tries layout widths up to a single row, box groups keep their natural width, and it enlarges at most 1.5×. It does not shrink below the scale at which the smallest text is 8px (the export's print floor, `MIN_LEGIBLE_SCALE`); past that the frame scrolls.
   - Key-bar choices show as text, and function tags still explain on hover or tap.
   - It isn't saved.
 - **Each box has an "x"** that removes it after the same confirmation as the Delete key.
 - **Clicked notes** have a gradient core and a crisp ring in the box color. The animation was removed on 2026-09-14, at the user's request.
-- **Fret markers:** light grey inlays at 3, 5, 7, 9, 12 (two dots), 15 and so on, behind the strings. A switch in Settings, on by default and saved with the preset.
+- **Fret markers:** quiet inlays at 3, 5, 7, 9, 12 (two dots), 15 and so on, behind the strings. A switch in Settings, on by default and saved with the preset.
 - **Responsive:**
   - The `.app` grid column is `minmax(0, 1fr)`, so content scrolls instead of widening the page.
   - At 1024px and below the sidebar slides over the canvas with a Done button.
-  - At 760px and below: the top bar uses icons and the name takes the leftover width, the toolbar is one scrolling row, strips sit above their box, and wide necks scroll sideways so notes stay finger-sized.
+  - At 1024px and below the top bar's tertiary buttons show icons only (their names stay accessible), and the save status steps out of sight, kept for screen readers; the Save button carries it.
+  - At 760px and below: the name takes the leftover width, the toolbar is one row that fits, strips sit above their box as a single line (`3 semitones · 2 common`), and wide necks scroll sideways.
 - **Accounts:** not now. Export all is the backup and migration path.
+
+## The design plan, carried out (2026-09-17 to 2026-09-23)
+
+A design review found that the interface had not kept up with the theory engine behind it. The review
+and its plan were delivered in conversation, not committed; `docs/ui-testing.md` records every
+measurement, and `CLAUDE.md` records the rules the work settled on. In short:
+
+- **Phase 0, instrumentation:** component render tests, axe, contrast tests and a Playwright suite at
+  three widths, with every known defect on record as a failing assertion.
+- **The AI-code callouts:** keyboard access to every fretboard position, radiogroups that implement
+  their pattern, real modal layers, a touch-reachable popover instead of a permanent tooltip, code
+  splitting, and a first-run state that says something.
+- **Phase 1, the fretboard:** a chord-chart window instead of the whole neck (the Board switch), one
+  element per empty position, 25px notes, and boards in a row that start together.
+- **Phase 2, information architecture:**
+  - one key bar per chord, over the chord it names
+  - one function chip
+  - strips that draw only the voices that move
+  - a Display popover that lets the toolbar fit a phone
+  - the load-bearing `title`s moved into text or accessible names
+  - rows of charts that line up at their heads and chips
+- **Phase 3, the design system:**
+  - one control vocabulary and a top bar nothing covers
+  - a palette that clears WCAG, and region colors ΔE 15 apart
+  - six type sizes and seven spacing steps
+  - a dark theme
+  - the stylesheet split into seven sheets, three of them lazy
+- **Phase 4, accessibility:** closed by the callouts, plus reduced motion.
+- **Phase 5, export:** one screen by default, a print floor of 6 pt, and view mode that scrolls rather
+  than shrinking text below 8px.
+- **Phase 6, guardrails:** `ci.yml`, bundle budgets, and `CLAUDE.md`.
 
 ## Added on 2026-09-15 (merged and deployed; decisions await the user's review)
 - **Asked and answered before building:**

@@ -1,10 +1,12 @@
-import { useId } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { boxChord } from '../state/boxChords';
 import { useWorkbench, type BoardView, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { keyName } from '../theory';
 import { planFoundKey } from './findKeyModel';
+import { usePopoverLayer } from './focusLayer';
 import { ScaleSelects } from './ScaleSelects';
 import { Segmented, type SegmentedOption } from './Segmented';
+import { Switch } from './Switch';
 
 const LABEL_OPTIONS: readonly SegmentedOption<LabelMode>[] = [
   { value: 'names', label: 'Names' },
@@ -27,20 +29,20 @@ const NOTATION_OPTIONS: readonly SegmentedOption<HarmonyNotation>[] = [
 ];
 
 /**
- * Preset-wide controls above the boxes: the key and shifting everything (edit mode only), the neck
- * and how much of it each board draws, and what the strips between boxes show.
+ * Preset-wide controls above the boxes.
+ *
+ * The bar is split by what a control does rather than by what it is. The key, Find key and Shift
+ * change the music itself and stay in the bar; the neck's direction, how much of it each board
+ * draws and what the strips between boxes show only change how that music is drawn, and live behind
+ * the Display button. Eight groups in one row came to 4.4 times the width of a 390px phone, and the
+ * bar scrolled sideways with `scrollbar-width: none` — three quarters of the controls were off the
+ * side of the screen with nothing to say they were there. What is left fits one row at every width.
  */
 export function CanvasToolbar() {
   const key = useWorkbench((s) => s.key);
   const setKey = useWorkbench((s) => s.setKey);
   const setKeyAndScales = useWorkbench((s) => s.setKeyAndScales);
   const transposeAll = useWorkbench((s) => s.transposeAll);
-  const orientation = useWorkbench((s) => s.orientation);
-  const setOrientation = useWorkbench((s) => s.setOrientation);
-  const boardView = useWorkbench((s) => s.settings.boardView);
-  const setBoardView = useWorkbench((s) => s.setBoardView);
-  const strips = useWorkbench((s) => s.strips);
-  const setStrips = useWorkbench((s) => s.setStrips);
   const viewing = useWorkbench((s) => s.viewing);
   const hasChord = useWorkbench((s) => s.boxes.some((box) => boxChord(box, s.settings).chord !== null));
 
@@ -102,88 +104,122 @@ export function CanvasToolbar() {
           </div>
         </>
       )}
-      <div className="toolbar-group" role="group" aria-labelledby="neck-label" data-tour="neck">
-        <span className="toolbar-label" id="neck-label">
-          Neck
-        </span>
-        <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
-      </div>
-      <div className="toolbar-group" role="group" aria-labelledby="board-label" data-tour="board">
-        <span className="toolbar-label" id="board-label">
-          Board
-        </span>
-        <Segmented label="Board view" options={BOARD_VIEW_OPTIONS} value={boardView} onChange={setBoardView} />
-      </div>
-      <div className="toolbar-group" role="group" aria-label="Lines between boxes" data-tour="strips">
-        <ToolbarSwitch
-          id="common-tones-label"
-          label="Common tones"
-          checked={strips.commonTones}
-          onChange={(commonTones) => setStrips({ commonTones })}
-        />
-        <ToolbarSwitch
-          id="voice-leading-label"
-          label="Voice leading"
-          checked={strips.voiceLeading}
-          onChange={(voiceLeading) => setStrips({ voiceLeading })}
-        />
-        {(strips.commonTones || strips.voiceLeading) && (
-          <Segmented
-            label="Labels between boxes"
-            options={LABEL_OPTIONS}
-            value={strips.labelMode}
-            onChange={(labelMode) => setStrips({ labelMode })}
-          />
-        )}
-      </div>
-      <div className="toolbar-group" role="group" aria-label="Harmonic analysis" data-tour="analysis">
-        <ToolbarSwitch
-          id="harmonic-analysis-label"
-          label="Harmonic analysis"
-          checked={strips.analysis}
-          onChange={(analysis) => setStrips({ analysis })}
-        />
-        {strips.analysis && (
-          <Segmented
-            label="Analysis notation"
-            options={NOTATION_OPTIONS}
-            value={strips.notation}
-            onChange={(notation) => setStrips({ notation })}
-          />
-        )}
-      </div>
+      <DisplayMenu />
     </div>
   );
 }
 
-export function ToolbarSwitch({
-  id,
-  label,
-  checked,
-  onChange,
-}: {
-  readonly id: string;
-  readonly label: string;
-  readonly checked: boolean;
-  readonly onChange: (checked: boolean) => void;
-}) {
+/**
+ * The Display button and the popover it opens.
+ *
+ * The panel is mounted only while it is open, because `usePopoverLayer` takes focus on mount and
+ * hands it back on unmount: keeping an empty panel in the DOM would mean the layer never opens or
+ * closes as far as focus is concerned.
+ */
+function DisplayMenu() {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  // Stable across renders so the layer's press-outside listener is not torn down and rebuilt on
+  // every keystroke the panel's controls cause.
+  const close = useCallback(() => setOpen(false), []);
+
   return (
-    <span className="toolbar-switch">
-      {/* Not `toolbar-label`: that treatment marks a group heading ("Key", "Shift", "Neck", "Board"),
-          and a switch's own name is not a heading. Seven uppercase headings in one row shout at each other. */}
-      <span className="toolbar-switch-label" id={id}>
-        {label}
-      </span>
+    <div className="toolbar-group toolbar-display" data-tour="display">
       <button
         type="button"
-        role="switch"
-        className="toggle"
-        aria-checked={checked}
-        aria-labelledby={id}
-        onClick={() => onChange(!checked)}
+        className="button is-compact"
+        data-display-trigger=""
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        // The panel is not in the DOM when it is closed, and pointing at an id that is not there
+        // tells a screen reader about a relationship it cannot follow.
+        aria-controls={open ? panelId : undefined}
+        onClick={() => setOpen((wasOpen) => !wasOpen)}
       >
-        <span className="toggle-knob" />
+        Display
       </button>
-    </span>
+      {open && <DisplayPanel id={panelId} onClose={close} />}
+    </div>
+  );
+}
+
+/**
+ * How the canvas is drawn: the neck, the board, and what the strips between boxes show.
+ *
+ * Like the settings and preset panels this is a non-modal `role="dialog"` — the canvas behind stays
+ * live and stays readable, which is the point of a control that changes how it looks, so a press
+ * outside closes it and there is no focus trap and no `aria-modal`. What it does owe the user is
+ * what `usePopoverLayer` provides: focus moves in when it opens, Escape closes it, and focus goes
+ * back to the Display button when it does.
+ */
+function DisplayPanel({ id, onClose }: { readonly id: string; readonly onClose: () => void }) {
+  const { ref, onKeyDown } = usePopoverLayer<HTMLDivElement>({ trigger: '[data-display-trigger]', onClose });
+  const orientation = useWorkbench((s) => s.orientation);
+  const setOrientation = useWorkbench((s) => s.setOrientation);
+  const boardView = useWorkbench((s) => s.settings.boardView);
+  const setBoardView = useWorkbench((s) => s.setBoardView);
+  const strips = useWorkbench((s) => s.strips);
+  const setStrips = useWorkbench((s) => s.setStrips);
+
+  const labels = useId();
+  const stripsLabelId = `${labels}-strips`;
+
+  return (
+    <div
+      className="toolbar-display-panel"
+      id={id}
+      role="dialog"
+      aria-label="Display"
+      tabIndex={-1}
+      ref={ref}
+      onKeyDown={onKeyDown}
+    >
+      <div className="toolbar-display-row">
+        <span className="toolbar-label">Neck</span>
+        <Segmented label="Neck orientation" options={ORIENTATION_OPTIONS} value={orientation} onChange={setOrientation} />
+      </div>
+      <div className="toolbar-display-row">
+        <span className="toolbar-label">Board</span>
+        <Segmented label="Board view" options={BOARD_VIEW_OPTIONS} value={boardView} onChange={setBoardView} />
+      </div>
+      <div className="toolbar-display-section" role="group" aria-labelledby={stripsLabelId}>
+        <span className="toolbar-label" id={stripsLabelId}>
+          Between boxes
+        </span>
+        <Switch label="Common tones" checked={strips.commonTones} onChange={(commonTones) => setStrips({ commonTones })} />
+        <Switch label="Voice leading" checked={strips.voiceLeading} onChange={(voiceLeading) => setStrips({ voiceLeading })} />
+        {/* Only worth showing once there are lines to label. Appearing here adds a row to the foot of
+            a section the user is already looking at, rather than shoving the controls beside it
+            sideways as it did when it sat in the bar itself. */}
+        {(strips.commonTones || strips.voiceLeading) && (
+          <div className="toolbar-display-row">
+            <span className="toolbar-label">Labels</span>
+            <Segmented
+              label="Labels between boxes"
+              options={LABEL_OPTIONS}
+              value={strips.labelMode}
+              onChange={(labelMode) => setStrips({ labelMode })}
+            />
+          </div>
+        )}
+      </div>
+      <div className="toolbar-display-section">
+        <Switch label="Harmonic analysis" checked={strips.analysis} onChange={(analysis) => setStrips({ analysis })} />
+        {/* Last in the panel on purpose: switching harmonic analysis on used to inject this control
+            into the middle of the bar and move every control to its right, so the thing the user was
+            reaching for was no longer under their finger. Here there is nothing below it to move. */}
+        {strips.analysis && (
+          <div className="toolbar-display-row">
+            <span className="toolbar-label">Notation</span>
+            <Segmented
+              label="Analysis notation"
+              options={NOTATION_OPTIONS}
+              value={strips.notation}
+              onChange={(notation) => setStrips({ notation })}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import { BoxCard } from './BoxCard';
 import { buildCanvasModel, type CanvasEntry, type KeyChoice } from './canvasModel';
 import { CanvasToolbar } from './CanvasToolbar';
 import { KEY_REGION_COLORS, bandShade } from './color';
+import { scrollBehavior } from './motion';
 import { pinReading } from './readingChoice';
 import { buildStripView } from './stripModel';
 import { useFitToFrame } from './useFitToFrame';
@@ -14,11 +15,16 @@ import { VoiceLeadingStrip } from './VoiceLeadingStrip';
 
 /**
  * Boxes flow left to right and wrap. Each box after the first is grouped with the strip that leads
- * into it, so a wrap never separates a strip from the box it leads into. Two bars run above the
- * boxes: the key band across each group joins into one bar per key region, with a seam where the key
- * changes, and under it each box shows its own reference scale. A box whose readings put it in
- * different keys splits its band ("B♭ minor | B♭ major?") and, in edit mode, choosing one pins it.
- * In view mode the whole canvas is scaled to fit the screen and nothing can be edited.
+ * into it, so a wrap never separates a strip from the box it leads into. The group is a grid: the
+ * strip takes the first column and the card the second, and one bar sits over the second column
+ * alone, so the bar begins exactly where the card it names begins.
+ *
+ * That bar carries both the key the box is in and the box's reference scale. The two used to be
+ * separate bands, one above the other, which in the common case printed the same name twice ("G
+ * Mixolydian" over "G Mixolydian"); the scale is now shown beside the key only when it says
+ * something the key does not. A box whose readings put it in different keys splits the bar
+ * ("B♭ minor | B♭ major?") and, in edit mode, choosing one pins it. In view mode the whole canvas is
+ * scaled to fit the screen and nothing can be edited.
  */
 /**
  * What clicking one of a box's offered keys will do. The key bar shows only the key names, so this
@@ -53,7 +59,7 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
   useEffect(() => {
     if (boxCount > previousCount.current && !viewing) {
       const groups = canvasRef.current?.querySelectorAll('.box-group');
-      groups?.[groups.length - 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      groups?.[groups.length - 1]?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
     }
     previousCount.current = boxCount;
   }, [boxCount, viewing]);
@@ -78,15 +84,6 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
             const next = i + 1 < model.entries.length ? model.entries[i + 1] : null;
             const rowStart = i === 0 || rowStarts[i] === true;
             const { analysis, keyChoices } = entry;
-            const bandClass = [
-              'key-band',
-              i === 0 ? 'is-first' : '',
-              rowStart ? 'is-row-start' : '',
-              entry.regionStart ? 'is-region-start' : '',
-              entry.regionEnd ? 'is-region-end' : '',
-            ]
-              .filter(Boolean)
-              .join(' ');
             const tentative = analysis.ambiguous && (strips.analysis || keyChoices.length > 0);
             const tag =
               strips.analysis && analysis.facts
@@ -102,11 +99,35 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
                   }
                 : null;
             const otherScales = keyChoices.filter((c) => !c.chosen && c.scaleName && c.scaleName !== entry.view.scaleName);
+            // The reference scale earns its place in the bar only when it is not simply the key
+            // said again, or when a rival reading suggests a different one.
+            const showScale = entry.view.scaleName !== entry.keyName || otherScales.length > 0;
+            const scaleTitle = `Reference scale: ${entry.view.scaleName}${otherScales.map((c) => ` (or ${c.scaleName} in ${c.keyName})`).join('')}`;
             return (
               <div key={entry.box.id} className="box-group">
+                {previous &&
+                  (showStrips ? (
+                    <VoiceLeadingStrip
+                      strip={buildStripView(previous, entry, strips)}
+                      voices={voices}
+                      lane={
+                        strips.analysis
+                          ? {
+                              relations: relationViews(entry.relationsIn, strips.notation, keyName(analysis.reading.home.ref)),
+                              patterns: patternsAcross(model.patterns, i),
+                            }
+                          : null
+                      }
+                      wrapped={rowStart}
+                    />
+                  ) : (
+                    <div className="box-spacer" />
+                  ))}
                 <div
-                  className={bandClass}
+                  className="key-band"
                   style={{ backgroundColor: KEY_REGION_COLORS[entry.colorIndex % KEY_REGION_COLORS.length] }}
+                  // Redundant with the text in the bar, which is where the information actually
+                  // lives: a native tooltip never appears on a touch screen.
                   title={keyChoices.length > 0 ? `Key: ${keyChoices.map((c) => c.keyName).join(' or ')}` : `Key: ${entry.keyName}`}
                 >
                   {keyChoices.length > 0 ? (
@@ -148,48 +169,42 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
                       })}
                     </span>
                   ) : (
-                    (entry.regionStart || rowStart) && (
+                    // Every bar names its key now that each one covers a single chord. A bar
+                    // continuing a key region says so in a lighter weight, which is what the joined
+                    // bar used to say by simply running on.
+                    <>
+                      {/* The names alone say which is which to anyone who can see the two colors,
+                          so the words that tell them apart are carried for screen readers only. */}
+                      <span className="visually-hidden">Key: </span>
                       <span className={entry.regionStart ? 'key-band-label' : 'key-band-label is-continued'}>
                         {entry.keyName}
                       </span>
-                    )
+                    </>
                   )}
-                </div>
-                <div className="box-group-body">
-                  {previous &&
-                    (showStrips ? (
-                      <VoiceLeadingStrip
-                        strip={buildStripView(previous, entry, strips)}
-                        voices={voices}
-                        lane={
-                          strips.analysis
-                            ? {
-                                relations: relationViews(entry.relationsIn, strips.notation, keyName(analysis.reading.home.ref)),
-                                patterns: patternsAcross(model.patterns, i),
-                              }
-                            : null
-                        }
-                        wrapped={rowStart}
-                      />
-                    ) : (
-                      <div className="box-spacer" />
-                    ))}
-                  <div className="box-column">
-                    <div
-                      className="scale-band"
-                      style={{ backgroundColor: bandShade(entry.box.color) }}
-                      title={`Reference scale: ${entry.view.scaleName}${otherScales.map((c) => ` (or ${c.scaleName} in ${c.keyName})`).join('')}`}
-                    >
-                      <span>
+                  {showScale && (
+                    <>
+                      <span className="visually-hidden">Reference scale: </span>
+                      <span
+                        className="key-band-scale"
+                        style={{ backgroundColor: bandShade(entry.box.color) }}
+                        title={scaleTitle}
+                      >
                         {entry.view.scaleName}
                         {otherScales.map((c) => (
                           <span key={c.pinId} className="scale-alternative">
                             {' | '}
-                            {c.scaleName}?
+                            {c.scaleName}
+                            {/* Which key that rival scale belongs to is in the bar's title only,
+                                and a title is nothing on a touch screen. */}
+                            <span className="visually-hidden">{` in ${c.keyName}`}</span>?
                           </span>
                         ))}
                       </span>
-                    </div>
+                    </>
+                  )}
+                </div>
+                <div className="box-group-body">
+                  <div className="box-column">
                     <BoxCard
                       box={entry.box}
                       view={entry.view}
@@ -208,7 +223,7 @@ export function Canvas({ onRequestRemove }: { readonly onRequestRemove: (boxId: 
           })}
           {!viewing && (
             <div className="add-slot">
-              <button type="button" className="add-button" aria-label="Add a box" onClick={() => addBox()}>
+              <button type="button" className="button is-icon add-button" aria-label="Add a box" onClick={() => addBox()}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
                   <path d="M12 5v14M5 12h14" />
                 </svg>

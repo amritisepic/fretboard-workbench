@@ -26,6 +26,42 @@ export const PX_PER_POINT = 96 / 72;
 /** The largest a fitted export enlarges short content. */
 export const MAX_FIT_SCALE = 2;
 
+/**
+ * The smallest text a board on an export sheet draws, in CSS pixels: the fret numbers, the string
+ * names and every note's label, which all share this size. It is the stylesheet's smallest size,
+ * `--text-xs`, and a test holds the two to one value. It was 10.5 until the type scale did away with
+ * half pixels and put its floor at 11, which lets an export shrink a little further before it breaks
+ * onto another page, and view mode likewise.
+ *
+ * A note's label used to drop to 8.5px once it ran past two glyphs, and this floor was set without
+ * it, since a floor that honored it would have forced a page count nobody wanted. That size is gone:
+ * a long label is now narrowed to fit its note at full height, so nothing on a board is smaller than
+ * this and the floor covers every glyph on it.
+ */
+export const SMALLEST_SHEET_TEXT_PX = 11;
+
+/**
+ * The size below which printed text is fine print rather than something read at arm's length. Six
+ * points is the usual floor, and a chord chart is read on a music stand.
+ */
+export const MIN_PRINT_POINTS = 6;
+
+/** What `cssPixels` of text measures on paper, in points, when the sheet is printed at `scale`. */
+export const printedPoints = (cssPixels: number, scale: number): number => (cssPixels / PX_PER_POINT) * scale;
+
+/**
+ * The smallest scale an export may shrink to before the page count has to grow instead.
+ *
+ * The sheet's smallest text is 8.25 points at full size, so six points is about 73% of it. Fitting
+ * everything onto one page is a promise about the page count, and it is the wrong promise to keep
+ * when keeping it means printing a chart nobody can read.
+ */
+export const MIN_LEGIBLE_SCALE = MIN_PRINT_POINTS / printedPoints(SMALLEST_SHEET_TEXT_PX, 1);
+
+/** Whether `scale` keeps the sheet's smallest text at or above the print floor. */
+export const isLegible = (scale: number): boolean =>
+  printedPoints(SMALLEST_SHEET_TEXT_PX, scale) >= MIN_PRINT_POINTS - 0.001;
+
 export interface PageGeometry {
   /** The page in points. */
   readonly width: number;

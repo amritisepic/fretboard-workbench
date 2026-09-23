@@ -15,6 +15,7 @@
     "typecheck": "tsc -p tsconfig.theory.json && tsc -p tsconfig.json && tsc -p tsconfig.e2e.json",
     "icons": "node scripts/generate-icons.mjs",
     "verify:pwa": "npm run build && node scripts/verify-pwa.mjs",
+    "check:budgets": "node scripts/check-budgets.mjs",
     "test:offline": "npm run build && node scripts/test-offline.mjs"
   },
   "devDependencies": {

@@ -12,6 +12,7 @@ import {
   type ScaleRef,
 } from '../theory';
 import { getBoxView, type BoxView } from './boardModel';
+import { regionSlots } from './color';
 
 /** A key a box may be in, from one of its readings, with the scale that reading suggests. */
 export interface KeyChoice {
@@ -35,6 +36,10 @@ export interface CanvasEntry {
   readonly numeral: string;
   readonly regionStart: boolean;
   readonly regionEnd: boolean;
+  /**
+   * Which of KEY_REGION_COLORS the box's key bar wears. Not the key's own index from planKeys, which
+   * runs past the palette once a progression has more than eight keys: see regionSlots.
+   */
   readonly colorIndex: number;
   /** How harmonic analysis reads the box. */
   readonly analysis: BoxAnalysis;
@@ -79,6 +84,7 @@ function keyChoicesFor(analysis: BoxAnalysis, view: BoxView, key: ScaleRef): Key
 /** Every box with its view, the key in effect at it (see planKeys), its reading and its place in the key bar. */
 export function buildCanvasModel(boxes: readonly Box[], settings: Settings, globalKey: ScaleRef): CanvasModel {
   const plan = keyPlanOf(globalKey, boxes, settings);
+  const slots = regionSlots(plan.regions.map((region) => region.colorIndex));
   const entries = boxes.map((box, i): CanvasEntry => {
     const key = plan.keys[i];
     const view = getBoxView(box, settings, key);
@@ -92,7 +98,7 @@ export function buildCanvasModel(boxes: readonly Box[], settings: Settings, glob
       numeral: view.chord ? romanNumeral(view.chord, key) : '',
       regionStart: region.first === i,
       regionEnd: region.last === i,
-      colorIndex: region.colorIndex,
+      colorIndex: slots[plan.regionOfBox[i]],
       analysis,
       relationsIn: i > 0 ? plan.analysis.relations[i - 1] : [],
       keyChoices: keyChoicesFor(analysis, view, key),

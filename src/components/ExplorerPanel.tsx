@@ -18,6 +18,15 @@ import { downloadText } from './download';
 import { usePopoverLayer } from './focusLayer';
 import { rovingMenu } from './rovingMenu';
 
+/**
+ * A tree row's left padding: one step of the space scale per level, on top of a starting step. The
+ * nesting is the one spacing the stylesheet cannot express on its own, since it depends on depth, so
+ * it is written here — in the scale's tokens rather than in pixel sums that sat off it.
+ */
+const indentBy = (depth: number, start = 'var(--space-2)') => ({
+  paddingLeft: `calc(${start} + ${depth} * var(--space-4))`,
+});
+
 interface Target {
   readonly kind: 'folder' | 'preset';
   readonly id: string;
@@ -47,9 +56,9 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 /**
  * The preset explorer: saved presets in nested folders, with create, rename, move, delete, export and
- * import. Like the settings panel it is a non-modal popover hanging off a top-bar tab, not a modal
+ * import. Like the settings panel it is a non-modal popover opened from a top-bar button, not a modal
  * dialog: the canvas behind stays live and a press outside closes it, so there is no `aria-modal`
- * and no focus trap — only focus in on open, Escape to close, and focus back to the tab afterwards.
+ * and no focus trap — only focus in on open, Escape to close, and focus back to the button afterwards.
  */
 export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
   const ids = useId();
@@ -297,7 +306,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
                   type="button"
                   role="menuitem"
                   className="explorer-menu-item"
-                  style={{ paddingLeft: 10 + option.depth * 14 }}
+                  style={indentBy(option.depth, 'var(--space-3)')}
                   disabled={option.id === currentParent || insideItself}
                   onClick={() => void moveTarget(target, option.id)}
                 >
@@ -333,7 +342,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
   const renderLevel = (parentId: string | null, depth: number): ReactNode[] => {
     const folders = childFolders(library.folders, parentId);
     const presets = presetsIn(library.presets, parentId);
-    const indent = { paddingLeft: 6 + depth * 18 };
+    const indent = indentBy(depth);
 
     const folderItems = folders.map((folder: FolderRecord) => {
       const target: Target = { kind: 'folder', id: folder.id };
@@ -378,7 +387,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
           {isExpanded && (
             <ul className="explorer-list">
               {count === 0 ? (
-                <li className="explorer-empty-folder" style={{ paddingLeft: 30 + (depth + 1) * 18 }}>
+                <li className="explorer-empty-folder" style={indentBy(depth + 1, 'var(--space-6)')}>
                   Empty
                 </li>
               ) : (
@@ -491,7 +500,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
             const isExpanded = expanded.has(id);
             return (
               <li key={id}>
-                <div className="explorer-row" style={{ paddingLeft: 6 }}>
+                <div className="explorer-row" style={indentBy(0)}>
                   <button
                     type="button"
                     className="explorer-caret"
@@ -511,7 +520,7 @@ export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
                   <ul className="explorer-list">
                     {folder.examples.map((example) => (
                       <li key={example.name}>
-                        <div className="explorer-row" style={{ paddingLeft: 24 }}>
+                        <div className="explorer-row" style={indentBy(1)}>
                           <span className="explorer-caret" aria-hidden="true" />
                           <button type="button" className="explorer-name" onClick={() => openExample(folder, example)}>
                             <PresetIcon />

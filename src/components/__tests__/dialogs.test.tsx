@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLibrary } from '../../state/library';
+import { usePreferences } from '../../state/preferences';
 import { useWorkbench } from '../../state/workbench';
 import { axeRuleIds } from '../../test/axe';
 import { FIXTURES, openExample, resetStores } from '../../test/fixtures';
@@ -202,6 +203,35 @@ describe('SettingsPanel', () => {
     expect(document.getElementById('fret-count-message')?.textContent).toContain('set to 30');
   });
 
+  it('turns its two on/off settings with the one Switch, from the name as well as the track', () => {
+    render(<SettingsPanel onClose={vi.fn()} />);
+    const markers = screen.getByRole('switch', { name: 'Fret markers' });
+    const before = useWorkbench.getState().settings.fretMarkers;
+    expect(markers.getAttribute('aria-checked')).toBe(String(before));
+    fireEvent.click(markers);
+    expect(useWorkbench.getState().settings.fretMarkers).toBe(!before);
+
+    const warnings = screen.getByRole('switch', { name: 'Show delete warnings' });
+    expect(warnings.classList.contains('switch-track')).toBe(true);
+    const was = usePreferences.getState().deleteWarnings;
+    fireEvent.click(screen.getByText('Show delete warnings'));
+    expect(usePreferences.getState().deleteWarnings).toBe(!was);
+  });
+
+  it('offers the theme as System, Light and Dark, following the system until one is chosen', () => {
+    render(<SettingsPanel onClose={vi.fn()} />);
+    const theme = screen.getByRole('radiogroup', { name: 'Theme' });
+    const options = within(theme).getAllByRole('radio');
+    expect(options.map((option) => option.textContent)).toEqual(['System', 'Light', 'Dark']);
+    expect(within(theme).getByRole('radio', { checked: true }).textContent).toBe('System');
+
+    fireEvent.click(within(theme).getByRole('radio', { name: 'Dark' }));
+    expect(usePreferences.getState().theme).toBe('dark');
+    expect(within(theme).getByRole('radio', { checked: true }).textContent).toBe('Dark');
+    // One tab stop for the group, on the choice, as every Segmented has.
+    expect(options.filter((option) => option.tabIndex === 0).map((option) => option.textContent)).toEqual(['Dark']);
+  });
+
   it('closes on a pointer press outside itself', () => {
     const onClose = vi.fn();
     render(<SettingsPanel onClose={onClose} />);
@@ -218,7 +248,7 @@ describe('SettingsPanel', () => {
 
   // Was a known gap called 'declares itself modal', asserting aria-modal="true". The gap was real —
   // no focus management at all — but the contract was the wrong one. This panel is not modal: it
-  // hangs off a top-bar tab with the canvas behind it live and clickable, and it closes on a press
+  // opens from a top-bar button with the canvas behind it live and clickable, and it closes on a press
   // outside, which no modal ever would. A non-modal role="dialog" is legitimate, so what it owes is
   // focus, not aria-modal, and that is what these two assert instead.
   it('is a popover rather than a modal dialog, and does not claim otherwise', () => {
@@ -238,7 +268,7 @@ describe('SettingsPanel', () => {
     expect(document.activeElement).toBe(panel);
   });
 
-  it('closes on Escape and gives focus back to the tab it hangs off', () => {
+  it('closes on Escape and gives focus back to the button that opened it', () => {
     const onClose = vi.fn();
     const Harness = ({ open }: { readonly open: boolean }) => (
       <>
@@ -261,18 +291,36 @@ describe('SettingsPanel', () => {
 describe('ExportDialog', () => {
   beforeEach(resetStores);
 
-  it('offers the format, the chords and what to show', () => {
+  it('opens on the format alone, with everything else behind More options', () => {
     openExample(FIXTURES.short);
     render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: 'Export preset' });
     expect(within(dialog).getByRole('radiogroup', { name: 'Format' })).toBeDefined();
+    // Not merely hidden: a control that is in the document is in the tab order and in the
+    // accessibility tree, and counts against the number of decisions this dialog asks for.
+    expect(within(dialog).queryByLabelText('Paper size')).toBeNull();
+    expect(within(dialog).queryByRole('checkbox', { name: 'Harmonic analysis' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'More options' })).toHaveProperty('ariaExpanded', 'false');
+  });
+
+  it('gives every option back when More options is opened', () => {
+    openExample(FIXTURES.short);
+    render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    const dialog = screen.getByRole('dialog', { name: 'Export preset' });
     expect(within(dialog).getByLabelText('Paper size')).toBeDefined();
+    expect(within(dialog).getByLabelText('Margins')).toBeDefined();
     expect(within(dialog).getByRole('checkbox', { name: 'Harmonic analysis' })).toBeDefined();
+    expect(within(dialog).getByRole('radiogroup', { name: 'Fit' })).toBeDefined();
+    expect(within(dialog).getByRole('radiogroup', { name: 'Resolution' })).toBeDefined();
+    expect(within(dialog).getByLabelText('Boxes per row')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Fewer options' })).toHaveProperty('ariaExpanded', 'true');
   });
 
   it('lists every chord, all of them chosen to start with', () => {
     const count = openExample(FIXTURES.short);
     const { container } = render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     const boxes = [...container.querySelectorAll<HTMLInputElement>('.export-boxes input[type="checkbox"]')];
     expect(boxes).toHaveLength(count);
     expect(boxes.every((b) => b.checked)).toBe(true);
@@ -303,19 +351,20 @@ describe('ExportDialog', () => {
   it('groups the export checkboxes under the heading that names them', () => {
     openExample(FIXTURES.short);
     render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
     expect(screen.getByRole('group', { name: /^Chords/ })).toBeDefined();
     expect(screen.getByRole('group', { name: 'Show' })).toBeDefined();
   });
 
-  // ---- Known gaps -------------------------------------------------------
-
-  // Counted so the number is visible and has to be argued down rather than drifting up. Plan items
-  // 32 and 33 (Phase 5) put everything past format and download behind "More options".
-  it.fails('asks for no more than six decisions before a file can be downloaded', () => {
+  it('asks for no more than six decisions before a file can be downloaded', () => {
     openExample(FIXTURES.short);
     const { container } = render(<ExportDialog screen="workbench" onClose={vi.fn()} />);
     const options = container.querySelector('.export-options') as Element;
-    const controls = options.querySelectorAll('[role="radiogroup"], select, input[type="range"], .export-show input');
+    // The count was written against `.export-show input`, a class this dialog has never had, so the
+    // checkboxes it was meant to catch were never counted. `.export-features input` is what they
+    // are, and the number is the honest one: eight feature checkboxes used to sit in this column
+    // alongside eight other controls, and every one of them was a question asked before Download.
+    const controls = options.querySelectorAll('[role="radiogroup"], select, input[type="range"], .export-features input');
     expect(controls.length).toBeLessThanOrEqual(6);
   });
 });

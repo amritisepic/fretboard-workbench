@@ -34,10 +34,10 @@ export interface Measurements {
   /** Fret wires a board draws. A chord chart shows a window of four or five, not the whole neck. */
   readonly fretsDrawn: number;
   /**
-   * How far apart the nuts of the boards in the top row sit along the axis the frets run down, in
-   * pixels. Comparing shapes across a progression is what the app is for, so the boards in a row
-   * have to start at the same place: anything above a pixel or two means a card above one board is
-   * taller than the card above another.
+   * How far apart the necks of the boards in a row start, along the axis the frets run down, in
+   * pixels, for the worst row on the page. Comparing shapes across a progression is what the app is
+   * for, so the boards in a row have to start at the same place: anything above a pixel or two means
+   * one card or one board's head is taller than its neighbour's.
    */
   readonly nutSpread: number;
 }
@@ -85,18 +85,30 @@ export async function measure(page: Page): Promise<Measurements> {
       .filter((r) => r.width > 0 && r.height > 0)
       .map((r) => Math.min(r.width, r.height));
 
-    // Boards in the first row: the ones whose top edge matches the topmost board.
-    const boards = [...document.querySelectorAll('.fretboard')];
-    const tops = boards.map((b) => b.getBoundingClientRect().top);
-    const rowTop = tops.length > 0 ? Math.min(...tops) : 0;
-    const firstRow = boards.filter((_, i) => Math.abs(tops[i] - rowTop) < 200);
-    // A nut is only drawn when the window includes the open strings; a board showing a window up
-    // the neck has none, and then the neck's own start is what has to line up.
+    // Where each board's neck starts: its nut, or the wire that heads a window further up. Only the
+    // head wire, by its class: the first `.wire` in the document is the one a fret *below* it, and
+    // measuring that against a neighbour's nut compared two different lines.
     const startOf = (board: Element) => {
-      const nut = board.querySelector('.nut') ?? board.querySelector('.wire');
-      return nut ? nut.getBoundingClientRect().top : board.getBoundingClientRect().top;
+      const head = board.querySelector('.nut, .wire.is-head');
+      return head ? head.getBoundingClientRect().top : board.getBoundingClientRect().top;
     };
-    const starts = firstRow.map(startOf);
+    // Every row, not only the first. Rows are told apart by the top of the board, which is at least
+    // a card's height from the next row's; the worst row is the number, because a row that mixes an
+    // open-position board with one up the neck is exactly where the heads used to differ, and the
+    // fixtures' first rows happen not to.
+    const rows: Element[][] = [];
+    for (const board of [...document.querySelectorAll('.fretboard')]) {
+      const top = board.getBoundingClientRect().top;
+      const row = rows.find((r) => Math.abs(r[0].getBoundingClientRect().top - top) < 200);
+      if (row) row.push(board);
+      else rows.push([board]);
+    }
+    const spreads = rows
+      .filter((row) => row.length > 1)
+      .map((row) => {
+        const starts = row.map(startOf);
+        return Math.max(...starts) - Math.min(...starts);
+      });
 
     const positionSides = [...document.querySelectorAll('.fretboard .position')]
       .map((el) => el.getBoundingClientRect())
@@ -106,7 +118,7 @@ export async function measure(page: Page): Promise<Measurements> {
     return {
       smallestBoardTarget: positionSides.length > 0 ? Number(Math.min(...positionSides).toFixed(1)) : 0,
       fretsDrawn: board ? board.querySelectorAll('.wire').length : 0,
-      nutSpread: starts.length > 1 ? Math.round(Math.max(...starts) - Math.min(...starts)) : 0,
+      nutSpread: spreads.length > 0 ? Math.round(Math.max(...spreads)) : 0,
       chromeAboveFirstChord: Math.round(chromeAboveFirstChord),
       viewportHeight,
       chromeFraction: Number((chromeAboveFirstChord / viewportHeight).toFixed(3)),

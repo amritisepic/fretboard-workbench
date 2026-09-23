@@ -45,9 +45,9 @@ export const TOUR_STEPS: readonly TourStep[] = [
     screen: 'workbench',
   },
   {
-    title: 'Key bar and scale bar',
-    body: 'The top bar shows the key in effect at each box, which changes when the progression tonicizes or modulates. Under it is each box’s reference scale.',
-    target: '.canvas > .box-group:nth-child(-n+2) .key-band, .canvas > .box-group:nth-child(-n+2) .scale-band',
+    title: 'The key bar',
+    body: 'The bar over each box names the key in effect there, which changes when the progression tonicizes or modulates. When the box’s reference scale is something other than that key, the bar names it too, on the box’s own color.',
+    target: '.canvas > .box-group:nth-child(-n+2) .key-band',
     screen: 'workbench',
   },
   {
@@ -101,8 +101,11 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: 'What the canvas shows',
-    body: 'Draw the necks vertically like chord charts or horizontally like tab, show each chord in a window around its shape or on the whole neck, and switch common tones, voice leading and harmonic analysis on or off.',
-    target: '[data-tour="neck"], [data-tour="board"], [data-tour="strips"], [data-tour="analysis"]',
+    body: 'Display holds how the music is drawn: necks vertical like chord charts or horizontal like tab, each chord in a window around its shape or on the whole neck, and common tones, voice leading and harmonic analysis on or off.',
+    // The button, not the controls themselves: they are inside the popover it opens, and the tour
+    // makes the page behind its card inert, so a step pointing into a closed popover would ring
+    // nothing the user can see.
+    target: '[data-tour="display"]',
     screen: 'workbench',
   },
   {

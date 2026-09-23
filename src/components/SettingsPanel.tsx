@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TUNING_PRESETS } from '../data/tunings';
-import { usePreferences } from '../state/preferences';
+import { usePreferences, type ThemeChoice } from '../state/preferences';
 import { useWorkbench } from '../state/workbench';
 import {
   MAX_CAPO,
@@ -16,18 +16,26 @@ import {
   toMidi,
 } from '../theory';
 import { usePopoverLayer } from './focusLayer';
+import { Segmented, type SegmentedOption } from './Segmented';
+import { Switch } from './Switch';
 
 const OCTAVES = [0, 1, 2, 3, 4, 5, 6, 7];
+
+const THEME_OPTIONS: readonly SegmentedOption<ThemeChoice>[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 const sameTuning = (a: readonly number[], b: readonly number[]) =>
   a.length === b.length && a.every((midi, i) => midi === b[i]);
 
 /**
  * The settings panel, which is not a modal dialog and does not claim to be one: it hangs off the
- * top bar's Settings tab with the canvas behind it still live, still clickable and still worth
+ * top bar's Settings button with the canvas behind it still live, still clickable and still worth
  * reading, which is exactly why a press outside closes it. So there is no `aria-modal` here and no
  * focus trap — only what a non-modal `role="dialog"` still owes: focus moves in when it opens,
- * Escape closes it, and focus goes back to the tab when it does.
+ * Escape closes it, and focus goes back to the button when it does.
  */
 export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
   const { ref: panelRef, onKeyDown } = usePopoverLayer<HTMLDivElement>({ trigger: '[data-settings-tab]', onClose });
@@ -131,6 +139,7 @@ export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
       <FretCountField />
       <FretMarkersField />
       <DeleteWarningsField />
+      <ThemeField />
     </div>
   );
 }
@@ -142,24 +151,28 @@ function DeleteWarningsField() {
 
   return (
     <section className="settings-section">
-      <div className="settings-row">
-        <span className="field-label" id="delete-warnings-label">
-          Show delete warnings
-        </span>
-        <button
-          type="button"
-          role="switch"
-          className="toggle"
-          aria-checked={deleteWarnings}
-          aria-labelledby="delete-warnings-label"
-          onClick={() => setDeleteWarnings(!deleteWarnings)}
-        >
-          <span className="toggle-knob" />
-        </button>
-      </div>
+      <Switch label="Show delete warnings" labelClassName="field-label" checked={deleteWarnings} onChange={setDeleteWarnings} />
       <p className="hint">
         Ask before removing a box. Kept on this device rather than in the preset. Deleting presets and folders always asks.
       </p>
+    </section>
+  );
+}
+
+/**
+ * Light or dark, or whichever the device is set to. A device setting like the delete warnings, and
+ * beside them for that reason: a rehearsal room and a stage want the dark theme whichever preset is
+ * open.
+ */
+function ThemeField() {
+  const theme = usePreferences((s) => s.theme);
+  const setTheme = usePreferences((s) => s.setTheme);
+
+  return (
+    <section className="settings-section">
+      <span className="field-label">Theme</span>
+      <Segmented label="Theme" options={THEME_OPTIONS} value={theme} onChange={setTheme} />
+      <p className="hint">System follows this device's light or dark setting. Kept on this device rather than in the preset.</p>
     </section>
   );
 }
@@ -170,22 +183,8 @@ function FretMarkersField() {
 
   return (
     <section className="settings-section">
-      <div className="settings-row">
-        <span className="field-label" id="fret-markers-label">
-          Fret markers
-        </span>
-        <button
-          type="button"
-          role="switch"
-          className="toggle"
-          aria-checked={fretMarkers}
-          aria-labelledby="fret-markers-label"
-          onClick={() => setFretMarkers(!fretMarkers)}
-        >
-          <span className="toggle-knob" />
-        </button>
-      </div>
-      <p className="hint">Light grey dots at frets 3, 5, 7, 9 and 12, repeating up the neck.</p>
+      <Switch label="Fret markers" labelClassName="field-label" checked={fretMarkers} onChange={setFretMarkers} />
+      <p className="hint">Quiet dots at frets 3, 5, 7, 9 and 12, repeating up the neck.</p>
     </section>
   );
 }
