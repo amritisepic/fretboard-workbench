@@ -4,7 +4,8 @@ import { fireEvent, render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { axeRuleIds } from '../../test/axe';
 import { C_MAJOR_POSITIONS, boxWithPositions, resetStores, testSettings } from '../../test/fixtures';
-import { getBoxView } from '../boardModel';
+import type { PitchClass } from '../../theory';
+import { fretWindow, getBoxView, type BoardDot } from '../boardModel';
 import { Fretboard, type FretboardProps } from '../Fretboard';
 
 /**
@@ -22,6 +23,9 @@ import { Fretboard, type FretboardProps } from '../Fretboard';
  */
 const WINDOW_NODE_BUDGET = 72;
 const BOARD_NODE_BUDGET = 137;
+
+/** A clicked note at `fret`, for asking the model which window a shape of that reach gets. */
+const dotAt = (fret: number): BoardDot => ({ string: 0, fret, pc: 0 as PitchClass, kind: 'strong', selected: true, label: '' });
 
 const box = boxWithPositions(C_MAJOR_POSITIONS);
 const view = getBoxView(box, testSettings);
@@ -243,16 +247,28 @@ describe('Fretboard', () => {
       expect(Math.max(...frets)).toBe(9);
     });
 
-    it('shows the nut and the string names only while the open strings are in the window', () => {
+    it('draws the nut only while the open strings are in the window, and names the strings on both', () => {
       const open = renderBoard({ window: { first: 0, last: 4 } }).svg;
       expect(open.querySelectorAll('.nut')).toHaveLength(1);
+      expect(open.querySelectorAll('.wire.is-head')).toHaveLength(0);
       expect(open.querySelectorAll('.string-name')).toHaveLength(testSettings.tuning.length);
-      expect(open.querySelectorAll('.string-stub')).toHaveLength(testSettings.tuning.length);
 
       const high = renderBoard({ window: { first: 5, last: 9 } }).svg;
       expect(high.querySelectorAll('.nut')).toHaveLength(0);
-      expect(high.querySelectorAll('.string-name')).toHaveLength(0);
-      expect(high.querySelectorAll('.string-stub')).toHaveLength(0);
+      expect(high.querySelectorAll('.wire.is-head')).toHaveLength(1);
+      expect(high.querySelectorAll('.string-name')).toHaveLength(testSettings.tuning.length);
+    });
+
+    it('starts a chart up the neck where an open-position chart starts, so their rows line up', () => {
+      // A board up the neck used to begin its grid at the top edge, 48px above an open-position
+      // board's nut, so any row mixing the two began its shapes at different heights. The windows are
+      // the ones the model gives two short shapes.
+      const along = (line: Element | null) => Number(line?.getAttribute('y1'));
+      const open = renderBoard({ window: fretWindow([dotAt(2)], 0, 12) }).svg;
+      const high = renderBoard({ window: fretWindow([dotAt(9)], 0, 12) }).svg;
+      expect(along(high.querySelector('.wire.is-head'))).toBe(along(open.querySelector('.nut')));
+      // The first wire below the head, which fixes the pitch every row after it follows.
+      expect(along(high.querySelector('.wire:not(.is-head)'))).toBe(along(open.querySelector('.wire')));
     });
 
     it('numbers the first fret of a window that starts up the neck, however it is numbered', () => {

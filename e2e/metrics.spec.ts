@@ -44,6 +44,12 @@ type Budget = {
  * phone toolbar is nearly four screens wide with no scrollbar; and the 31-chord standard puts 11.4k
  * elements on the page to show one chord on a phone and three on a laptop.
  */
+// `boardWasteOnLong` was loosened from 0.87 to 0.89 on purpose. Every chart now keeps the same head —
+// the string names and the open-string run — whether it shows the nut or a window up the neck, so
+// that a row mixing the two starts its shapes at the same height. A board up the neck used to start
+// its grid 48px higher than an open-position board beside it, and `nutSpread` could not see it
+// because it only measured the first row and, on those, the wire a fret below the head. On the jazz
+// standard, where most boards are up the neck, that head is 48px of the board with no notes in it.
 const BUDGETS: Readonly<Record<string, Budget>> = {
   phone: {
     chromeFraction: 0.275,
@@ -54,7 +60,7 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     // takes every width back to 1. Until then this records the cost rather than hiding it.
     toolbarOverflow: 4.45,
     boardWaste: 0.37,
-    boardWasteOnLong: 0.87,
+    boardWasteOnLong: 0.89,
     chordsVisibleOnLong: 1,
     domNodesOnLong: 4_700,
     targetsUnder24: 20,
@@ -69,7 +75,7 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     // shows up in chromeFraction.
     toolbarOverflow: 1,
     boardWaste: 0.37,
-    boardWasteOnLong: 0.87,
+    boardWasteOnLong: 0.89,
     chordsVisibleOnLong: 3,
     domNodesOnLong: 4_700,
     targetsUnder24: 20,
@@ -82,7 +88,7 @@ const BUDGETS: Readonly<Record<string, Budget>> = {
     chromeFraction: 0.285,
     toolbarOverflow: 1,
     boardWaste: 0.37,
-    boardWasteOnLong: 0.87,
+    boardWasteOnLong: 0.89,
     chordsVisibleOnLong: 6,
     domNodesOnLong: 4_700,
     targetsUnder24: 20,

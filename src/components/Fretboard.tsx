@@ -21,12 +21,6 @@ const STRING_GAP = 26;
  */
 const DOT_RADIUS = 12.5;
 const PAD_END = 10;
-/**
- * Along the neck before the first fret wire, when the window starts up the neck and there is no nut
- * or open-string run to fill that space. Enough that the wire and the focus ring on the first row
- * of notes are not drawn against the edge.
- */
-const PAD_HEAD = 8;
 const MARKER_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24, 27];
 /** The inlay dots at the marker frets; octave frets get two. */
 const INLAY_RADIUS = 5;
@@ -176,7 +170,15 @@ export const Fretboard = memo(function Fretboard({
    * wire below it instead, so fret 0 falls off the front and this goes negative. `alongOf` is the
    * same either way — nothing before `headFret` is drawn.
    */
-  const nut = atNut ? margins.names + OPEN_LENGTH : PAD_HEAD - headFret * FRET_LENGTH;
+  /**
+   * Every board keeps the same head, the string names and the open-string run, whether it shows the
+   * nut or a window further up. A board up the neck used to start its grid right at the top edge,
+   * 48px above where an open-position board beside it started its own, so in any row that mixed the
+   * two the shapes began at different heights — and comparing shapes across a row is what the
+   * canvas is for. Printed chord books reserve the same head on every diagram for the same reason.
+   */
+  const head = margins.names + OPEN_LENGTH;
+  const nut = head - headFret * FRET_LENGTH;
   const neckStart = nut + headFret * FRET_LENGTH;
   const neckEnd = nut + lastFret * FRET_LENGTH;
   const firstString = vertical ? margins.numbers + DOT_RADIUS : DOT_RADIUS + 3;
@@ -359,20 +361,18 @@ export const Fretboard = memo(function Fretboard({
           // them, and a board is mostly strings and positions, so a wrapper per string is a node
           // per string spent on nothing.
           <Fragment key={`string-${string}`}>
-            {atNut && (
-              <>
-                <text
-                  className="string-name"
-                  x={name.x}
-                  y={name.y}
-                  textAnchor={vertical ? 'middle' : 'end'}
-                  dominantBaseline="central"
-                >
-                  {pitchName(midi)}
-                </text>
-                <line className="string-stub" {...segment(margins.names + 2, across, nut, across)} strokeWidth={weight} />
-              </>
-            )}
+            {/* Named on every board, now that every board has the room: a chart in an open tuning
+                means nothing without them, and it is where the strings come in from the nut. */}
+            <text
+              className="string-name"
+              x={name.x}
+              y={name.y}
+              textAnchor={vertical ? 'middle' : 'end'}
+              dominantBaseline="central"
+            >
+              {pitchName(midi)}
+            </text>
+            <line className="string-stub" {...segment(margins.names + 2, across, neckStart, across)} strokeWidth={weight} />
             <line className="string" {...segment(neckStart, across, neckEnd, across)} strokeWidth={weight} />
           </Fragment>
         );
@@ -385,7 +385,7 @@ export const Fretboard = memo(function Fretboard({
       {atNut ? (
         <line className="nut" {...segment(nut, firstString, nut, lastString)} />
       ) : (
-        <line className="wire" {...segment(neckStart, firstString, neckStart, lastString)} />
+        <line className="wire is-head" {...segment(neckStart, firstString, neckStart, lastString)} />
       )}
 
       {/* The numbers beside the neck. A window that starts up the neck has no nut to read its

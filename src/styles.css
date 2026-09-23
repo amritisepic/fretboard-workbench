@@ -409,6 +409,10 @@ button[aria-disabled='true'] {
 .box-group {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  /* The bar takes its own height and the card takes the rest. Left to the default, a group stretched
+     to the height of the tallest in its row gave part of the extra to the bar's row, so the shorter
+     cards started lower than the tall one and their chord names no longer lined up. */
+  grid-template-rows: auto 1fr;
   min-width: 0;
   max-width: 100%;
 }
@@ -458,7 +462,11 @@ button[aria-disabled='true'] {
   contain: inline-size;
 }
 
+/* The key comes first and gives way last. When the bar also carries the reference scale and the two
+   do not fit, the scale is what ellipsizes: the key choices are buttons, and a clipped button is a
+   control nobody can read or aim at, whereas the scale's full name is in the bar's hidden text. */
 .key-band-label {
+  flex-shrink: 0;
   min-width: 0;
   overflow: hidden;
   color: #56524a;
@@ -479,7 +487,7 @@ button[aria-disabled='true'] {
    and pushed to the trailing edge away from the key. */
 .key-band-scale {
   flex: 0 1 auto;
-  min-width: 0;
+  min-width: 3em;
   margin-left: auto;
   padding: 0 8px;
   border-radius: 7px;
@@ -631,8 +639,11 @@ button[aria-disabled='true'] {
 
 /* ---- Boxes ----------------------------------------------------------- */
 
+/* A column, so the body can take the height a row gives the card; see `.box-body.is-vertical`. */
 .box {
   position: relative;
+  display: flex;
+  flex-direction: column;
   max-width: 100%;
   padding: 18px 22px 10px;
   border: 1px solid var(--rule-strong);
@@ -712,11 +723,20 @@ button[aria-disabled='true'] {
  */
 .box-body {
   display: flex;
+  flex: 1 0 auto;
   gap: 10px 14px;
 }
 
 .box-body.is-vertical {
   flex-direction: column;
+}
+
+/* Under a vertical neck the chip sits at the foot of the card. Every chart shares one head, so their
+   rows line up from the top; but a window at the nut spends a fret on the open-string run and draws
+   a row fewer than one up the neck, and a chip placed straight under each board would then sit a
+   row higher in one card than in the card beside it. At the foot, a row of chips lines up too. */
+.box-body.is-vertical > .box-analysis {
+  margin-top: auto;
 }
 
 .box-body.is-horizontal {
@@ -3042,17 +3062,26 @@ kbd {
   /* Capped, not just narrowed: `field-sizing: content` sizes a select to the name it is showing, so
      without a ceiling a key of "Harmonic minor" would widen the bar until it wrapped. The cap is on
      the pair, so the two share what there is, and it holds the promise of one row for every key at
-     the cost of ellipsizing the longest few scale names. */
+     the cost of ellipsizing the longest few scale names.
+
+     Only the scale gives way. The tonic is one or two characters and has nothing to ellipsize into,
+     so letting it shrink put its letter under its own chevron; and the right padding stays, because
+     it is the chevron's room — without it the name is drawn beneath the arrow. */
   .canvas-toolbar .scale-selects {
-    max-width: 112px;
+    max-width: 136px;
     gap: 4px;
   }
 
   .canvas-toolbar .scale-selects .select {
     height: 30px;
     min-width: 0;
-    padding: 0 6px;
+    padding: 0 22px 0 8px;
+    background-position: right 7px center;
     font-size: 12.5px;
+  }
+
+  .canvas-toolbar .scale-selects .select:first-child {
+    flex-shrink: 0;
   }
 
   .canvas-toolbar .button.is-compact {
