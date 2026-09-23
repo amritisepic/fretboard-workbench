@@ -2,7 +2,7 @@ import { Fragment, memo, useId, useRef, useState, type KeyboardEvent as ReactKey
 import type { Orientation } from '../state/workbench';
 import { PITCH_CLASS_NAMES, pitchName, type FretPosition, type PitchClass, type Tuning } from '../theory';
 import type { BoardDot, DotKind, FretWindow } from './boardModel';
-import { labelInk, mapShade, mix } from './color';
+import { dotColor, dotHighlight, dotInk, mapInk, mapShade } from './color';
 
 /** Along the neck: space per fret and for the open strings. */
 const FRET_LENGTH = 38;
@@ -54,9 +54,9 @@ export interface FretboardProps {
 const RING_GAP = 2.5;
 
 /**
- * The widest a note's label may run, in CSS px. Every label is drawn at the stylesheet's one size,
- * 10.5px, where the three glyphs of a double accidental (G♯♯, ♭♭7) measure up to 18px and sit inside
- * the 25px note with room to spare. A label of more glyphs than that could only come from spelling
+ * The widest a note's label may run, in CSS px. Every label is drawn at the stylesheet's smallest size,
+ * `--text-xs` (11px), where three glyphs (G♯♯, ♭♭7, ♯11) measure 17–19.6px and sit inside the 25px
+ * note with room to spare. A label of more glyphs than that could only come from spelling
  * past a double accidental; it is narrowed to this width rather than shrunk, so it keeps its height
  * and still ends inside the note. Shrinking, which is what the board used to do past two glyphs, took
  * a label down to 8.5px: smaller than anything else in the app, and under the print floor.
@@ -223,9 +223,12 @@ export const Fretboard = memo(function Fretboard({
     return area(start, end, across - STRING_GAP / 2, across + STRING_GAP / 2);
   };
 
+  // Every paint below carries its light and its dark value (see `themed` in color.ts), so the board
+  // follows the theme, and a board on the export sheet, which is always light, stays light.
+  const strong = dotColor(color);
   const weak = mapShade(color);
-  const strongInk = labelInk(color);
-  const weakInk = labelInk(weak);
+  const strongInk = dotInk(color);
+  const weakInk = mapInk(color);
   const capoWire = nut + capo * FRET_LENGTH;
   const markerFrets = MARKER_FRETS.filter((fret) => fret >= (atNut ? 0 : firstFret) && fret <= lastFret);
   /**
@@ -354,8 +357,8 @@ export const Fretboard = memo(function Fretboard({
             tall, starts 0.19 of the way out from the centre of this gradient at the top of the
             note, and the highlight is gone by 0.17, so every pixel behind a label is the box color. */}
         <radialGradient id={coreFill} cx="0.5" cy="0.06" r="0.94">
-          <stop offset="0" stopColor={mix(color, '#FFFFFF', 0.25)} />
-          <stop offset="0.17" stopColor={color} />
+          <stop offset="0" stopColor={dotHighlight(color)} />
+          <stop offset="0.17" stopColor={strong} />
         </radialGradient>
       </defs>
       {capo > 0 && atNut && (
@@ -442,7 +445,7 @@ export const Fretboard = memo(function Fretboard({
         if (dot.selected) {
           return (
             <g key={key} data-position={key} className="position position-strong is-clicked" {...controlProps(dot)}>
-              <circle className="dot-ring" cx={cx} cy={cy} r={ringRadius} stroke={color} />
+              <circle className="dot-ring" cx={cx} cy={cy} r={ringRadius} stroke={strong} />
               <circle className="dot-core" cx={cx} cy={cy} r={DOT_RADIUS} fill={`url(#${coreFill})`} />
               <text className="dot-label" x={cx} y={cy} fill={strongInk} {...labelFit(dot.label)}>
                 {dot.label}
@@ -467,7 +470,7 @@ export const Fretboard = memo(function Fretboard({
         }
         return (
           <g key={key} data-position={key} className={`position position-${dot.kind}`} {...controlProps(dot)}>
-            <circle cx={cx} cy={cy} r={DOT_RADIUS} fill={dot.kind === 'strong' ? color : weak} />
+            <circle cx={cx} cy={cy} r={DOT_RADIUS} fill={dot.kind === 'strong' ? strong : weak} />
             <text
               className="dot-label"
               x={cx}

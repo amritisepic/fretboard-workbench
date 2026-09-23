@@ -3,11 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#FAF9F7" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1b1a18" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Arpeggio and scale maps across any tuning, with voice leading between chords." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Fretboard Workbench</title>
+    <script>
+      // The theme chosen in Settings, put on the page before it first paints. The stylesheet follows
+      // the system on its own, but it cannot read a stored choice, and the app that can loads after
+      // the first paint: someone who chose dark would see a white page first. Kept this small because
+      // it holds up that paint; src/state/theme.ts takes over once the app is running.
+      try {
+        var theme = JSON.parse(localStorage.getItem('fretboard-workbench:preferences')).theme;
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch (error) {
+        // Nothing stored, or storage blocked: the page follows the system, as the stylesheet does.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -10,7 +10,8 @@ import css from '../../styles.css?inline';
  */
 describe('motion in the stylesheet', () => {
   it('states its duration once, as a token', () => {
-    expect(css).toMatch(/:root\s*\{[^}]*--motion:\s*\d+m?s;/s);
+    // The tokens' rule names the export's two roots as well as the page's; see the top of styles.css.
+    expect(css).toMatch(/:root,\s*\.export-stage,\s*\.export-root\s*\{[^}]*--motion:\s*\d+m?s;/s);
   });
 
   it('spells every transition duration as that token, so one place turns them all off', () => {

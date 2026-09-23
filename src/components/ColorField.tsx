@@ -1,4 +1,5 @@
 import { useWorkbench, type Box } from '../state/workbench';
+import { dotColor } from './color';
 import { rovingRadioGroup } from './rovingRadioGroup';
 
 /**
@@ -60,14 +61,16 @@ export function ColorField({ box }: { readonly box: Box }) {
               aria-checked={swatch.value === current}
               aria-label={swatch.name}
               tabIndex={roving.tabIndex(index)}
-              style={{ backgroundColor: swatch.value }}
+              // The color as the board will draw it, which in the dark theme is lighter for the three
+              // darkest swatches (see dotColorIn): a swatch that does not match its notes misleads.
+              style={{ backgroundColor: dotColor(swatch.value) }}
               onClick={() => setColor(box.id, swatch.value)}
             />
           ))}
         </div>
         <label
           className={isCustom ? 'swatch swatch-custom is-active' : 'swatch swatch-custom'}
-          style={isCustom ? { backgroundColor: current } : undefined}
+          style={isCustom ? { backgroundColor: dotColor(current) } : undefined}
           title="Custom color"
         >
           {!isCustom && <span aria-hidden="true">+</span>}
