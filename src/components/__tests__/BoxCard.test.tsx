@@ -62,16 +62,43 @@ describe('BoxCard', () => {
     expect(screen.getAllByRole('heading', { level: 2 })[1].textContent).toBe('No notes');
   });
 
-  it('shows the numeral with the key it is counted from', () => {
-    const { container } = renderCard();
-    expect(container.querySelector('.box-numeral')?.getAttribute('title')).toBe('I in C major');
+  it('still gives the numeral when there is no analysis to give', () => {
+    const { container } = renderCard({ tag: null });
+    const chips = container.querySelectorAll('.function-tag');
+    expect(chips).toHaveLength(1);
+    // Nothing to disclose, so nothing claims to be a control.
+    expect(chips[0].tagName).toBe('SPAN');
+    expect(chips[0].textContent).toContain('I');
   });
 
-  it('marks a tentative numeral', () => {
-    const { container } = renderCard({ tentative: true });
-    const numeral = container.querySelector('.box-numeral');
-    expect(numeral?.classList.contains('is-tentative')).toBe(true);
-    expect(numeral?.textContent).toContain('?');
+  it('says which key the numeral is counted from, where a touch screen can reach it', () => {
+    const { container } = renderCard({ tag: null });
+    const chip = container.querySelector('.function-tag');
+    // A native tooltip needs a pointer to hover and a finger cannot hover, so `title` may repeat the
+    // fact but must not be the only place it lives.
+    expect(chip?.querySelector('.visually-hidden')?.textContent).toBe('I in C major');
+    expect(chip?.getAttribute('title')).toBe('I in C major');
+  });
+
+  it('marks a tentative reading on the one chip, and says so in words as well as a mark', () => {
+    const { container } = renderCard({ tentative: true, tag: null });
+    const chips = container.querySelectorAll('.function-tag');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].classList.contains('is-tentative')).toBe(true);
+    expect(chips[0].textContent).toContain('?');
+    expect(chips[0].querySelector('.visually-hidden')?.textContent).toBe(
+      'I in C major, tentative: other readings are nearly as likely',
+    );
+  });
+
+  it('puts the key and the doubt in the accessible name and the explanation when the chip opens', () => {
+    renderCard({ tag: TAG, tentative: true });
+    const trigger = screen.getByRole('button', { name: /What this means/ });
+    expect(trigger.getAttribute('aria-label')).toBe('Chord function, I in C major, tentative. What this means');
+    fireEvent.click(trigger);
+    expect(screen.getByRole('note').textContent).toBe(
+      `${TAG.explanation} This reading is tentative: other readings are nearly as likely.`,
+    );
   });
 
   it('asks to remove the box rather than removing it, and does not select it on the way', () => {
@@ -116,6 +143,11 @@ describe('BoxCard', () => {
     expect(await axeRuleIds(container)).toEqual([]);
   });
 
+  it('has no axe violations without the analysis, when the chip is not a button', async () => {
+    const { container } = renderCard({ tag: null });
+    expect(await axeRuleIds(container)).toEqual([]);
+  });
+
   it('keeps the function tag out of the header, so a tagged box and an untagged one line their boards up', () => {
     const box = seedBox();
     // jsdom draws nothing, so the height itself cannot be measured; the structure that guarantees it
@@ -153,11 +185,7 @@ describe('BoxCard', () => {
     expect(children).toEqual(['fretboard-scroll', 'box-analysis']);
   });
 
-  // ---- Known gaps -------------------------------------------------------
-
-  // The header prints the numeral in its own chip and the function tag by the board prints it again
-  // ("I" on the card, "I7" by the neck). Plan item 12 (Phase 2) collapses them into one chip.
-  it.fails('does not restate the numeral in the function tag', () => {
+  it('does not restate the numeral in the function tag', () => {
     const { container } = renderCard({ tag: TAG });
     const numeral = container.querySelector('.box-numeral')?.textContent?.trim();
     // FunctionText prints the label twice, once visually hidden; the hidden copy is the plain text.
