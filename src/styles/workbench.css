@@ -1021,13 +1021,18 @@ button.function-tag[aria-expanded='true'] {
   }
 }
 
+/* The choices take the bar's full height. Sized to their text they were 17.4px tall — the last controls
+   on the canvas under the 24px floor — in a bar that already had the room. */
 .key-band-label.is-split {
   display: inline-flex;
-  align-items: center;
+  align-self: stretch;
+  align-items: stretch;
   gap: var(--space-1);
 }
 
 .key-choice {
+  display: inline-flex;
+  align-items: center;
   padding: 0 var(--space-1);
   border: 0;
   background: transparent;
@@ -1053,6 +1058,7 @@ button.key-choice:hover {
 }
 
 .key-split-bar {
+  align-self: center;
   opacity: 0.5;
 }
 

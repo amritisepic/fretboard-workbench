@@ -22,9 +22,12 @@ type Budget = {
   readonly boardWasteOnLong: number;
   /** Chords of Autumn Leaves (31 of them) on screen at once. A floor: it should go up. */
   readonly chordsVisibleOnLong: number;
-  /** Elements in the document for the 31-chord progression. Plan item 6 should cut this by ~85%. */
+  /**
+   * Elements in the document for the 31-chord progression. The plan's target of 2,000 is out of reach
+   * since every fretboard position became a real control with its own name and tab stop.
+   */
   readonly domNodesOnLong: number;
-  /** Controls under the WCAG 2.2 minimum of 24 CSS px. Plan item 7 takes this to zero. */
+  /** Controls under the WCAG 2.2 minimum of 24 CSS px, on every fixture. Zero, and it stays zero. */
   readonly targetsUnder24: number;
   /** The smallest tap target, in CSS px. A floor: 24 is the minimum, 44 the touch guideline. */
   readonly smallestTarget: number;
@@ -32,71 +35,42 @@ type Budget = {
   readonly fretsDrawn: number;
   /** The smallest fretboard position, in CSS px. A floor: WCAG 2.2 asks for 24. */
   readonly smallestBoardTarget: number;
-  /** How far apart the boards in a row start, in pixels. Zero since the analysis left the header. */
+  /** How far apart the boards in a row start, in pixels, for the worst row on the page. */
   readonly nutSpread: number;
 };
 
 /**
- * Measured on 2026-09-17, then rounded outward by a hair so antialiasing cannot make a run flaky.
+ * Measured on 2026-09-23, after every phase of the design plan, then rounded outward by a hair so
+ * antialiasing cannot make a run flaky. Ceilings and floors, not targets: a change that improves one
+ * tightens it here in the same commit.
  *
- * Reading them: on every width 27–29% of the screen goes on chrome before the first chord; about
- * three quarters of an ordinary fretboard is empty grid, and 95% of one holding a jazz voicing; the
- * phone toolbar is nearly four screens wide with no scrollbar; and the 31-chord standard puts 11.4k
- * elements on the page to show one chord on a phone and three on a laptop.
+ * Reading them against where they started (2026-09-17): chrome before the first chord is 16–22% of
+ * the screen, down from 27–29%; the phone toolbar fits, down from nearly four screens wide; an
+ * ordinary fretboard is 35% empty grid, down from 73%; the 31-chord standard shows 2 / 4 / 9 chords
+ * at once, up from 1 / 2 / 3, with 4.2k elements, down from 11.4k; and nothing a pointer aims at is
+ * under 24px, down from 316 of 366 controls.
+ *
+ * `boardWasteOnLong` is the one that went the other way in the last phase, from 0.856 to 0.883, and on
+ * purpose: every chart keeps the same head — the string names and the open-string run — whether it
+ * shows the nut or a window up the neck, so that a row mixing the two starts its shapes at one
+ * height. On the jazz standard, where most boards are up the neck, that head holds no notes.
  */
-// `boardWasteOnLong` was loosened from 0.87 to 0.89 on purpose. Every chart now keeps the same head —
-// the string names and the open-string run — whether it shows the nut or a window up the neck, so
-// that a row mixing the two starts its shapes at the same height. A board up the neck used to start
-// its grid 48px higher than an open-position board beside it, and `nutSpread` could not see it
-// because it only measured the first row and, on those, the wire a fret below the head. On the jazz
-// standard, where most boards are up the neck, that head is 48px of the board with no notes in it.
+const EVERY_WIDTH = {
+  toolbarOverflow: 1,
+  boardWaste: 0.36,
+  boardWasteOnLong: 0.89,
+  domNodesOnLong: 4_300,
+  targetsUnder24: 0,
+  smallestTarget: 24,
+  fretsDrawn: 6,
+  smallestBoardTarget: 26,
+  nutSpread: 1,
+} as const;
+
 const BUDGETS: Readonly<Record<string, Budget>> = {
-  phone: {
-    chromeFraction: 0.275,
-    // Loosened from 3.9 when the Board switch was added. A control added to a toolbar that already
-    // does not fit makes the overflow worse — at 4.4 roughly three quarters of the controls are off
-    // the side of a phone, with no scrollbar to say so. The switch is the point of this phase, so
-    // the toolbar is what has to give: plan item 14 moves the display switches into one popover and
-    // takes every width back to 1. Until then this records the cost rather than hiding it.
-    toolbarOverflow: 4.45,
-    boardWaste: 0.37,
-    boardWasteOnLong: 0.89,
-    chordsVisibleOnLong: 1,
-    domNodesOnLong: 4_700,
-    targetsUnder24: 20,
-    smallestTarget: 16.5,
-    fretsDrawn: 7,
-    smallestBoardTarget: 24,
-    nutSpread: 1,
-  },
-  tablet: {
-    chromeFraction: 0.295,
-    // The toolbar is allowed to wrap above 760px, so it fits — at the cost of the extra row that
-    // shows up in chromeFraction.
-    toolbarOverflow: 1,
-    boardWaste: 0.37,
-    boardWasteOnLong: 0.89,
-    chordsVisibleOnLong: 3,
-    domNodesOnLong: 4_700,
-    targetsUnder24: 20,
-    smallestTarget: 16.5,
-    fretsDrawn: 7,
-    smallestBoardTarget: 24,
-    nutSpread: 1,
-  },
-  desktop: {
-    chromeFraction: 0.285,
-    toolbarOverflow: 1,
-    boardWaste: 0.37,
-    boardWasteOnLong: 0.89,
-    chordsVisibleOnLong: 6,
-    domNodesOnLong: 4_700,
-    targetsUnder24: 20,
-    smallestTarget: 16.5,
-    fretsDrawn: 7,
-    smallestBoardTarget: 24,
-    nutSpread: 1,
-  },
+  phone: { ...EVERY_WIDTH, chromeFraction: 0.225, chordsVisibleOnLong: 2 },
+  tablet: { ...EVERY_WIDTH, chromeFraction: 0.165, chordsVisibleOnLong: 4 },
+  desktop: { ...EVERY_WIDTH, chromeFraction: 0.19, chordsVisibleOnLong: 9 },
 };
 
 /** Puts the reading in the report, so a run is a record and not only a pass or a fail. */
@@ -232,11 +206,19 @@ test.describe('layout budgets', () => {
 
   test('controls are big enough to hit', async ({ page }, testInfo) => {
     const budget = BUDGETS[testInfo.project.name];
-    await goTo(page, STATES.short);
-    const m = await measure(page);
-    record('short progression', m);
+    // The long fixtures as well as the short one: their key bars carry the rival-reading buttons the
+    // ordinary progression never shows, and those were the last controls under the floor.
+    for (const [state, title] of [
+      [STATES.short, 'short progression'],
+      [STATES.long, 'Autumn Leaves'],
+      [STATES.tags, 'All Blues'],
+    ] as const) {
+      await goTo(page, state);
+      const m = await measure(page);
+      record(title, m);
 
-    expect(m.targetsUnder24, 'controls under 24 CSS px').toBeLessThanOrEqual(budget.targetsUnder24);
-    expect(m.smallestTarget, 'the smallest control on screen').toBeGreaterThanOrEqual(budget.smallestTarget);
+      expect(m.targetsUnder24, `controls under 24 CSS px, ${title}`).toBeLessThanOrEqual(budget.targetsUnder24);
+      expect(m.smallestTarget, `the smallest control on screen, ${title}`).toBeGreaterThanOrEqual(budget.smallestTarget);
+    }
   });
 });
