@@ -97,6 +97,13 @@ change in front of a reviewer, not to claim the layout is good. A deliberate cha
 `npm run test:e2e:update`, and the new picture lands in the diff. The committed baselines are Linux
 (`-linux.png`), which is what CI runs; a run on another platform reports missing snapshots instead.
 
+They are also Chromium's **headless shell**, which is what Playwright launches by default and what CI
+installs. Full Chromium rasterizes text differently and measures some glyphs — ♭ and ♯ among them —
+to a slightly different width, so a strip's title can wrap on a different word and move everything
+under it. Two baselines taken with full Chromium failed CI by 2% of their pixels for exactly that
+reason. Where the default browser is not installed, point `PLAYWRIGHT_CHROMIUM_PATH` at a
+`headless_shell` binary, not at `chrome`, before taking or checking baselines.
+
 **Overlays (`overlays.spec.ts`)**: Escape ends the tour and leaves nothing inert; a confirmation traps
 Tab and hands focus back; the settings panel stays non-modal. jsdom cannot test these: it focuses
 hidden elements and does not implement `inert`.

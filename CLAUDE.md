@@ -80,8 +80,10 @@ below the board, never in the header.
   it and in the commit message.
 - A known defect goes in as a failing assertion marked `it.fails` / `test.fail`, with a comment
   naming what will fix it — not as a TODO. Fixing it makes the run fail until the marker comes off.
-- Screenshot baselines are Linux (`-linux.png`); `npm run test:e2e:update` retakes them and the new
-  pictures belong in the diff for review.
+- Screenshot baselines are Linux (`-linux.png`) and Chromium's headless shell, as CI runs them;
+  `npm run test:e2e:update` retakes them and the new pictures belong in the diff for review. Full
+  Chromium wraps some text differently and fails them, so if `PLAYWRIGHT_CHROMIUM_PATH` is set it
+  must point at a `headless_shell` binary.
 - Running Playwright while anything else might be serving on port 4173 measures the wrong build:
   the config reuses an existing server. Use a copy of the config on a private port.
 - Styles live in `src/styles/`: `base.css` (tokens and the control vocabulary), `workbench.css`,
