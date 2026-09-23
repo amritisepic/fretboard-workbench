@@ -45,9 +45,9 @@ export const TOUR_STEPS: readonly TourStep[] = [
     screen: 'workbench',
   },
   {
-    title: 'Key bar and scale bar',
-    body: 'The top bar shows the key in effect at each box, which changes when the progression tonicizes or modulates. Under it is each box’s reference scale.',
-    target: '.canvas > .box-group:nth-child(-n+2) .key-band, .canvas > .box-group:nth-child(-n+2) .scale-band',
+    title: 'The key bar',
+    body: 'The bar over each box names the key in effect there, which changes when the progression tonicizes or modulates. When the box’s reference scale is something other than that key, the bar names it too, on the box’s own color.',
+    target: '.canvas > .box-group:nth-child(-n+2) .key-band',
     screen: 'workbench',
   },
   {

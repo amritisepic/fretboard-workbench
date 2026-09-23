@@ -89,7 +89,6 @@ export function WorkbenchSheet({
           const adjacent = previous !== undefined && model.entries.indexOf(previous) === index - 1;
           const rowStart = i === 0 || rowStarts[i] === true;
           const regionStart = !sameRegion(previous, entry);
-          const regionEnd = !sameRegion(entry, entries[i + 1]);
           const { analysis, keyChoices } = entry;
           const next = model.entries[index + 1];
           const tag =
@@ -112,47 +111,42 @@ export function WorkbenchSheet({
                   patterns: patternsAcross(model.patterns, index),
                 }
               : null;
-          const bandClass = [
-            'key-band',
-            i === 0 ? 'is-first' : '',
-            rowStart ? 'is-row-start' : '',
-            regionStart ? 'is-region-start' : '',
-            regionEnd ? 'is-region-end' : '',
-          ]
-            .filter(Boolean)
-            .join(' ');
           const keyText =
             keyChoices.length > 0
               ? keyChoices.map((c) => `${c.keyName}${c.chosen || analysis.pinned ? '' : '?'}`).join(' | ')
               : entry.keyName;
+          // The sheet shares the canvas's bar: one bar per chord, over the card alone, naming the
+          // key and adding the reference scale only when it is not the key said again. The two
+          // export switches still choose independently which of the two the sheet prints.
+          const showScale = features.scaleBar && entry.view.scaleName !== entry.keyName;
 
           return (
             <div key={entry.box.id} className="box-group">
-              {features.keyBar && (
-                <div className={bandClass} style={{ backgroundColor: KEY_REGION_COLORS[entry.colorIndex % KEY_REGION_COLORS.length] }}>
-                  {(regionStart || rowStart || keyChoices.length > 0) && (
+              {previous &&
+                (voices || lane ? (
+                  <VoiceLeadingStrip
+                    strip={buildStripView(previous, entry, stripSettings)}
+                    voices={voices}
+                    lane={lane}
+                    wrapped={rowStart}
+                  />
+                ) : (
+                  <div className="box-spacer" />
+                ))}
+              {(features.keyBar || showScale) && (
+                <div className="key-band" style={{ backgroundColor: KEY_REGION_COLORS[entry.colorIndex % KEY_REGION_COLORS.length] }}>
+                  {features.keyBar && (
                     <span className={regionStart || keyChoices.length > 0 ? 'key-band-label' : 'key-band-label is-continued'}>{keyText}</span>
+                  )}
+                  {showScale && (
+                    <span className="key-band-scale" style={{ backgroundColor: bandShade(entry.box.color) }}>
+                      {entry.view.scaleName}
+                    </span>
                   )}
                 </div>
               )}
               <div className="box-group-body">
-                {previous &&
-                  (voices || lane ? (
-                    <VoiceLeadingStrip
-                      strip={buildStripView(previous, entry, stripSettings)}
-                      voices={voices}
-                      lane={lane}
-                      wrapped={rowStart}
-                    />
-                  ) : (
-                    <div className="box-spacer" />
-                  ))}
                 <div className="box-column">
-                  {features.scaleBar && (
-                    <div className="scale-band" style={{ backgroundColor: bandShade(entry.box.color) }}>
-                      <span>{entry.view.scaleName}</span>
-                    </div>
-                  )}
                   <BoxCard
                     box={entry.box}
                     view={entry.view}
