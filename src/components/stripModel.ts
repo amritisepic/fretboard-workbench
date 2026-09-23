@@ -23,10 +23,25 @@ export interface StripView {
   readonly toTitle: string;
   /** Top to bottom: highest above the earlier box's chord root (or scale tonic) first. */
   readonly voices: readonly StripVoice[];
+  /**
+   * The voices that change, in `voices` order. These are what the strip draws an arrow for: a
+   * guitarist reads the strip to find out what the hand has to do, and a voice that stays put is
+   * not work. Added and dropped tones count as changes even though they have no interval.
+   */
+  readonly moves: readonly StripVoice[];
+  /** The voices held across the change, in `voices` order: drawn as a column of marks, not arrows. */
+  readonly held: readonly StripVoice[];
+  /** The held voices' labels, so their names survive the collapse into marks. */
+  readonly heldLabels: readonly string[];
   readonly totalMotion: number;
   readonly commonTones: number;
   /** "3 semitones · 1 common", or just the part the strip settings show. */
   readonly summary: string;
+  /**
+   * The summary's facts one by one, so a narrow strip can wrap between them and never leave a
+   * separator dangling at the start of a line.
+   */
+  readonly summaryParts: readonly string[];
   /** What to say when no voice is left to draw. */
   readonly emptyText: string;
   /** Plain-language summary for assistive technology. */
@@ -78,13 +93,17 @@ export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: Strip
     .filter((p) => shown(p.voice))
     .sort((a, b) => b.height - a.height)
     .map((p) => p.voice);
+  // A common tone keeps its name in `from`, so the labels survive even though the marks that stand
+  // for them on screen carry no text of their own.
+  const held = voices.filter((v) => v.kind === 'common');
+  const moves = voices.filter((v) => v.kind !== 'common');
+  const heldLabels = held.map((v) => v.from ?? '');
   const commonTones = leading.motions.filter((m) => m.distance === 0).length;
-  const summary = [
+  const summaryParts = [
     strips.voiceLeading ? `${leading.totalMotion} ${leading.totalMotion === 1 ? 'semitone' : 'semitones'}` : '',
     strips.commonTones ? `${commonTones} common` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  ].filter(Boolean);
+  const summary = summaryParts.join(' · ');
   const emptyText =
     placed.length === 0 ? 'No notes to compare' : strips.voiceLeading ? 'No voices move' : 'No common tones';
 
@@ -106,9 +125,13 @@ export function buildStripView(from: CanvasEntry, to: CanvasEntry, strips: Strip
     fromTitle,
     toTitle,
     voices,
+    moves,
+    held,
+    heldLabels,
     totalMotion: leading.totalMotion,
     commonTones,
     summary,
+    summaryParts,
     emptyText,
     description:
       voices.length === 0
