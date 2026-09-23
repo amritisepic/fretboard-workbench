@@ -240,7 +240,8 @@ button[aria-disabled='true'] {
   gap: 16px;
   height: var(--topbar-height);
   padding: 0 20px;
-  border-bottom: 1px solid var(--rule-strong);
+  /* A divider between the bar and the canvas, not the edge of a control, so the decorative rule. */
+  border-bottom: 1px solid var(--rule-mid);
 }
 
 .topbar-left,
@@ -1278,9 +1279,11 @@ button.key-choice:hover {
   text-align: center;
 }
 
+/* Quieter than a pattern that starts here, by color and weight rather than by opacity: seventy per
+   cent of --ink-soft came out at 3.0:1, and this is text. --ink-faint clears 4.5 on paper. */
 .strip-pattern.is-continued {
+  color: var(--ink-faint);
   font-weight: 500;
-  opacity: 0.7;
 }
 
 .strip-relation {

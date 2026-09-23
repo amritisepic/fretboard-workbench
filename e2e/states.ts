@@ -82,7 +82,10 @@ export async function goTo(page: Page, state: (typeof STATES)[keyof typeof STATE
       return;
     case STATES.sidebar:
       await openExample(page, 'short');
-      await page.locator('.box').first().click();
+      // By the chord's name, not the middle of the card. The middle of a card is a fretboard cell, and
+      // a click there adds a note: the first chord of this fixture was being turned from G into Em/G
+      // on its way to the sidebar, and the baseline was a picture of a chord nobody had written.
+      await page.locator('.box .box-title').first().click();
       await page.locator('.sidebar').waitFor();
       await settle(page);
       return;
