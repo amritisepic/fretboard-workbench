@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import css from '../../styles.css?inline';
 import { SWATCHES } from '../../components/ColorField';
-import { KEY_REGION_COLORS, bandShade, labelInk, mapShade } from '../../components/color';
+import { KEY_REGION_COLORS, bandShade, labelInk, mapShade, regionSlots } from '../../components/color';
 import { MINIMUM, contrast, parseHex, ratio, rootColorTokens } from '../contrast';
 
 const tokens = rootColorTokens(css);
@@ -13,7 +13,8 @@ const token = (name: string) => {
 
 /**
  * Where each color is actually used, and what WCAG asks of it there. Decorative rules are left out
- * on purpose: 1.4.11 covers what identifies a control, not every hairline.
+ * on purpose: 1.4.11 covers what identifies a control, not every hairline, which is why `--rule` and
+ * `--rule-mid` (a card's outline, a table's head, an inlay) are not in the table.
  *
  * `--ink-faint` carries fret numbers, string names, the save status and the hint paragraphs, all of
  * them at 10.5–11.5px, so it is body text wherever it appears.
@@ -29,18 +30,20 @@ const USAGE = [
 ] as const;
 
 /**
- * The usages that fail today, and the plan item that fixes each. The test asserts this list exactly,
- * so a new failure breaks the build and a fixed one has to be deleted from here — it cannot quietly
- * stay on the list. Plan item 22 (Phase 3) clears it.
+ * The usages that fail today. The test asserts this list exactly, so a new failure breaks the build
+ * and a fixed one has to be deleted from here — it cannot quietly stay on the list. Plan item 22
+ * emptied it: `--ink-faint` went from 2.76:1 on paper and 2.55:1 on the sunk panels to 4.96 and
+ * 4.59, and `--rule-strong` from 1.53:1 to 3.1.
  */
-const KNOWN_FAILURES: readonly string[] = [
-  'ink-faint on paper', // 2.76:1, needs 4.5
-  'ink-faint on paper-sunk', // 2.55:1, needs 4.5
-  'rule-strong on paper', // 1.53:1, needs 3
-];
+const KNOWN_FAILURES: readonly string[] = [];
 
 /** The ink printed on the key bands and the scale bands, hardcoded in styles.css. */
 const BAND_INK = '#56524A';
+/** The lighter ink of a rival reading's scale on a scale band (`.scale-alternative`), also hardcoded. */
+const RIVAL_SCALE_INK = '#625E56';
+
+/** The dot colors before plan item 22 darkened four of them. Boxes saved in them keep them. */
+const RETIRED_SWATCHES = ['#C9672A', '#B08A1E', '#3E8750', '#23828A'];
 
 describe('design tokens', () => {
   it('declares every color the usage table names', () => {
@@ -64,11 +67,11 @@ describe('design tokens', () => {
     expect(measured).toEqual({
       'ink on paper': 10.81,
       'ink-soft on paper': 5.68,
-      'ink-faint on paper': 2.76,
-      'ink-faint on paper-sunk': 2.55,
+      'ink-faint on paper': 4.96,
+      'ink-faint on paper-sunk': 4.59,
       'danger on paper': 6.33,
       'notice on paper': 5.6,
-      'rule-strong on paper': 1.53,
+      'rule-strong on paper': 3.1,
     });
   });
 });
@@ -80,26 +83,53 @@ describe('key region colors', () => {
     }
   });
 
-  it('keeps the band ink readable on a scale band tinted with any dot color', () => {
+  it('keeps the band ink, and the rival scale beside it, readable on a scale band tinted with any dot color', () => {
     for (const swatch of SWATCHES) {
-      expect(ratio(BAND_INK, bandShade(swatch.value)), `band ink on a ${swatch.name} scale band`).toBeGreaterThanOrEqual(
-        MINIMUM.bodyText,
-      );
+      for (const [what, ink] of [
+        ['band ink', BAND_INK],
+        ['rival scale', RIVAL_SCALE_INK],
+      ] as const) {
+        expect(ratio(ink, bandShade(swatch.value)), `${what} on a ${swatch.name} scale band`).toBeGreaterThanOrEqual(
+          MINIMUM.bodyText,
+        );
+      }
     }
   });
 
-  // ---- Known gaps -------------------------------------------------------
-
-  // The eight region colors are all the same beige at slightly different hues. They are what tells
-  // one key region from the next, and several pairs are close to the just-noticeable threshold, so
-  // on a projector or in sunlight they read as one color. Plan item 23 (Phase 3) rebuilds them.
-  it.fails('keeps the region colors far enough apart to tell one from another', () => {
+  // They used to be eight beiges whose closest pair was ΔE 3.0, near the just-noticeable 2.3, so on
+  // a projector or in sunlight two regions read as one. Plan item 23 rebuilt them.
+  it('keeps the region colors far enough apart to tell one from another', () => {
     for (let i = 0; i < KEY_REGION_COLORS.length; i++) {
       for (let j = i + 1; j < KEY_REGION_COLORS.length; j++) {
         expect(deltaE(KEY_REGION_COLORS[i], KEY_REGION_COLORS[j]), `${KEY_REGION_COLORS[i]} vs ${KEY_REGION_COLORS[j]}`)
           .toBeGreaterThanOrEqual(15);
       }
     }
+  });
+
+  it('gives each of the first eight keys a color of its own, wherever the key comes back', () => {
+    expect(regionSlots([0, 1, 0, 2, 3, 4, 5, 6, 7, 3, 0])).toEqual([0, 1, 0, 2, 3, 4, 5, 6, 7, 3, 0]);
+  });
+
+  it('never draws two neighbouring regions in the same color, however many keys there are', () => {
+    const progressions = {
+      // The regions of Blues for Alice, one of the built-in examples, numbered by key. Its ninth key
+      // used to wrap round onto the first key's color, right beside the first key.
+      'Blues for Alice': [0, 1, 2, 0, 3, 4, 5, 6, 0, 7, 8, 0, 7, 0],
+      'a home key every other key returns to': [0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 9, 0, 10, 0, 8],
+      // Its ninth key borders every one of the eight colors, so none is left that it could keep.
+      'a key that borders all eight colors': [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 8, 1, 8, 2, 8, 3, 8, 4, 8, 5, 8, 6, 8],
+    };
+    for (const [name, keys] of Object.entries(progressions)) {
+      const slots = regionSlots(keys);
+      expect(slots.every((slot) => slot >= 0 && slot < KEY_REGION_COLORS.length), name).toBe(true);
+      const clashes = slots.flatMap((slot, i) => (i > 0 && slot === slots[i - 1] ? [i] : []));
+      expect(clashes, `${name}: regions drawn in the color of the region before`).toEqual([]);
+    }
+    // A key past the eighth still keeps one color wherever it comes back, when a color is free.
+    const alice = regionSlots(progressions['Blues for Alice']);
+    expect(new Set(alice.filter((_, i) => progressions['Blues for Alice'][i] === 8)).size).toBe(1);
+    expect(new Set(alice.filter((_, i) => progressions['Blues for Alice'][i] === 0))).toEqual(new Set([0]));
   });
 });
 
@@ -119,16 +149,28 @@ describe('labelInk', () => {
     }
   });
 
-  // ---- Known gaps -------------------------------------------------------
-
-  // labelInk picks by a luminance threshold and never checks what it got. Dot labels are 10.5px, or
-  // 8.5px once a label runs past two characters, so they are body text. Plan item 22 (Phase 3) is
-  // where the palette is chosen to clear this; plan item 22 also drops the 8.5px size.
-  it.fails('leaves every dot label readable against its dot', () => {
+  // Dot labels are 10.5px at every length, so they are body text.
+  it('leaves every dot label readable against its dot', () => {
     for (const swatch of SWATCHES) {
-      const color = swatch.value;
-      expect(ratio(labelInk(color), color), `${swatch.name} dot label`).toBeGreaterThanOrEqual(MINIMUM.bodyText);
+      for (const [kind, color] of [
+        ['dot', swatch.value],
+        ['map shade', mapShade(swatch.value)],
+      ] as const) {
+        expect(ratio(labelInk(color), color), `${swatch.name} ${kind} label`).toBeGreaterThanOrEqual(MINIMUM.bodyText);
+      }
     }
+  });
+
+  it('labels every dot color in white, so the palette reads as one set', () => {
+    expect(SWATCHES.filter((swatch) => labelInk(swatch.value) !== '#FFFFFF').map((swatch) => swatch.name)).toEqual([]);
+  });
+
+  it('finds a readable ink for any custom color, and for a box still in a retired dot color', () => {
+    // Every channel in steps of 17: 4,096 colors from black to white, with every mid-tone in between.
+    const steps = Array.from({ length: 16 }, (_, i) => (i * 17).toString(16).padStart(2, '0'));
+    const colors = steps.flatMap((r) => steps.flatMap((g) => steps.map((b) => `#${r}${g}${b}`)));
+    const unreadable = [...colors, ...RETIRED_SWATCHES].filter((color) => ratio(labelInk(color), color) < MINIMUM.bodyText);
+    expect(unreadable).toEqual([]);
   });
 });
 

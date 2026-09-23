@@ -27,12 +27,13 @@ export const PX_PER_POINT = 96 / 72;
 export const MAX_FIT_SCALE = 2;
 
 /**
- * The smallest text an export sheet draws, in CSS pixels: the fret numbers and the string names
- * beside a neck.
+ * The smallest text a board on an export sheet draws, in CSS pixels: the fret numbers, the string
+ * names and every note's label, which all share this size.
  *
- * A dot label drops to 8.5px once the note name runs past two characters, which is a defect of its
- * own that plan item 22 closes by deleting that size. A floor set from it today would force a page
- * count nobody wants, for a glyph that is on its way out.
+ * A note's label used to drop to 8.5px once it ran past two glyphs, and this floor was set without
+ * it, since a floor that honored it would have forced a page count nobody wanted. That size is gone:
+ * a long label is now narrowed to fit its note at full height, so nothing on a board is smaller than
+ * this and the floor covers every glyph on it.
  */
 export const SMALLEST_SHEET_TEXT_PX = 10.5;
 
