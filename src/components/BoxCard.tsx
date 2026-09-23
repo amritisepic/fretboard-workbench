@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useWorkbench, type Box, type Orientation } from '../state/workbench';
 import { MAX_CHORD_NOTES, type FretPosition } from '../theory';
-import type { FunctionLabel } from './analysisModel';
+import { numeralLabel, type FunctionLabel } from './analysisModel';
 import type { BoxView } from './boardModel';
 import { editableWindow } from './boardModel';
 import { Fretboard } from './Fretboard';
@@ -10,6 +10,9 @@ import { InfoPopover } from './InfoPopover';
 
 /** How long the "chord is full" note stays up after a refused click. */
 const NOTICE_MS = 2500;
+
+/** What the chip says of a reading the analysis is not confident in. */
+const TENTATIVE_NOTE = 'tentative: other readings are nearly as likely';
 
 /** What harmonic analysis adds beside the board: the chord's function and a sentence about it. */
 export interface AnalysisTag {
@@ -74,22 +77,25 @@ export function BoxCard({
 
   const className = ['box', selected ? 'is-selected' : '', viewing ? 'is-viewing' : ''].filter(Boolean).join(' ');
 
+  // The card says the chord's function once, in the fullest form it knows. With harmonic analysis on
+  // that is the analyzer's label and the sentence that goes with it ("I7", "C is I in C major"); with
+  // it off, the numeral in the key is all there is, and it wears the same chip with nothing to open.
+  const analyzed = tag && tag.label.text ? tag : null;
+  const label = analyzed ? analyzed.label : numeral ? numeralLabel(numeral) : null;
+
   return (
     <section
       className={className}
       aria-label={view.title || 'Empty box'}
       onClick={viewing ? undefined : () => selectBox(box.id)}
     >
+      {/*
+        Nothing but the chord's name, and a notice that is taken out of the flow. The header is the
+        one part of the card that has to lay out to the same height in every box, because the board
+        hangs below it and a row of boards has to start together; so anything a box may or may not
+        have — the function chip above all — belongs below, beside the board it describes.
+      */}
       <header className="box-header">
-        {numeral && (
-          <span
-            className={tentative ? 'box-numeral is-tentative' : 'box-numeral'}
-            title={tentative ? `${numeral} in ${keyName}, tentative: other readings are nearly as likely` : `${numeral} in ${keyName}`}
-          >
-            {numeral}
-            {tentative && <span className="tentative-mark">?</span>}
-          </span>
-        )}
         {view.title ? (
           <h2 className="box-title">{view.title}</h2>
         ) : (
@@ -118,13 +124,13 @@ export function BoxCard({
         </button>
       )}
       {/*
-        The board and, when harmonic analysis is on, the function tag beside or under it. The tag is
-        kept out of the header on purpose: a tag long enough to wrap used to push its own board down
-        while its neighbors' stayed put, so the nuts no longer lined up across a row, and comparing
-        shapes across a progression is the whole point of the canvas. Out here the header holds the
-        same elements in every box and every board starts at the same height.
+        The board and the function chip beside or under it. The chip is kept out of the header on
+        purpose: a label long enough to wrap used to push its own board down while its neighbors'
+        stayed put, so the nuts no longer lined up across a row, and comparing shapes across a
+        progression is the whole point of the canvas. Out here the header holds the same elements in
+        every box and every board starts at the same height.
 
-        Which side the tag takes follows the orientation the card is actually drawing, which is the
+        Which side the chip takes follows the orientation the card is actually drawing, which is the
         preset's unless an export overrode it. The stylesheet does the placing; the class only says
         which way the neck runs.
       */}
@@ -157,30 +163,71 @@ export function BoxCard({
             onToggle={onToggle}
           />
         </div>
-        {tag && tag.label.text && <FunctionTag tag={tag} />}
+        {label && (
+          <FunctionTag label={label} keyName={keyName} tentative={tentative} explanation={analyzed?.explanation ?? ''} />
+        )}
       </div>
     </section>
   );
 }
 
 /**
- * The chord's function, beside the board or under it; clicking or tapping it explains what it means.
+ * The chord's function: one chip carrying the whole label, the key it is counted from, and whether
+ * the reading is firm. Where there is an explanation to give, clicking or tapping it gives it.
  *
  * It comes after the board in the DOM because that is where it is on the screen in both
  * orientations — to the right of a horizontal neck, under a vertical one — so reading order and
  * focus order follow the picture rather than being reshuffled by `order`.
+ *
+ * The key used to live in a `title` on a second chip up in the header, which on a phone is nowhere
+ * at all: a native tooltip needs a pointer to hover, and a finger cannot hover. So it is spoken with
+ * the label instead, and the sentence about the reading opens in a real popover that a tap reaches.
  */
-function FunctionTag({ tag }: { readonly tag: AnalysisTag }) {
+function FunctionTag({
+  label,
+  keyName,
+  tentative,
+  explanation,
+}: {
+  readonly label: FunctionLabel;
+  readonly keyName: string;
+  readonly tentative: boolean;
+  /** The analysis's sentence about this chord, or "" when there is no analysis to explain. */
+  readonly explanation: string;
+}) {
+  const className = tentative ? 'function-tag is-tentative' : 'function-tag';
+  // The mark is the tentative modifier's visible half; the words are carried by the accessible name
+  // or the hidden copy of the label, so reading "?" out on top of them would only be noise.
+  const body = (
+    <>
+      <FunctionText label={label} context={tentative ? `in ${keyName}, ${TENTATIVE_NOTE}` : `in ${keyName}`} />
+      {tentative && (
+        <span className="tentative-mark" aria-hidden="true">
+          ?
+        </span>
+      )}
+      {label.note && <span className="function-note">{label.note}</span>}
+    </>
+  );
+
   return (
     <div className="box-analysis">
-      <InfoPopover
-        className="function-tag"
-        label={`Chord function, ${tag.label.text}. What this means`}
-        explanation={tag.explanation}
-      >
-        <FunctionText label={tag.label} />
-        {tag.label.note && <span className="function-note">{tag.label.note}</span>}
-      </InfoPopover>
+      {explanation ? (
+        <InfoPopover
+          className={className}
+          label={`Chord function, ${label.text} in ${keyName}${tentative ? ', tentative' : ''}. What this means`}
+          explanation={tentative ? `${explanation} This reading is ${TENTATIVE_NOTE}.` : explanation}
+        >
+          {body}
+        </InfoPopover>
+      ) : (
+        // Nothing to disclose without the analysis, so the chip is not a button: a control that
+        // opens nothing is worse than plain text. `title` is left as a convenience for a mouse, on
+        // top of the hidden copy of the label that every reader gets.
+        <span className={className} title={`${label.text} in ${keyName}${tentative ? `, ${TENTATIVE_NOTE}` : ''}`}>
+          {body}
+        </span>
+      )}
     </div>
   );
 }

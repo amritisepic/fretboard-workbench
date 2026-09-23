@@ -46,6 +46,18 @@ export interface FunctionLabel {
   readonly text: string;
 }
 
+/**
+ * A bare Roman numeral as a function label.
+ *
+ * A card carries one chip for its function, and with harmonic analysis switched off the numeral in
+ * the key is the whole of what is known about it. Dressing that numeral as a label rather than
+ * printing it some other way is what lets the chip stay one component with one look, instead of
+ * splitting back into the numeral badge and the function tag this replaced.
+ */
+export function numeralLabel(numeral: string): FunctionLabel {
+  return { numeral, suffix: '', figures: [], target: '', note: '', text: numeral };
+}
+
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
 

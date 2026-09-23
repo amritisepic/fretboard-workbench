@@ -1,10 +1,16 @@
 import type { FunctionLabel } from './analysisModel';
 
 /** A function label as in print, with figured bass stacked: V⁶₅/V, V7/IV. */
-export function FunctionText({ label }: { readonly label: FunctionLabel }) {
+export function FunctionText({ label, context }: { readonly label: FunctionLabel; readonly context?: string }) {
   return (
     <span className="function-text">
-      <span className="visually-hidden">{label.text}</span>
+      {/*
+        The printed label is built out of superscripts and stacked figures that a screen reader would
+        read as loose digits, so the plain text is what is actually announced. `context` is spoken
+        with it: a numeral means nothing without the key it is counted from, and where the chip has
+        no explanation to open, this hidden copy is the only place that can say so.
+      */}
+      <span className="visually-hidden">{context ? `${label.text} ${context}` : label.text}</span>
       <span aria-hidden="true">
         {label.numeral}
         {label.suffix}

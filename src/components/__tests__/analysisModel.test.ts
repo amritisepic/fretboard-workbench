@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeHarmony, chordName, makeScaleRef, mod12, type HarmonicAnalysis } from '../../theory';
 import { progression } from '../../theory/__tests__/chordSymbols';
-import { explainReading, figuresText, functionLabel, patternsAcross, relationViews } from '../analysisModel';
+import { explainReading, figuresText, functionLabel, numeralLabel, patternsAcross, relationViews } from '../analysisModel';
 
 function analyze(symbols: string, tonic: string, mode = 0) {
   const chords = progression(symbols);
@@ -28,6 +28,12 @@ describe('function labels', () => {
     expect(labels(analyze('C G7/B C', 'C').analysis, 'classical')).toEqual(['I', 'V⁶₅', 'I']);
     expect(labels(analyze('C A7/C♯ Dm', 'C').analysis, 'classical')).toEqual(['I', 'V⁶₅/ii', 'ii']);
     expect(figuresText(['4', '2'])).toBe('⁴₂');
+  });
+
+  it('dresses a bare numeral as a label, for a card whose analysis is switched off', () => {
+    // The card draws one chip through one component, so the numeral on its own has to arrive in the
+    // same shape a full reading does.
+    expect(numeralLabel('♭VII')).toEqual({ numeral: '♭VII', suffix: '', figures: [], target: '', note: '', text: '♭VII' });
   });
 
   it('writes a tritone substitute as subV7 or ♭II⁷, and notes borrowing in each notation', () => {
