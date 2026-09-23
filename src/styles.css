@@ -289,10 +289,13 @@ button[aria-disabled='true'] {
   /* Sticky offsets count from inside the workspace's padding, so this cancels it. */
   top: -28px;
   display: flex;
+  /* The bar is meant to fit one row at every width, and does. Wrapping is kept as the way it gives
+     when a translation or a text-size setting makes a control wider than it is here: a second row
+     costs a little height, where `nowrap` would push the last control off the side of the screen
+     with nothing to say it had gone, which is the failure this replaced. */
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px 28px;
+  gap: 12px 20px;
   margin: -28px -28px 22px;
   padding: 14px 28px;
   border-bottom: 1px solid var(--rule);
@@ -333,6 +336,50 @@ button[aria-disabled='true'] {
 .canvas-toolbar .stepper button {
   width: 30px;
   height: 30px;
+}
+
+/* Away from the controls that change the music, at the end of the bar, and the anchor the panel
+   hangs off. */
+.toolbar-display {
+  position: relative;
+  margin-left: auto;
+}
+
+/* Opening the panel puts focus on it so its name is read out, the way .settings-panel does; it is
+   not a tab stop, so the ring would mark a place the keyboard can never be asked to go.
+
+   Anchored to the button's right edge because the button is at the right of the bar: opening
+   leftwards is the one direction with room on a phone. */
+.toolbar-display-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 12px;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  outline: none;
+}
+
+/* A name on the left, the control it names on the right, so the controls line up down the panel. */
+.toolbar-display-row,
+.toolbar-display-panel .toolbar-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toolbar-display-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
 }
 
 .canvas {
@@ -2898,21 +2945,53 @@ kbd {
     padding: 16px;
   }
 
-  /* One scrolling row, so the sticky toolbar stays short. */
+  /* One row on a 390px phone, which is what the whole bar is sized against below. */
   .canvas-toolbar {
-    flex-wrap: nowrap;
     top: -16px;
-    justify-content: flex-start;
-    gap: 18px;
+    gap: 10px;
     margin: -16px -16px 16px;
-    padding: 10px 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    padding: 10px 12px;
   }
 
   .toolbar-group {
-    flex: none;
     flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  /* The Key heading is what the bar can most afford to lose: "Find key" beside the two selects says
+     what they are, and the group still carries its name for a screen reader. Shift keeps its
+     heading, because a bare - and + name nothing at all. */
+  .toolbar-group[data-tour='key'] > .toolbar-label {
+    display: none;
+  }
+
+  .canvas-toolbar > .toolbar-group > .toolbar-label {
+    font-size: 10px;
+  }
+
+  /* Capped, not just narrowed: `field-sizing: content` sizes a select to the name it is showing, so
+     without a ceiling a key of "Harmonic minor" would widen the bar until it wrapped. The cap is on
+     the pair, so the two share what there is, and it holds the promise of one row for every key at
+     the cost of ellipsizing the longest few scale names. */
+  .canvas-toolbar .scale-selects {
+    max-width: 112px;
+    gap: 4px;
+  }
+
+  .canvas-toolbar .scale-selects .select {
+    height: 30px;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 12.5px;
+  }
+
+  .canvas-toolbar .button.is-compact {
+    padding: 0 8px;
+  }
+
+  .canvas-toolbar .stepper button {
+    width: 26px;
+    height: 26px;
   }
 
   /* Strips sit above their box instead of beside it. */
