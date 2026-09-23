@@ -17,13 +17,23 @@ const renderCanvas = () => {
 describe('Canvas', () => {
   beforeEach(resetStores);
 
-  it('lays out one group per chord, each with a key band, a scale band and a card', () => {
+  // One bar per chord now, not two: plan item 10 merged the scale band into the key band, so a
+  // group is a bar and a card. The bar is a fixed height whether or not it carries a scale, which is
+  // what keeps the cards in a row starting at the same height.
+  it('lays out one group per chord, each with one bar and a card', () => {
     const count = openExample(FIXTURES.short);
     const container = renderCanvas();
     expect(container.querySelectorAll('.box-group')).toHaveLength(count);
     expect(container.querySelectorAll('.key-band')).toHaveLength(count);
-    expect(container.querySelectorAll('.scale-band')).toHaveLength(count);
     expect(container.querySelectorAll('.box')).toHaveLength(count);
+    expect(container.querySelectorAll('.scale-band'), 'the second band is gone').toHaveLength(0);
+  });
+
+  it('names the key over every chord, not only where a key region starts', () => {
+    const count = openExample(FIXTURES.short);
+    const container = renderCanvas();
+    const named = [...container.querySelectorAll('.key-band')].filter((band) => band.textContent?.includes('G major'));
+    expect(named).toHaveLength(count);
   });
 
   it('puts a strip between every pair of chords, but not before the first', () => {
@@ -71,12 +81,10 @@ describe('Canvas', () => {
     expect(await axeRuleIds(renderCanvas())).toEqual([]);
   });
 
-  // ---- Known gaps -------------------------------------------------------
-
-  // A group is [key band] + [strip + box]. The band therefore starts one strip-width to the left of
-  // the chord it names, so on screen each band sits above the gap before its chord instead of above
-  // the chord. Plan item 11 (Phase 2) scopes the band to its own box.
-  it.fails('draws each key band over the chord it names, not over the strip before it', () => {
+  // A group is a grid: the strip takes the first column and the card the second, and the bar covers
+  // the second column alone. It used to be [key band] + [strip + box], which started the band one
+  // strip-width left of the chord it named. Closed by plan item 11 (Phase 2).
+  it('draws each key band over the chord it names, not over the strip before it', () => {
     openExample(FIXTURES.short);
     const container = renderCanvas();
     for (const group of container.querySelectorAll('.box-group')) {
@@ -87,16 +95,26 @@ describe('Canvas', () => {
     }
   });
 
-  // The key band and the scale band under it print the same text whenever a box's reference scale
-  // is the key it is in, which is the common case. Plan item 10 (Phase 2) merges them.
-  it.fails('does not print the key and the reference scale twice when they are the same', () => {
+  // The key band and the scale band under it used to print the same text whenever a box's reference
+  // scale was the key it is in, which is the common case. Closed by plan item 10 (Phase 2): there is
+  // one bar, and the scale joins it only when it differs from the key.
+  it('does not print the key and the reference scale twice when they are the same', () => {
     openExample(FIXTURES.short);
     const container = renderCanvas();
+    // `.scale-band` is gone, so the old reading of this — key-band text against scale-band text —
+    // would now pass without looking at anything. The bar's own two halves are what can still say
+    // the same thing twice, so they are what is compared.
     const repeated = [...container.querySelectorAll('.box-group')].filter((group) => {
       const key = group.querySelector('.key-band-label')?.textContent?.trim();
-      const scale = group.querySelector('.scale-band')?.textContent?.trim();
+      const scale = group.querySelector('.key-band-scale')?.textContent?.trim();
       return key !== undefined && key === scale;
     });
     expect(repeated).toHaveLength(0);
+
+    // And the box whose scale is its key must print that name once, not in both halves.
+    const tonic = [...container.querySelectorAll('.box-group')].find(
+      (group) => group.querySelector('.key-band-label')?.textContent?.trim() === 'G major',
+    );
+    expect(tonic?.querySelector('.key-band-scale'), 'the tonic box carries no second name').toBeNull();
   });
 });

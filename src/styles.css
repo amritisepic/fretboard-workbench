@@ -342,16 +342,30 @@ button[aria-disabled='true'] {
   row-gap: 30px;
 }
 
+/* Strip in the first column, card in the second, and the bar over the second column alone. The bar
+   used to span the whole group, which put it a strip-width to the left of the chord it names. */
 .box-group {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   min-width: 0;
   max-width: 100%;
 }
 
+.box-group > .strip,
+.box-group > .box-spacer {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.box-group > .key-band {
+  grid-column: 2;
+  grid-row: 1;
+}
+
 .box-group-body {
   display: flex;
-  flex: 1;
+  grid-column: 2;
+  grid-row: 2;
   align-items: stretch;
   min-width: 0;
 }
@@ -367,63 +381,53 @@ button[aria-disabled='true'] {
   min-width: 0;
 }
 
+/* One bar per chord, holding the key the box is in and, when it differs, the box's reference scale.
+   `contain: inline-size` keeps a long scale name from widening the column: the card sets the width
+   and the bar's contents ellipsize inside it. */
 .key-band {
-  position: relative;
-  height: 24px;
-  margin-bottom: 6px;
-  background: var(--rule);
-}
-
-/* Each box's reference scale, under the key band. It never widens the box. */
-.scale-band {
   display: flex;
   align-items: center;
-  height: 22px;
-  margin-bottom: 10px;
+  gap: 8px;
+  height: 24px;
+  margin-bottom: 6px;
   padding: 0 10px;
-  border-radius: 7px;
-  color: #56524a;
-  font-size: 11.5px;
-  font-weight: 600;
+  border-radius: 8px;
+  background: var(--rule);
   contain: inline-size;
 }
 
-.scale-band span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.key-band.is-first,
-.key-band.is-region-start {
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
-}
-
-/* The seam where the key changes; a row's left edge needs none. */
-.key-band.is-region-start:not(.is-row-start) {
-  margin-left: 10px;
-}
-
-.key-band.is-region-end {
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
-}
-
 .key-band-label {
-  position: absolute;
-  top: 50%;
-  left: 10px;
+  min-width: 0;
+  overflow: hidden;
   color: #56524a;
   font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
-  transform: translateY(-50%);
+  text-overflow: ellipsis;
 }
 
+/* A bar carrying on a key region rather than starting one. The bars no longer touch, so the lighter
+   weight is what now says "same key as the one before" that a joined bar said by running on. */
 .key-band-label.is-continued {
   font-weight: 500;
   opacity: 0.7;
+}
+
+/* The reference scale, kept on the box's own color so the two halves of the bar stay told apart,
+   and pushed to the trailing edge away from the key. */
+.key-band-scale {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  padding: 0 8px;
+  border-radius: 7px;
+  overflow: hidden;
+  color: #56524a;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .box-spacer {
@@ -2915,9 +2919,26 @@ kbd {
     flex-wrap: nowrap;
   }
 
-  /* Strips sit above their box instead of beside it. */
+  /* Strips sit above their box instead of beside it, so the group collapses to a single column:
+     strip, then the bar naming the chord, then the card. */
+  .box-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .box-group > .strip,
+  .box-group > .box-spacer {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .box-group > .key-band {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .box-group-body {
-    flex-direction: column;
+    grid-column: 1;
+    grid-row: 3;
   }
 
   .strip {
@@ -3056,8 +3077,24 @@ kbd {
   }
 
   /* The off-screen sheet keeps the desktop layout the export is drawn with. */
+  .export-sheet .box-group {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .export-sheet .box-group > .strip,
+  .export-sheet .box-group > .box-spacer {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .export-sheet .box-group > .key-band {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
   .export-sheet .box-group-body {
-    flex-direction: row;
+    grid-column: 2;
+    grid-row: 2;
   }
 
   .export-sheet .strip {
