@@ -13,15 +13,21 @@ that work settled on. Each is enforced by a test, named beside it, so breaking o
 changing one is a design decision, and belongs in the commit message with the reason.
 
 **Type.** Six sizes, and only six: `--text-xs` 11, `--text-sm` 12, `--text-md` 14, `--text-lg` 16,
-`--text-xl` 20, `--text-2xl` 28 (px). No half-pixel sizes, and nothing under 11px anywhere, the
-fretboard's SVG text included. *Enforced by `src/design/__tests__/`.*
+`--text-xl` 20, `--text-2xl` 28 (px), with two line heights. No half-pixel sizes, and nothing under
+11px, the fretboard's SVG text included. The one exception is the figured-bass figures (V⁶₅), sized
+relative to their numeral as figures are in print. The smallest size is also what the export's
+print floor and view mode's legibility floor are computed from (`SMALLEST_SHEET_TEXT_PX`).
+*Enforced by `src/design/__tests__/scale.test.ts`, which names every exception.*
 
 **Space.** Seven steps for padding, margin and gap: `--space-1` … `--space-7` = 4, 8, 12, 16, 24,
 32, 48. A value between two steps means choosing one, not adding a step. Hairline borders, radii and
-control sizes are not spacing. *Enforced by `src/design/__tests__/`.*
+control sizes are not spacing. Spacing computed in JavaScript uses the same tokens (see `indentBy` in
+`ExplorerPanel.tsx`). *Enforced by `src/design/__tests__/scale.test.ts`.*
 
-**Color.** Every color is a token in `:root`, with a light and a dark value. Text clears 4.5:1 on
-whatever it sits on and the edge of a control clears 3:1 (WCAG 1.4.3, 1.4.11), in both themes:
+**Color.** Every color is a token in `:root`, written once as `light-dark(light, dark)`; the theme
+is the system's unless Settings overrides it (`data-theme` on `<html>`, set before first paint by the
+script in `index.html`). No color literal outside the token blocks. Text clears 4.5:1 on whatever it
+sits on and the edge of a control clears 3:1 (WCAG 1.4.3, 1.4.11), in both themes:
 - `--ink`, `--ink-soft` and `--ink-faint` are the three text weights. `--ink-faint` is the quietest
   thing allowed to be text, and it still passes.
 - `--rule` is a hairline inside a surface, `--rule-mid` outlines what only groups things, and
@@ -29,11 +35,11 @@ whatever it sits on and the edge of a control clears 3:1 (WCAG 1.4.3, 1.4.11), i
 - Opacity is not a way to make text quieter: it silently takes it under the floor. Use a token.
 - A dot's label color comes from `labelInk()` in `src/components/color.ts`, which picks by measured
   contrast, never by a luminance threshold.
-- The key-region colors stay at least ΔE 15 apart, and two neighbouring regions never share one.
+- The key-region colors stay at least ΔE 15 apart, and two neighboring regions never share one.
 - The export sheet is always light: it is printed on white paper.
 
-*Enforced by `src/design/__tests__/contrast.test.ts`, whose `KNOWN_FAILURES` list is empty and has
-to stay that way.*
+*Enforced by `src/design/__tests__/contrast.test.ts` and `theme.test.ts`; `KNOWN_FAILURES` is empty
+for both themes and has to stay that way.*
 
 **Controls.** One control per kind of decision:
 - On or off → `Switch` (`src/components/Switch.tsx`).

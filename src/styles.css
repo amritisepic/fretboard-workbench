@@ -1739,6 +1739,9 @@ button.key-choice:hover {
 .mode-stop {
   position: absolute;
   top: 0;
+  /* Four pixels round an 11px label come to 23.95px at the body line height, a hair under the 24px
+     floor for anything a pointer aims at; the minimum settles it without leaving the scale. */
+  min-height: 24px;
   padding: var(--space-1);
   border: 0;
   background: transparent;

@@ -200,7 +200,11 @@ function planLayout(sheet: HTMLElement, workbench: boolean, output: OutputOption
    * done about that from here — a box is not divisible — so the preview says so instead.
    */
   const fillPageWidth = (): Layout => {
-    const width = perRow ?? (workbench ? Math.min(singleRow, Math.max(widestGroup, boxWidth / MIN_LEGIBLE_SCALE)) : SCALE_SHEET_WIDTH);
+    // A whole number of pixels, rounded down. The sheet's measured width comes back as an integer, so
+    // laying it out at 966.6px measured as 967, and the scale that fitted 967 to the page landed a
+    // hair under the floor — the default export then warned that its own text was too small.
+    const atFloor = Math.floor(boxWidth / MIN_LEGIBLE_SCALE);
+    const width = perRow ?? (workbench ? Math.min(singleRow, Math.max(widestGroup, atFloor)) : SCALE_SHEET_WIDTH);
     const trial = measureAt(width);
     return { width, scale: Math.min(boxWidth / Math.max(trial.width, trial.contentWidth), MAX_FIT_SCALE), paginated: true };
   };

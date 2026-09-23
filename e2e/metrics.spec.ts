@@ -218,6 +218,18 @@ test.describe('layout budgets', () => {
     expect(reading?.scrollHeight, 'how far the frame scrolls').toBeGreaterThanOrEqual(reading?.lastCardBottom ?? Infinity);
   });
 
+  test('the default export prints every label at the print floor or above', async ({ page }) => {
+    // Plan item 33: the dialog's default used to print the fret numbers at 4.7 pt. The summary line
+    // under the preview says when the smallest text lands under six points; on the default path, for
+    // the longest fixture, it must never say so.
+    await goTo(page, STATES.long);
+    await page.locator('[data-tour="export"]').click();
+    const summary = page.locator('.export-summary');
+    await summary.waitFor({ timeout: 30_000 });
+    await expect(summary).toContainText('pages');
+    await expect(summary).not.toContainText('under 6 pt');
+  });
+
   test('controls are big enough to hit', async ({ page }, testInfo) => {
     const budget = BUDGETS[testInfo.project.name];
     await goTo(page, STATES.short);

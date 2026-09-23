@@ -184,7 +184,7 @@ function FretMarkersField() {
   return (
     <section className="settings-section">
       <Switch label="Fret markers" labelClassName="field-label" checked={fretMarkers} onChange={setFretMarkers} />
-      <p className="hint">Light grey dots at frets 3, 5, 7, 9 and 12, repeating up the neck.</p>
+      <p className="hint">Quiet dots at frets 3, 5, 7, 9 and 12, repeating up the neck.</p>
     </section>
   );
 }
