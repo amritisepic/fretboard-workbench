@@ -1,0 +1,506 @@
+/* The design tokens, in both themes, and what everything else is built from: the page, the
+   element defaults, focus, and the control vocabulary — buttons at their three levels, the Switch,
+   the tool switch, dialogs and the offline notice. Loaded first; every other sheet assumes it.
+   The six type sizes and seven spacing steps defined here are the only ones any sheet may use
+   (src/design/__tests__/scale.test.ts). */
+
+/*
+ * Every color, font size and spacing value in this file is one of the tokens below. The tests in
+ * `src/design/__tests__/` hold it to that: a font size or a spacing value that is not a token fails
+ * the build, and so does a color written anywhere but here. The few exceptions are listed there, each
+ * with its reason beside it here.
+ *
+ * Each color is written once, as its light value and its dark value side by side, and `light-dark()`
+ * chooses between them by `color-scheme`. So a theme is that one property: the blocks after this one
+ * switch the page to dark. A copy of the palette per theme would have been two lists to keep in step.
+ *
+ * The export is the one thing that stays light, because a PDF or a PNG is printed on white paper
+ * whatever the screen was showing when it was made. That is why the tokens are declared on two more
+ * elements than the root: the off-screen stage the export sheet is laid out in, and the root that
+ * `export/rasterize.ts` wraps a copy of the sheet in to draw it. Declaring `color-scheme: light` on
+ * the stage alone would not do, because the build rewrites `light-dark()` for browsers without it
+ * into custom properties that are resolved where they are declared; a token resolved dark on the
+ * page's root arrives at the stage already dark. Declared here, each token is resolved again, light,
+ * on the stage and on the export's root.
+ */
+:root,
+.export-stage,
+.export-root {
+  color-scheme: light;
+
+  /* The dark theme is for rehearsal rooms and stages, so its page is a warm near-black rather than
+     black, and its ink stops short of white: full white on black glows at the edges of each letter
+     in a dark room, and at 14:1 this is still further from the page than the light theme's ink
+     (10.8:1). Every pairing both themes use is checked in contrast.test.ts, dark and light alike. */
+  --paper: light-dark(#faf9f7, #1b1a18);
+  /* Behind hovered rows, pressed buttons and the export preview. In the dark theme it is lighter
+     than the page rather than darker: a surface that stands out in the dark is one lit a little
+     more, and a hover that darkened a near-black page would not show. */
+  --paper-sunk: light-dark(#f2f0ec, #252421);
+  --ink: light-dark(#3a3a3a, #ebe8e3);
+  --ink-soft: light-dark(#66635d, #aca79e);
+  /* The quietest text there is, and still text: fret numbers, string names, hints, the save status,
+     all at --text-xs and --text-sm. So it clears 4.5:1 on the sunk panels as well as on paper, which
+     leaves it close to --ink-soft; size and weight say the rest. It was #9b978f, at 2.76:1. */
+  --ink-faint: light-dark(#706c64, #948f86);
+  /* Three weights of line. --rule is a hairline inside a surface. --rule-mid outlines what is only
+     there to group things, like a chord card, a table's head or an inlay, and WCAG 1.4.11 leaves
+     that alone. --rule-strong is the edge of something to operate or a panel that floats over the
+     page, where the edge is how you find it, so it clears 3:1 on paper; it was #cfcbc3, at 1.53:1,
+     which --rule-mid keeps. */
+  --rule: light-dark(#e6e3dd, #2e2c29);
+  --rule-mid: light-dark(#cfcbc3, #454240);
+  --rule-strong: light-dark(#928e86, #75716a);
+  --danger: light-dark(#a83228, #ec8074);
+  --notice: light-dark(#8a5a1f, #d69b52);
+
+  /* The fills behind the key bars, one per key. They are what tells one key region from the next at
+     a glance, so every pair is at least ΔE 15 apart (CIE76), where the beiges they replaced came as
+     close as 3. All eight share one lightness and one chroma (21.5), with their hues spaced evenly
+     round the circle, so no bar reads heavier than another; the bar names its key in words as well,
+     which is why the hues stop at the separation the eye needs and go no further towards saturated
+     blocks. The order is the order keys are met in, and each key after the first takes the hue
+     furthest from the ones before it (see KEY_REGION_COLORS in components/color.ts).
+
+     The dark set keeps each hue and the chroma and moves the lightness from L* 85 to L* 32, which
+     keeps the pairs as far apart; the test holds both sets to ΔE 15. Left pale, eight bright bars
+     would have been the brightest things on a dark stage, which is what the dark theme exists to
+     stop, and the band ink on them is light for the same reason. */
+  --region-1: light-dark(#e8d2ac, #594929);
+  --region-2: light-dark(#b9d7fc, #2e4e6d);
+  --region-3: light-dark(#a7e0d0, #1d5448);
+  --region-4: light-dark(#fbc6d8, #6a3e4f);
+  --region-5: light-dark(#c6dbb5, #3e5131);
+  --region-6: light-dark(#e0cdf3, #544565);
+  --region-7: light-dark(#9fdfee, #005360);
+  --region-8: light-dark(#fdc9bb, #6a4136);
+  /* The ink on the key bars and on the scale bands beside them, which are tinted with the box's own
+     color (see bandShade). The soft one is a rival reading's scale on a scale band. */
+  --band-ink: light-dark(#56524a, #e3dfd8);
+  --band-ink-soft: light-dark(#625e56, #c2bdb3);
+  /* The tonic in the scale wizard's chromatic grid, matching the tonic's dots on its fretboard, which
+     are drawn in the default box color. That red clears 3:1 on both pages, so the dark theme keeps
+     it as it is (see dotColorIn). */
+  --tonic: #c8372d;
+  --on-tonic: #ffffff;
+  /* The paper an export prints on, white in both themes. */
+  --sheet: #ffffff;
+  /* Shadows darken whatever is under them, so the dark theme's are black; a shadow in the light
+     theme's ink would glow on a dark page. */
+  --shade: light-dark(rgb(58 58 58 / 0.34), rgb(0 0 0 / 0.55));
+  --shadow: light-dark(rgb(58 58 58 / 0.25), rgb(0 0 0 / 0.6));
+  --shadow-faint: light-dark(rgb(58 58 58 / 0.14), rgb(0 0 0 / 0.45));
+  /* An image cannot take a color from the page, so the select's chevron is drawn once per theme, in
+     that theme's ink; the dark one is in the blocks below. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%233a3a3a' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  /* Six sizes of type. There were fifteen, five of them half pixels, each nudged until it looked
+     right on its own. Labels and the fretboard's own text are --text-xs, which is also the export's
+     print floor (SMALLEST_SHEET_TEXT_PX); small print and compact controls --text-sm; everything
+     read as body text --text-md; panel and dialog titles --text-lg; chord and scale names
+     --text-xl; and the two display figures, the root box's note and an export's title, --text-2xl. */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  /* Body leading, which suits every size up to --text-xl, and a tighter one for --text-2xl, where the
+     same ratio would open a wrapped title up like double spacing and stand the root box's note taller
+     than the box. */
+  --leading: 1.45;
+  --leading-tight: 1.15;
+
+  /* Seven steps of space, for every padding, margin and gap. Anything between two steps was moved to
+     one of them rather than given a step of its own. Hairlines, radii and the heights of controls are
+     not space and are not on this scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius-lg: 16px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  /* Every transition in this file is this long. The three ad-hoc durations it replaced were 120ms,
+     150ms and 180ms, which nobody can tell apart, and a single token is what lets the reduced-motion
+     block below turn the lot off without an `!important` anywhere. */
+  --motion: 150ms;
+  --font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+}
+
+/*
+ * The dark theme, for anyone whose system asks for it and has not chosen light in Settings, and for
+ * anyone who has chosen dark. `index.html` sets `data-theme` before the first paint from the stored
+ * choice, so the page never flashes white first; no attribute means "follow the system".
+ *
+ * CSS cannot say "this media query or that selector" in one block, so the two are written out; the
+ * colors themselves are in `:root` above, which leaves each block two lines long, and a test holds the
+ * two to being identical.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23ebe8e3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23ebe8e3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* Someone who has asked their system to reduce motion is telling every app to stop moving things,
+   and this one has never listened. Zeroing the duration rather than removing the transitions keeps
+   the rules in one piece, and keeps this file's long-standing promise of no `!important`. The
+   smooth scroll that follows a new chord is JavaScript, so it reads the same preference in
+   `motion.ts` instead. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0s;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  line-height: var(--leading);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* `aria-disabled` is styled the same as `disabled`: see TopBar's Export button for why a control
+   that is unavailable still keeps its place in the tab order. */
+button:disabled,
+button[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.35;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---- Buttons ------------------------------------------------------------ */
+
+/*
+ * Three levels of button, and only three, told apart by how much ink each one carries:
+ *
+ *  - Primary (`.button.is-primary`): solid ink. The action a screen or a dialog is there for, one to a
+ *    group so the eye has one place to land: Save while there is something to save, Next in the tour,
+ *    Download in the export, the answer a confirmation is asking for.
+ *  - Secondary (`.button`, the default): an outline. An ordinary action, beside the primary one or
+ *    among equals: Cancel, Back, Find key, Display, New preset.
+ *  - Tertiary (`.button.is-tertiary`): a ghost, with no fill and no outline until it is pointed at.
+ *    For the controls that are always on screen and seldom the point — the top bar's Presets, Guide,
+ *    Export and Settings, a card's remove, End tour — where an outline on every one would drown out
+ *    the button that matters.
+ *
+ * Danger is a tone, not a fourth level (`.is-danger`). How loudly a button speaks and what it does
+ * are separate questions: deleting a preset is the whole point of the dialog that confirms it, so
+ * there it is primary, while removing a box is one small mark on every card, so there it is tertiary.
+ * A danger level would have to pick one of those and be wrong about the other. The tone swaps the ink
+ * the level is drawn in for the danger color, so a primary danger button is solid red and a secondary
+ * one is outlined in red. A tertiary one turns red when it is pointed at or focused, the moment before
+ * it acts; at rest it is as quiet as any other ghost, so thirty cards do not carry thirty red crosses.
+ *
+ * Two sizes, both over the WCAG 2.2 minimum of 24px: 34px by default, and 30px with `.is-compact` for
+ * toolbars and dense panels. `.is-icon` squares either one off, for a button that is a glyph and an
+ * `aria-label`.
+ *
+ * Defined before the layout so that a one-class rule placing a particular button (`.sidebar-close`
+ * hiding itself, `.box-remove` pinning itself to a corner) comes later in the file and wins.
+ */
+.button {
+  /* The ink the level is drawn in, and the one thing `.is-danger` changes. */
+  --button-ink: var(--ink);
+  display: inline-flex;
+  /* Never squeezed below its size by a flex parent that has run out of room. The sidebar's Done was
+     a 30px button drawn 20px tall, because the sidebar is a scrolling column and its content is
+     taller than it is. Across a row this changes nothing: the label does not wrap, so a button could
+     not get narrower than its text anyway. */
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 34px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--button-ink);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    border-color var(--motion) ease,
+    background-color var(--motion) ease,
+    color var(--motion) ease;
+}
+
+.button.is-danger {
+  --button-ink: var(--danger);
+}
+
+.button:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--button-ink);
+}
+
+.button.is-primary {
+  border-color: var(--button-ink);
+  background: var(--button-ink);
+  color: var(--paper);
+}
+
+.button.is-tertiary {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+/* Focus as well as hover, so a keyboard user sees a tertiary danger button's tone before pressing it,
+   as a pointer user does. */
+.button.is-tertiary:is(:hover, :focus-visible):not(:disabled, [aria-disabled='true']) {
+  border-color: transparent;
+  background: var(--paper-sunk);
+  color: var(--button-ink);
+}
+
+/* A button whose panel is open looks pressed for as long as it is. This is what the top bar's tabs
+   were for, said the way any button that opens something can say it. */
+.button[aria-expanded='true'] {
+  border-color: var(--button-ink);
+  background: var(--paper-sunk);
+}
+
+.button.is-tertiary[aria-expanded='true'] {
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.button.is-compact {
+  height: 30px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.button.is-icon {
+  width: 34px;
+  padding: 0;
+}
+
+.button.is-icon.is-compact {
+  width: 30px;
+}
+
+/* ---- Switch ---------------------------------------------------------- */
+
+/* The one on/off control (Switch.tsx). The name on the left and the track on the right, pushed apart
+   when the row has room, so the tracks in a column of switches line up down its right-hand edge. */
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* The name is the track's label, so pressing it works too. */
+.switch > label {
+  cursor: pointer;
+}
+
+/* A switch's own name, as ordinary text: the uppercase treatment marks a heading that groups several
+   controls, and a switch's name is only a heading where its section has nothing else in it. */
+.switch-label {
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.switch .field-label {
+  margin: 0;
+}
+
+/* A key hint sits beside the name it belongs to, not out beside the track. */
+.switch > .shortcut {
+  margin: 0 auto 0 0;
+}
+
+/* 24px tall, the WCAG 2.2 minimum for a target, where the four hand-written copies it replaced were
+   22px. The width grows with it so the knob travels as far as it did. */
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color var(--motion) ease;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition:
+    transform var(--motion) ease,
+    background-color var(--motion) ease;
+}
+
+.switch-track[aria-checked='true'] {
+  background: var(--ink);
+}
+
+.switch-track[aria-checked='true'] .switch-knob {
+  background: var(--paper);
+  transform: translateX(16px);
+}
+
+/* ---- Offline and update notice --------------------------------------- */
+
+.update-notice {
+  position: fixed;
+  z-index: 40;
+  bottom: var(--space-4);
+  left: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(440px, calc(100vw - 40px));
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--ink);
+  border-radius: 12px;
+  background: var(--paper);
+  font-size: var(--text-md);
+}
+
+.update-actions {
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+/* ---- Dialog ---------------------------------------------------------- */
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.dialog {
+  width: min(360px, calc(100vw - 40px));
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.dialog h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.dialog p {
+  margin-top: var(--space-2);
+  color: var(--ink-soft);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+/* ---- Tool switch --------------------------------------------------------- */
+
+.app-switch .segmented button {
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+}
+
+.topbar-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ---- Phones -------------------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+
+  .app-switch {
+    grid-area: switch;
+    justify-self: start;
+  }
+
+  .app-switch .segmented button {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .topbar-save {
+    grid-area: save;
+  }
+
+  .topbar-presets {
+    grid-area: presets;
+  }
+
+  .topbar-settings {
+    grid-area: settings;
+    justify-self: end;
+  }
+
+  .topbar-title {
+    display: none;
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import css from '../../styles.css?inline';
+import { css } from '../styles';
 import { SWATCHES } from '../../components/ColorField';
 import {
   KEY_REGION_COLORS,

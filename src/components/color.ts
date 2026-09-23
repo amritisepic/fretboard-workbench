@@ -1,6 +1,6 @@
 import { MINIMUM, contrast } from '../design/contrast';
 
-/** The two themes the stylesheet draws; see the tokens at the top of styles.css. */
+/** The two themes the stylesheet draws; see the tokens at the top of src/styles/base.css. */
 export type Theme = 'light' | 'dark';
 
 /** Each theme's page, as `--paper` declares it. The contrast tests hold the two to the same values. */

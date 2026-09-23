@@ -1,0 +1,302 @@
+/* The export dialog and the off-screen sheet it draws PDF and PNG pages from. Loaded with the
+   dialog's chunk (src/components/export/ExportDialog.tsx), not on first paint. The sheet is always
+   drawn in the light theme; the tokens in base.css are declared on its roots for that. */
+
+/* ---- Export ---------------------------------------------------------------- */
+
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, calc(100vw - 40px));
+  height: min(780px, calc(100vh - 40px));
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  outline: none;
+}
+
+.export-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.export-dialog-head h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.export-dialog-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 340px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.export-options {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  overflow: auto;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border-right: 1px solid var(--rule);
+  /* A control cut in half at the scroll fold, with nothing to say the column scrolls, is how this
+     column used to end. The two radial gradients are painted in the scrollport rather than on the
+     content, so each one shows only while there is content past that edge: the shadow appears when
+     something is hidden and goes when nothing is. The two linear gradients scroll with the content
+     and cover the shadow at the ends. */
+  background:
+    linear-gradient(var(--paper) 40%, transparent) top / 100% 22px no-repeat local,
+    linear-gradient(transparent, var(--paper) 60%) bottom / 100% 22px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--shadow-faint), transparent) top / 100% 9px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--shadow-faint), transparent) bottom / 100% 9px no-repeat scroll;
+  /* Tabbing to a control the column has to scroll to must not leave it flush against the fold. */
+  scroll-padding-block: var(--space-5);
+}
+
+/* Everything past the format, which is mounted only while "More options" is open. */
+.export-advanced {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.export-more {
+  justify-self: start;
+}
+
+.export-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.export-group .field-label {
+  margin-bottom: 0;
+}
+
+.export-group .hint {
+  margin-top: 0;
+}
+
+.export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.export-links {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.export-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.export-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0 var(--space-3);
+  max-height: 168px;
+  overflow: auto;
+  padding: var(--space-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+
+.export-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1) var(--space-3);
+}
+
+.export-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.export-check input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.export-check > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-index {
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+}
+
+.export-value {
+  min-width: 42px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.export-preview {
+  overflow: auto;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: var(--paper-sunk);
+}
+
+.export-summary,
+.export-empty {
+  margin-bottom: var(--space-4);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.export-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.export-pages.is-wide {
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+.export-page {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule-mid);
+  background: var(--sheet);
+}
+
+.export-page.is-image {
+  width: auto;
+  max-width: 100%;
+}
+
+.export-pages:has(.is-image) {
+  display: block;
+}
+
+.export-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+
+.export-status {
+  margin-right: auto;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.export-status.is-error {
+  color: var(--danger);
+}
+
+/* The sheet is laid out off screen at export size; only its layout matters here. */
+.export-stage {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  pointer-events: none;
+}
+
+/* Printed on white paper whatever the screen is showing, so the sheet is laid out in the light theme's
+   colors in either theme: the stage around it declares them (see the tokens at the top of the file).
+   `color` is set again here rather than inherited, because what the body passes down is the page's
+   ink already resolved for the page's theme. */
+.export-sheet {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.export-sheet .box-group,
+.export-sheet .box,
+.export-sheet .fretboard-scroll,
+.export-sheet .fretboard {
+  max-width: none;
+}
+
+.export-sheet .box-group {
+  flex-shrink: 0;
+}
+
+.export-sheet .chromatic-scroll,
+.export-sheet .chord-table-scroll,
+.export-sheet .scale-board {
+  overflow: visible;
+}
+
+.export-sheet.no-chord-names .box-title {
+  display: none;
+}
+
+.export-header {
+  padding-bottom: var(--space-5);
+}
+
+.export-title {
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.export-subtitle {
+  margin-top: var(--space-1);
+  color: var(--ink-soft);
+  font-size: var(--text-md);
+}
+
+.export-scale .export-section + .export-section {
+  margin-top: var(--space-5);
+}
+
+.export-section-title {
+  margin-bottom: var(--space-2);
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- Phones -------------------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+
+  .export-dialog {
+    width: calc(100vw - 20px);
+    height: calc(100dvh - 20px);
+  }
+
+  .export-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .export-options {
+    padding: var(--space-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .export-preview {
+    padding: var(--space-4);
+  }
+}

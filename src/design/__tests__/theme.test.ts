@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import css from '../../styles.css?inline';
+import { css } from '../styles';
 import { rootColorTokens } from '../contrast';
 import { declarations, ruleBody, withoutComments } from '../stylesheet';
 

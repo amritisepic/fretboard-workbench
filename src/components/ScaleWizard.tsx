@@ -1,3 +1,4 @@
+import '../styles/wizard.css';
 import { useScaleWizard } from '../state/scaleWizard';
 import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { TOP_VOICES, maxTopVoice, scaleNotes, scaleRefName, type TopVoice } from '../theory';

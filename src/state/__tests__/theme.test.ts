@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import html from '../../../index.html?raw';
-import css from '../../styles.css?inline';
+import { css } from '../../design/styles';
 import { rootColorTokens } from '../../design/contrast';
 import { resetStores } from '../../test/fixtures';
 import { PREFERENCES_KEY, usePreferences } from '../preferences';

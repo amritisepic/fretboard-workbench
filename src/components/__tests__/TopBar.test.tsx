@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import css from '../../styles.css?inline';
+import { css } from '../../design/styles';
 import { useLibrary } from '../../state/library';
 import { usePreferences } from '../../state/preferences';
 import { axeRuleIds } from '../../test/axe';

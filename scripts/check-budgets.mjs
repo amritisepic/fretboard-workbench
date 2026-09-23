@@ -17,10 +17,17 @@ import { join } from 'node:path';
 
 const DIST = join(import.meta.dirname, '..', 'dist');
 
-/** Kilobytes, gzipped. */
+/**
+ * Kilobytes, gzipped.
+ *
+ * `firstLoadJs` went from 114 to 115 with the second and third phases of the design plan, which put
+ * the Display popover, the one Switch, the theme and its theme-aware dot colors, and the strip's new
+ * model on the first-paint path: 113.1 kB before them, 114.6 after. `firstLoadCss` came down from 10
+ * to 8 when the stylesheet was split and the wizard, export and tour sheets moved to their chunks.
+ */
 const BUDGETS = {
-  firstLoadJs: 114,
-  firstLoadCss: 10,
+  firstLoadJs: 115,
+  firstLoadCss: 8,
   /** Everything in the build, lazy chunks included, so a new dependency cannot hide in a chunk. */
   allJs: 145,
 };

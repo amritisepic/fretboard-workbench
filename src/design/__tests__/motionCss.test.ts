@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import css from '../../styles.css?inline';
+import { css } from '../styles';
 
 /**
  * The stylesheet's answer to "reduce motion", asserted rather than trusted.
@@ -10,7 +10,7 @@ import css from '../../styles.css?inline';
  */
 describe('motion in the stylesheet', () => {
   it('states its duration once, as a token', () => {
-    // The tokens' rule names the export's two roots as well as the page's; see the top of styles.css.
+    // The tokens' rule names the export's two roots as well as the page's; see the top of src/styles/base.css.
     expect(css).toMatch(/:root,\s*\.export-stage,\s*\.export-root\s*\{[^}]*--motion:\s*\d+m?s;/s);
   });
 

@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import css from '../../styles.css?inline';
+import { css } from '../../design/styles';
 import { axeRuleIds } from '../../test/axe';
 import { Switch } from '../Switch';
 
@@ -19,7 +19,7 @@ const renderSwitch = (checked = false, extra: Partial<Parameters<typeof Switch>[
 function rule(selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = new RegExp(`^${escaped} \\{([^}]*)\\}`, 'm').exec(css);
-  if (!match) throw new Error(`No rule for ${selector} in styles.css`);
+  if (!match) throw new Error(`No rule for ${selector} in the stylesheets`);
   return match[1];
 }
 

@@ -1,5 +1,10 @@
 import '@fontsource-variable/inter';
-import './styles.css';
+// The sheets every screen needs, in cascade order. The scale wizard, the export dialog and the tour
+// import their own sheets, so those arrive with their chunks rather than on first paint.
+import './styles/base.css';
+import './styles/workbench.css';
+import './styles/sidebar.css';
+import './styles/panels.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';

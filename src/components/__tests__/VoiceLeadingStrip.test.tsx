@@ -2,7 +2,7 @@
 
 import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import css from '../../styles.css?inline';
+import { sheet } from '../../design/styles';
 import { useWorkbench } from '../../state/workbench';
 import { axeRuleIds } from '../../test/axe';
 import { FIXTURES, openExample, resetStores } from '../../test/fixtures';
@@ -33,8 +33,12 @@ const EMPTY_LANE: AnalysisLane = { relations: [], patterns: [] };
 const renderStrip = (strip: StripView, lane: AnalysisLane | null = null) =>
   render(<VoiceLeadingStrip strip={strip} voices lane={lane} wrapped={false} />);
 
-/** The body of the last `@media (max-width: 760px)` block, where the phone layout is set. */
+/**
+ * The body of the workbench sheet's last `@media (max-width: 760px)` block, where the canvas's phone
+ * layout is set. The workbench sheet's, because every sheet now closes with its own phone block.
+ */
 function phoneBlock(): string {
+  const css = sheet('workbench');
   const start = css.lastIndexOf('@media (max-width: 760px)');
   expect(start, 'the phone breakpoint moved; this test tracks it').toBeGreaterThan(-1);
   let depth = 0;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import css from '../../styles.css?inline';
+import { css } from '../styles';
 import { SMALLEST_SHEET_TEXT_PX } from '../../components/export/exportLayout';
 import { declarations } from '../stylesheet';
 
@@ -17,7 +17,7 @@ import { declarations } from '../stylesheet';
 
 const all = declarations(css);
 // The tokens are declared on the page's root and on the two roots the export is drawn in; see the top of
-// styles.css for why.
+// src/styles/base.css for why.
 const TOKENS = ':root, .export-stage, .export-root';
 const outsideRoot = all.filter((d) => d.selector !== TOKENS);
 const describeDeclaration = ({ selector, property, value }: { selector: string; property: string; value: string }) =>

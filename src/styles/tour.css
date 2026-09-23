@@ -1,0 +1,70 @@
+/* The guided tour. Loaded with the tour's chunk (src/components/tour/GuidedTour.tsx), not on first
+   paint. */
+
+/* ---- Guided tour ------------------------------------------------------------ */
+
+.tour {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+}
+
+.tour-shade {
+  position: fixed;
+  background: var(--shade);
+}
+
+.tour-ring {
+  position: fixed;
+  border: 2px solid var(--paper);
+  border-radius: 12px;
+  outline: 2px solid var(--ink);
+}
+
+.tour-card {
+  position: fixed;
+  width: min(370px, calc(100vw - 24px));
+  padding: var(--space-4);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  outline: none;
+}
+
+.tour-count {
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tour-card h2 {
+  margin-top: var(--space-1);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.tour-body {
+  margin-top: var(--space-2);
+  color: var(--ink-soft);
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.tour-actions .tour-end {
+  margin-right: auto;
+}
+
+@media (max-width: 760px) {
+  .tour-card {
+    width: auto;
+  }
+}

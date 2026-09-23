@@ -1,3 +1,4 @@
+import '../../styles/export.css';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Screen } from '../../state/preferences';
 import { exportFileName } from '../../state/libraryTree';

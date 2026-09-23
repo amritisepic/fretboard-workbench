@@ -84,6 +84,11 @@ below the board, never in the header.
   pictures belong in the diff for review.
 - Running Playwright while anything else might be serving on port 4173 measures the wrong build:
   the config reuses an existing server. Use a copy of the config on a private port.
+- Styles live in `src/styles/`: `base.css` (tokens and the control vocabulary), `workbench.css`,
+  `sidebar.css` and `panels.css` load on first paint from `main.tsx`, in that order; `wizard.css`,
+  `export.css` and `tour.css` are imported by their own lazily loaded components. An override goes in
+  the sheet that loads at or after the rule it overrides. Tests read every sheet through
+  `src/design/styles.ts`, and a sheet added to the folder but not to its list fails a test.
 - Conventions: American spelling ("color"); comments say *why*, in full sentences; `import type` for
   types; no `!important`; no dead CSS; a new persisted field is optional on read and old presets
   upgrade (`src/state/presetFormat.ts`).

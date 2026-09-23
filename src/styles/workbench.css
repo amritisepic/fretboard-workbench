@@ -1,0 +1,1497 @@
+/* The workbench: the top bar and canvas toolbar, the canvas and its key bars, the voice-leading
+   strips, the chord cards, view mode, the fretboard itself and the harmonic analysis on it. */
+
+/* ---- Layout ---------------------------------------------------------- */
+
+/* The column may shrink below its content, so wide necks and the toolbar scroll inside the page
+   rather than widening it (which made phones zoom out). */
+.app {
+  --topbar-height: 56px;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+}
+
+/* Mobile browsers' toolbars come and go; the dynamic viewport height follows them. */
+@supports (height: 100dvh) {
+  .app {
+    height: 100dvh;
+  }
+}
+
+/*
+ * The tool switch, Save and Presets on the left, the preset's name in the middle, and the rest on the
+ * right. The outer columns share what is left over equally, which keeps the name in the middle of the
+ * screen, but they never go below what they hold: when they were allowed to (`minmax(0, 1fr)`) the
+ * left one shrank under its own buttons between 761px and 910px, they spilled across the name and
+ * the mode switch, and a tap on View opened Presets. Now the name is what gives way, down to nothing
+ * if it must, and the tablet rules below see to it that it never must.
+ */
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  /* A divider between the bar and the canvas, not the edge of a control, so the decorative rule. */
+  border-bottom: 1px solid var(--rule-mid);
+}
+
+.topbar-left,
+.topbar-right,
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.topbar-right {
+  justify-content: flex-end;
+}
+
+.mode-switch .segmented button {
+  padding: var(--space-1) var(--space-3);
+}
+
+.preset-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Free to shrink below the width its `size` asks for, so a narrow bar shortens the name rather than
+   pushing the columns beside it. */
+.preset-name-input {
+  min-width: 0;
+  max-width: 40vw;
+  text-overflow: ellipsis;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.preset-name-input:hover {
+  border-color: var(--rule-strong);
+}
+
+.preset-name-input:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.preset-status {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.preset-status.is-edited {
+  color: var(--notice);
+}
+
+.main {
+  display: flex;
+  min-height: 0;
+}
+
+.workspace {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--space-5);
+}
+
+/* Centred in the workspace and no wider than its own text, so an empty workbench reads as a short
+   note about what to do next rather than as a frame around nothing. */
+.empty-state {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 280px;
+}
+
+.empty-card {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  width: min(420px, 100%);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.empty-body {
+  color: var(--ink-soft);
+  font-size: var(--text-md);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Appends a chord at the end of the row of boxes. The empty workbench shows a card rather than a
+   lone circle now, so this is the only size it comes in. */
+/* A secondary icon button (see Buttons), drawn round and larger than the rest because it stands on
+   its own at the end of the row rather than in a bar of other controls. */
+.button.add-button {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+
+.add-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---- Canvas ---------------------------------------------------------- */
+
+/* Stays at the top of the workspace while the boxes scroll under it. */
+.canvas-toolbar {
+  position: sticky;
+  z-index: 5;
+  /* Sticky offsets count from inside the workspace's padding, so this cancels it. */
+  top: calc(-1 * var(--space-5));
+  display: flex;
+  /* The bar is meant to fit one row at every width, and does. Wrapping is kept as the way it gives
+     when a translation or a text-size setting makes a control wider than it is here: a second row
+     costs a little height, where `nowrap` would push the last control off the side of the screen
+     with nothing to say it had gone, which is the failure this replaced. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolbar-label {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.canvas-toolbar .scale-selects {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Sized to the chosen name, so long scale names show in full. */
+.canvas-toolbar .scale-selects .select {
+  width: auto;
+  field-sizing: content;
+}
+
+.canvas-toolbar .segmented button {
+  padding: var(--space-1) var(--space-3);
+}
+
+.canvas-toolbar .stepper button {
+  width: 30px;
+  height: 30px;
+}
+
+/* Away from the controls that change the music, at the end of the bar, and the anchor the panel
+   hangs off. */
+.toolbar-display {
+  position: relative;
+  margin-left: auto;
+}
+
+/* Opening the panel puts focus on it so its name is read out, the way .settings-panel does; it is
+   not a tab stop, so the ring would mark a place the keyboard can never be asked to go.
+
+   Anchored to the button's right edge because the button is at the right of the bar: opening
+   leftwards is the one direction with room on a phone. */
+.toolbar-display-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: grid;
+  gap: var(--space-3);
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: var(--space-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  outline: none;
+}
+
+/* A name on the left, the control it names on the right, so the controls line up down the panel. */
+.toolbar-display-row,
+.toolbar-display-panel .switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.toolbar-display-section {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.canvas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  row-gap: var(--space-6);
+}
+
+/* Strip in the first column, card in the second, and the bar over the second column alone. The bar
+   used to span the whole group, which put it a strip-width to the left of the chord it names. */
+.box-group {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  /* The bar takes its own height and the card takes the rest. Left to the default, a group stretched
+     to the height of the tallest in its row gave part of the extra to the bar's row, so the shorter
+     cards started lower than the tall one and their chord names no longer lined up. */
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.box-group > .strip,
+.box-group > .box-spacer {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.box-group > .key-band {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.box-group-body {
+  display: flex;
+  grid-column: 2;
+  grid-row: 2;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.box-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.box-column > .box {
+  flex: 1;
+  min-width: 0;
+}
+
+/* One bar per chord, holding the key the box is in and, when it differs, the box's reference scale.
+   `contain: inline-size` keeps a long scale name from widening the column: the card sets the width
+   and the bar's contents ellipsize inside it. */
+.key-band {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 24px;
+  margin-bottom: var(--space-1);
+  /* The scale's pill ends the bar, inset from its end about as far as from its top and bottom. */
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border-radius: 8px;
+  background: var(--rule);
+  contain: inline-size;
+}
+
+/* The key comes first and gives way last. When the bar also carries the reference scale and the two
+   do not fit, the scale is what ellipsizes: the key choices are buttons, and a clipped button is a
+   control nobody can read or aim at, whereas the scale's full name is in the bar's hidden text. */
+.key-band-label {
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--band-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A bar carrying on a key region rather than starting one. The bars no longer touch, so the lighter
+   weight is what now says "same key as the one before" that a joined bar said by running on, along
+   with the bar's color, which only a key change alters. The name used to be faded as well, to 70%,
+   which put it at 3.1:1 on its bar; it is small text and needs 4.5, so the weight does it alone. */
+.key-band-label.is-continued {
+  font-weight: 500;
+}
+
+/* The reference scale, kept on the box's own color so the two halves of the bar stay told apart,
+   and pushed to the trailing edge away from the key. */
+.key-band-scale {
+  flex: 0 1 auto;
+  min-width: 3em;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border-radius: 7px;
+  overflow: hidden;
+  color: var(--band-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  /* The pill's own height, which leaves 3px of the 24px bar showing above and below it. */
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.box-spacer {
+  flex: none;
+  width: var(--space-5);
+}
+
+.add-slot {
+  display: flex;
+  align-items: center;
+  padding: var(--space-6) 0 0 var(--space-5);
+}
+
+/* ---- Voice-leading strip --------------------------------------------- */
+
+/* About a third of a chord card (214px at desktop widths). The strip carries a handful of short
+   labels; anything wider spends the canvas on white space between chords that a player wants to
+   compare side by side. */
+.strip {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 76px;
+  padding: 0 var(--space-1);
+}
+
+.strip-wrap {
+  color: var(--ink-faint);
+  font-size: var(--text-xs);
+}
+
+/* The names wrap rather than ellipsize: in a strip this narrow a clipped "Cm…" would be worse than
+   a second line, and the strip has vertical room to spare now that the arrows are gone. */
+.strip-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-1);
+  justify-content: center;
+  max-width: 100%;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: center;
+}
+
+.strip-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-arrowhead {
+  fill: var(--ink);
+}
+
+/* The held marks in their own narrow column beside the moving voices, so the count reads at a
+   glance without the eye having to separate held rows from moving ones. */
+.strip-voices {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+
+.strip-held {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+.strip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+
+.strip-moves {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strip-move {
+  display: flex;
+  gap: var(--space-1);
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+/* The note names are the fact the row exists to carry, so they take the strongest ink. */
+.strip-note {
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.strip-glyph {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+.strip-step {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+/* On a phone this line is the whole strip, so it takes label ink rather than the faint hint ink.
+   In the narrow desktop strip the facts stack one per line, which is where they would wrap anyway,
+   and the separator goes: left in, it would start the second line. */
+.strip-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+.strip-fact {
+  white-space: nowrap;
+}
+
+.strip-sep {
+  display: none;
+  white-space: pre;
+}
+
+/* ---- Boxes ----------------------------------------------------------- */
+
+/* A column, so the body can take the height a row gives the card; see `.box-body.is-vertical`. */
+.box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  border: 1px solid var(--rule-mid);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+
+.box.is-selected {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 0.5px var(--ink);
+}
+
+/* The fretboard sets the box width; header text wraps rather than widening the box.
+
+   The header holds the chord's name and nothing else, so that it lays out to the same height in
+   every card and the boards hanging below it start together across a row. The function chip, which
+   only some cards have and whose width follows its label, sits by the board instead. */
+.box-header {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  min-height: 30px;
+  margin: 0 0 var(--space-2);
+  padding-right: var(--space-6);
+  contain: inline-size;
+}
+
+.box.is-viewing .box-header {
+  padding-right: 0;
+}
+
+/* A tertiary danger icon button (see Buttons); this only pins it to the card's corner. */
+.box-remove {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-3);
+}
+
+/*
+ * The board and the analysis that goes with it. The card grows along the axis its neck is long in,
+ * because that is the axis that costs least: cards with a horizontal neck are wide and short and
+ * wrap into rows, so the height of a row is what limits how many chords reach the screen and the
+ * analysis goes to the right; cards with a vertical neck are narrow and tall and stand side by side
+ * across a row, so width is the limit and the analysis goes underneath. Either way the card stays
+ * compact in the dimension that decides how much of the progression is visible at once.
+ *
+ * Nothing here assumes a board size. The board keeps whatever width and height it draws itself at,
+ * and the analysis takes the space left over.
+ */
+.box-body {
+  display: flex;
+  flex: 1 0 auto;
+  gap: var(--space-2) var(--space-3);
+}
+
+.box-body.is-vertical {
+  flex-direction: column;
+}
+
+/* Under a vertical neck the chip sits at the foot of the card. Every chart shares one head, so their
+   rows line up from the top; but a window at the nut spends a fret on the open-string run and draws
+   a row fewer than one up the neck, and a chip placed straight under each board would then sit a
+   row higher in one card than in the card beside it. At the foot, a row of chips lines up too. */
+.box-body.is-vertical > .box-analysis {
+  margin-top: auto;
+}
+
+.box-body.is-horizontal {
+  align-items: flex-start;
+}
+
+/* When the card is too wide for the window something has to give, and it must not be the board: two
+   boards in a progression drawn at different scales are exactly what this card is for comparing. So
+   the analysis gives way first and by far — the lopsided shrink factors are the whole point — and it
+   stops at its own narrowest wrap, after which the board starts to scale as it always has. */
+.box-body.is-horizontal > .fretboard-scroll {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* A column, not a lane the text can run away down: capped so a long function note wraps into a
+   narrow block instead of stretching the card out to the width of its own sentence. It keeps
+   flexbox's automatic minimum size, so that squeezing it stops once the text has nowhere left to
+   wrap and the board takes the rest of the loss. */
+.box-body.is-horizontal > .box-analysis {
+  flex: 0 200 auto;
+  max-width: 170px;
+}
+
+/*
+ * Beside the board needs room beside the board, and anything narrower than a laptop has none to
+ * spare: at a tablet's width the analysis would take its column out of the neck rather than out of
+ * the margin, and a progression whose boards are drawn at two different scales is worse than one
+ * that costs a little height. So below the same width at which the sidebar stops sitting beside the
+ * canvas, the analysis stops sitting beside the board, and goes under it as it does under a vertical
+ * neck.
+ *
+ * This is a viewport query rather than a wrapped flex line, which would follow the card's real width
+ * instead of guessing from the window's, because the explanation has to know which way to open and
+ * "did that item wrap" is not a question CSS can ask.
+ *
+ * The export sheet is laid out off-screen at the size it will be drawn at, so it keeps the side by
+ * side arrangement whatever screen the export was started from.
+ */
+@media (max-width: 1024px) {
+  .box-body.is-horizontal {
+    flex-direction: column;
+  }
+
+  .box-body.is-horizontal > .box-analysis {
+    max-width: none;
+  }
+
+  .export-sheet .box-body.is-horizontal {
+    flex-direction: row;
+  }
+
+  .export-sheet .box-body.is-horizontal > .box-analysis {
+    max-width: 170px;
+  }
+}
+
+.fretboard-scroll {
+  max-width: 100%;
+}
+
+/* Taken out of the flow. It is the one thing that can still appear in a header, and a header that
+   grows for the 2.5 seconds it is up would push that card's neck down while its neighbors stayed
+   put — the misalignment the analysis was moved out of the header to stop, back again in miniature.
+   It is a transient status, so it sits over the card instead of in it. */
+.box-notice {
+  position: absolute;
+  z-index: 4;
+  top: 100%;
+  right: 0;
+  left: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--notice);
+  font-size: var(--text-sm);
+}
+
+.box-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.box-title.is-placeholder {
+  color: var(--ink-faint);
+  font-size: var(--text-md);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.degree-basis {
+  margin-top: var(--space-2);
+}
+
+.degree-basis .hint {
+  margin-top: var(--space-2);
+}
+
+.sidebar-close {
+  display: none;
+  align-self: flex-end;
+  margin-bottom: calc(-1 * var(--space-3));
+}
+
+/* ---- View mode ------------------------------------------------------- */
+
+.workspace.is-viewing {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workspace.is-viewing .canvas-toolbar {
+  flex: none;
+}
+
+.canvas-frame.is-viewing {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* A progression too long to fit at a readable size stays at the floor and scrolls instead; see
+   useFitToFrame. The canvas is scaled with a transform, and a transformed box contributes its scaled
+   size to what the frame can scroll, so the scroll ends where the last row does. */
+.canvas-frame.is-viewing[data-paged] {
+  overflow: auto;
+}
+
+.canvas-frame.is-viewing > .canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* View mode lays everything out at natural size and scales the whole canvas, so nothing is capped
+   to the frame's width first (which squeezed boxes while their necks kept full size). */
+.canvas-frame.is-viewing .box-group,
+.canvas-frame.is-viewing .box,
+.canvas-frame.is-viewing .fretboard-scroll,
+.canvas-frame.is-viewing .fretboard {
+  max-width: none;
+}
+
+.canvas-frame.is-viewing .box-group {
+  flex-shrink: 0;
+}
+
+.empty-note {
+  color: var(--ink-faint);
+  font-size: var(--text-md);
+}
+
+/* ---- Fretboard ------------------------------------------------------- */
+
+.fretboard {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  user-select: none;
+}
+
+.fretboard .wire {
+  stroke: var(--ink);
+  stroke-opacity: 0.4;
+}
+
+.fretboard .nut {
+  stroke: var(--ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.fretboard .string {
+  stroke: var(--ink);
+}
+
+.fretboard .string-stub {
+  stroke: var(--ink);
+  stroke-opacity: 0.2;
+}
+
+.fretboard .capo-covered {
+  fill: var(--paper-sunk);
+}
+
+.fretboard .capo {
+  fill: var(--ink);
+}
+
+.fretboard .string-name,
+.fretboard .fret-number {
+  fill: var(--ink-faint);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.fretboard .fret-number.is-octave {
+  fill: var(--ink-soft);
+  font-weight: 650;
+}
+
+/* A window that starts up the neck has no nut, so this number is the only thing saying where on the
+   neck the shape is. It is read before anything else on the board and is weighted to match. */
+.fretboard .fret-number.is-position {
+  fill: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.fretboard .position {
+  cursor: pointer;
+}
+
+.fretboard .position circle {
+  transition: fill var(--motion) ease;
+}
+
+/* The board is one tab stop and the arrow keys walk it, so the cursor has to be visible on any
+   position, including an empty one that draws nothing.
+   
+   `:focus`, not `:focus-visible`: Chromium does not match :focus-visible on a focusable SVG group,
+   so the styling below would never apply and the user agent's own square 5px outline would be all
+   there was. Showing the ring after a click as well is right here in any case — this is a grid with
+   a roving tabindex, and where the cursor sits is worth seeing however it got there.
+   
+   A square outline would box a round dot, so on a drawn note it is traded for a ring on the dot
+   itself. An empty position has no dot to ring, so it wears its own cell as the ring. */
+.fretboard .position:focus {
+  outline: none;
+}
+
+.fretboard .position:focus circle:not(.dot-ring) {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+/* Clicked notes already wear a ring in the box color, so the focus ring goes onto that instead of
+   fighting the lit core. */
+.fretboard .is-clicked:focus .dot-ring {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.fretboard.is-static .position {
+  cursor: default;
+}
+
+/* An empty position is the one rect covering its cell, so hover and focus are drawn on the cell
+   rather than on a dot that is not there. That is a plainer shape than the dashed circle it
+   replaces, but it says the true thing: the whole cell is what the pointer has to hit. */
+.fretboard .position-empty {
+  fill: transparent;
+}
+
+@media (hover: hover) {
+  .fretboard:not(.is-static) .position-empty:hover {
+    fill: var(--ink);
+    fill-opacity: 0.07;
+  }
+}
+
+.fretboard .position-empty:focus {
+  fill: var(--ink);
+  fill-opacity: 0.07;
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.fretboard .inlay {
+  fill: var(--rule-mid);
+  fill-opacity: 0.75;
+  pointer-events: none;
+}
+
+/* Clicked notes: a lit core inside a crisp ring. */
+.fretboard .dot-ring {
+  fill: none;
+  pointer-events: none;
+  stroke-width: 1.75;
+}
+
+.fretboard .dot-core {
+  stroke: var(--paper);
+  stroke-width: 1.25;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform var(--motion) ease;
+}
+
+@media (hover: hover) {
+  .fretboard:not(.is-static) .is-clicked:hover .dot-core {
+    transform: scale(1.08);
+  }
+}
+
+/* One size for every label, however long. The three glyphs of a double accidental fit a note at
+   this size; anything longer is narrowed to the note's width by the board rather than shrunk, so no
+   label is ever smaller than this (see LABEL_MAX_WIDTH in Fretboard.tsx). */
+.fretboard .dot-label {
+  pointer-events: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* ---- Harmonic analysis ------------------------------------------------ */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tentative-mark {
+  color: var(--ink-faint);
+}
+
+/* The one chip a card gives its chord's function: the numeral in the key on its own, or the whole
+   analysis label with the note that goes with it. It is a button whenever there is an explanation to
+   open, and a plain span when there is not, so the same look serves both. */
+.function-tag {
+  display: inline-flex;
+  align-items: baseline;
+  /* A one-letter numeral (I, V) made a chip 22px wide, the one control on an ordinary progression
+     under the WCAG 2.2 minimum of 24; the letter is centered in the width it gets. */
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 24px;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  background: var(--paper);
+  font-size: var(--text-md);
+  font-weight: 600;
+  text-align: left;
+}
+
+/* A reading the analysis is not confident in, drawn like a numeral written in pencil. */
+.function-tag.is-tentative {
+  border-style: dashed;
+}
+
+/* Only the chip that opens something answers the pointer; the plain one has nothing to offer it. */
+button.function-tag:hover,
+button.function-tag[aria-expanded='true'] {
+  border-color: var(--ink);
+}
+
+.function-text {
+  position: relative;
+  white-space: nowrap;
+}
+
+/* The one exception to the type scale. A figure is set in proportion to the numeral it annotates, as a
+   superscript is, and even the smallest size on the scale is four fifths of the numeral: two figures
+   stacked at that size (⁶₅) would stand taller than the line they sit on and push the chip open. The
+   scale test names these two rules and allows no other size off the scale. */
+.function-text .figure {
+  font-size: 0.68em;
+  line-height: 0;
+}
+
+/* Stacked figured bass: ⁶₅, ⁴₃, ⁴₂. */
+.function-text .figures {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 0.62em;
+  line-height: 0.95;
+  vertical-align: -0.35em;
+}
+
+.function-note {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* The trigger and its explanation, positioned together. */
+.info-popover {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+}
+
+/* Only in the DOM while it is open, so nothing has to hide it. */
+.info-explanation {
+  position: absolute;
+  z-index: 6;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  display: block;
+  width: max-content;
+  max-width: min(300px, 80vw);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  text-align: left;
+}
+
+/*
+ * The explanation grows back over the board, which is the one direction certain to have room for it.
+ * Under a vertical neck the tag is at the foot of a tall card, where opening downwards puts the
+ * explanation below the bottom of the window, so it opens upwards; beside a horizontal neck the tag
+ * is against the card's right edge, where opening rightwards takes the last box of a row off the
+ * side of the screen, so it opens leftwards.
+ */
+.box-body.is-vertical .info-explanation {
+  top: auto;
+  bottom: calc(100% + var(--space-2));
+}
+
+.box-body.is-horizontal .info-explanation {
+  right: 0;
+  left: auto;
+}
+
+/* Below a laptop's width the analysis is under the board whichever way the neck runs, so it opens
+   upwards there too — and from the left, because a card that starts at the edge of a 390px screen
+   has no room for 300px of explanation to its left. */
+@media (max-width: 1024px) {
+  .box-body.is-horizontal .info-explanation {
+    top: auto;
+    right: auto;
+    bottom: calc(100% + var(--space-2));
+    left: 0;
+  }
+}
+
+.key-band-label.is-split {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.key-choice {
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--band-ink);
+  font: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.key-choice.is-chosen {
+  font-weight: 700;
+}
+
+.key-choice.is-pinned {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button.key-choice:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.key-split-bar {
+  opacity: 0.5;
+}
+
+/* A shade lighter than the band ink beside it, and still 4.5:1 on a scale band in any of the dot
+   colors, in either theme. It was #7a756c, at 3.27. */
+.scale-alternative {
+  color: var(--band-ink-soft);
+  font-weight: 500;
+}
+
+.strip-analysis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+
+.strip-pattern {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-style: italic;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Quieter than a pattern that starts here, by color and weight rather than by opacity: seventy per
+   cent of --ink-soft came out at 3.0:1, and this is text. --ink-faint clears 4.5 on paper. */
+.strip-pattern.is-continued {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+.strip-relation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.strip-relation-label {
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: center;
+}
+
+.strip-mark {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.strip-mark line,
+.strip-mark path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.strip-mark .is-dashed {
+  stroke-dasharray: 4 3;
+}
+
+.reading-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reading-option {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.reading-option:hover {
+  border-color: var(--rule-strong);
+}
+
+.reading-option.is-chosen {
+  border-color: var(--ink);
+}
+
+.reading-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.reading-key {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.reading-explanation {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.harmony-field .hint {
+  margin-top: var(--space-2);
+}
+
+.key-pin {
+  margin-top: var(--space-4);
+}
+
+.key-pin-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* ---- Tablets: the sidebar slides over the canvas ------------------------------------------------- */
+@media (max-width: 1024px) {
+  /* Below the laptop width the bar has no room for both the preset's name and the words saying
+     whether it is saved, and the name is the one that says what is on screen: at 768px it was cut
+     to "Autum". The Save button already carries the state — solid while there is something to save —
+     so the words step out of sight but stay in the accessibility tree, which `display: none`, as the
+     phone rule used to do, did not. */
+  .preset-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sidebar-close {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* The top bar holds the same controls here in less width, and with their names written out they
+     need about 1050px. So the four tertiary buttons drop to their icons, which leaves room for the
+     preset's name down to the narrowest tablet. Each keeps its name for a screen reader, clipped
+     rather than removed (the same technique as .visually-hidden), and shows it on hover as a title. */
+  .topbar .button.is-tertiary {
+    width: 34px;
+    padding: 0;
+  }
+
+  .topbar .button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+}
+
+/* ---- Phones -------------------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  /* The name takes whatever width the buttons leave. */
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+  }
+
+  .preset-name {
+    justify-content: center;
+  }
+
+  .preset-name-input {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    font-size: var(--text-md);
+  }
+
+  .mode-switch .segmented button {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .workspace {
+    padding: var(--space-4);
+  }
+
+  /* One row on a 390px phone, which is what the whole bar is sized against below. */
+  .canvas-toolbar {
+    top: calc(-1 * var(--space-4));
+    gap: var(--space-2);
+    margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .toolbar-group {
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+  }
+
+  /* The Key heading is what the bar can most afford to lose: "Find key" beside the two selects says
+     what they are, and the group still carries its name for a screen reader. Shift keeps its
+     heading, because a bare - and + name nothing at all. */
+  .toolbar-group[data-tour='key'] > .toolbar-label {
+    display: none;
+  }
+
+  /* Capped, not just narrowed: `field-sizing: content` sizes a select to the name it is showing, so
+     without a ceiling a key of "Harmonic minor" would widen the bar until it wrapped. The cap is on
+     the pair, so the two share what there is, and it holds the promise of one row for every key at
+     the cost of ellipsizing the longest few scale names.
+
+     Only the scale gives way. The tonic is one or two characters and has nothing to ellipsize into,
+     so letting it shrink put its letter under its own chevron; and the right padding stays, because
+     it is the chevron's room — without it the name is drawn beneath the arrow. */
+  .canvas-toolbar .scale-selects {
+    max-width: 136px;
+  }
+
+  .canvas-toolbar .scale-selects .select {
+    height: 30px;
+    min-width: 0;
+    font-size: var(--text-sm);
+  }
+
+  .canvas-toolbar .scale-selects .select:first-child {
+    flex-shrink: 0;
+  }
+
+  .canvas-toolbar .stepper button {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* Strips sit above their box instead of beside it, so the group collapses to a single column:
+     strip, then the bar naming the chord, then the card. */
+  .box-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .box-group > .strip,
+  .box-group > .box-spacer {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .box-group > .key-band {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .box-group-body {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  /* Stacked above its box, a strip can no longer read as the move between two chords: it is a
+     banner over one card, not a bridge between two. A column of arrows pretending otherwise costs a
+     screen of height and misleads, so on a phone the strip states the move in one line and the
+     boards stay adjacent enough to compare. */
+  .strip {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    align-items: baseline;
+    justify-content: center;
+    width: auto;
+    padding: var(--space-1) 0 var(--space-2);
+  }
+
+  .strip-voices {
+    display: none;
+  }
+
+  /* Every group is its own row on a phone, so "from the row above" would be printed on every strip
+     and tell the reader nothing. */
+  .strip-wrap {
+    display: none;
+  }
+
+  .strip-summary {
+    flex-direction: row;
+  }
+
+  .strip-sep {
+    display: inline;
+  }
+
+  /* The lane joins the same line instead of stacking its own column above it. */
+  .strip-analysis {
+    flex-direction: row;
+    gap: var(--space-2);
+    align-items: baseline;
+  }
+
+  .strip-mark {
+    display: none;
+  }
+
+  .box-spacer {
+    display: none;
+  }
+
+  /* Notes keep a finger-sized target: a wide neck scrolls sideways instead of shrinking. */
+  .fretboard-scroll {
+    overflow-x: auto;
+  }
+
+  .fretboard-scroll .fretboard {
+    max-width: none;
+  }
+
+  .canvas-frame.is-viewing .fretboard-scroll {
+    overflow: visible;
+  }
+
+  .add-slot {
+    padding: var(--space-3) 0 0;
+  }
+
+  /* Two rows on the workbench: the tool switch, Guide, Export and Save above, then Presets, the name,
+     the mode and Settings, so each panel button sits at the side its panel opens from. The scale
+     wizard fits one row. */
+  .app {
+    --topbar-height: 96px;
+  }
+
+  .app.is-scales {
+    --topbar-height: 52px;
+  }
+
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: 44px 52px;
+    grid-template-areas:
+      'switch switch tools save'
+      'presets name mode settings';
+    column-gap: var(--space-2);
+    row-gap: 0;
+  }
+
+  .topbar.is-scales {
+    grid-template-rows: 52px;
+    grid-template-areas: 'switch . tools settings';
+  }
+
+  .topbar-left,
+  .topbar-right {
+    display: contents;
+  }
+
+  .preset-name {
+    grid-area: name;
+  }
+
+  .mode-switch {
+    grid-area: mode;
+  }
+
+  .topbar-tools {
+    grid-area: tools;
+    justify-self: end;
+  }
+
+  /* The off-screen sheet keeps the desktop layout the export is drawn with. */
+  .export-sheet .box-group {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .export-sheet .box-group > .strip,
+  .export-sheet .box-group > .box-spacer {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .export-sheet .box-group > .key-band {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .export-sheet .box-group-body {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  /* A PDF or PNG has no viewport, so the sheet must not pick up the phone's one-line strip just
+     because the browser drawing it happens to be narrow. Everything the phone collapses is put
+     back here. */
+  .export-sheet .strip {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    align-items: center;
+    width: 76px;
+    padding: 0 var(--space-1);
+  }
+
+  .export-sheet .strip-voices {
+    display: flex;
+  }
+
+  .export-sheet .strip-wrap {
+    display: block;
+  }
+
+  .export-sheet .strip-summary {
+    flex-direction: column;
+  }
+
+  .export-sheet .strip-sep {
+    display: none;
+  }
+
+  .export-sheet .strip-analysis {
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: center;
+  }
+
+  .export-sheet .strip-mark {
+    display: block;
+  }
+
+  .export-sheet .box-spacer {
+    display: block;
+  }
+
+  .export-sheet .fretboard-scroll {
+    overflow: visible;
+  }
+
+}
