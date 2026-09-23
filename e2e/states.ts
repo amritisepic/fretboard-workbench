@@ -96,11 +96,13 @@ export async function goTo(page: Page, state: (typeof STATES)[keyof typeof STATE
       return;
     case STATES.view:
       await openExample(page, 'long');
-      // `force` because between 761px and 910px the Presets tab overflows its grid column and
-      // covers the Edit/View switch, so a real click lands on Presets instead. That is a bug, not a
-      // test problem: metrics.spec.ts asserts it separately, and this only keeps the screenshot of
-      // view mode obtainable in the meantime.
-      await page.getByRole('radio', { name: 'View' }).click({ force: true });
+      // Dispatched on the element rather than clicked at its position. Between 761px and 910px the
+      // Presets tab overflows its grid column and covers the Edit/View switch, so a click at the
+      // switch's coordinates — `force` included, which skips the checks but not the geometry — lands
+      // on Presets, and the tablet "view mode" screenshot was quietly of edit mode. The covering is a
+      // bug that metrics.spec.ts asserts separately; this only keeps view mode reachable meanwhile.
+      await page.getByRole('radio', { name: 'View' }).dispatchEvent('click');
+      await page.locator('.canvas-frame.is-viewing').waitFor();
       await settle(page);
       return;
   }

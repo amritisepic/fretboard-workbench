@@ -190,6 +190,38 @@ test.describe('layout budgets', () => {
     );
   });
 
+  test('view mode stays readable, scrolling rather than shrinking past the floor', async ({ page }) => {
+    await goTo(page, STATES.view);
+    const reading = await page.evaluate(() => {
+      const frame = document.querySelector('.canvas-frame.is-viewing');
+      const canvas = frame?.querySelector(':scope > .canvas');
+      if (!frame || !canvas) return null;
+      const scale = new DOMMatrix(getComputedStyle(canvas).transform).a;
+      // The chord names and the fret numbers: the largest and the smallest text a board carries, as
+      // they land on the screen once the canvas is scaled.
+      const sizes = [...canvas.querySelectorAll('.box-title, .fret-number')].map(
+        (el) => parseFloat(getComputedStyle(el).fontSize) * scale,
+      );
+      const boxes = [...canvas.querySelectorAll('.box')];
+      const last = boxes[boxes.length - 1].getBoundingClientRect();
+      const top = frame.getBoundingClientRect().top;
+      return {
+        scale: Number(scale.toFixed(3)),
+        smallestText: Number(Math.min(...sizes).toFixed(2)),
+        scrollHeight: frame.scrollHeight,
+        lastCardBottom: Math.floor(last.bottom - top + frame.scrollTop),
+      };
+    });
+    test.info().annotations.push({ type: 'measured', description: `view mode, Autumn Leaves — ${JSON.stringify(reading)}` });
+
+    expect(reading, 'view mode did not render a scaled canvas').not.toBeNull();
+    // Eight CSS pixels is six points, the export's print floor: one answer to "can the smallest label
+    // be read" on paper and on screen. Fitting 31 chords to a laptop used to put it near three.
+    expect(reading?.smallestText, 'the smallest text on screen, in CSS px').toBeGreaterThanOrEqual(7.95);
+    // Past the floor the frame scrolls, and it has to scroll far enough to reach the last chord.
+    expect(reading?.scrollHeight, 'how far the frame scrolls').toBeGreaterThanOrEqual(reading?.lastCardBottom ?? Infinity);
+  });
+
   test('controls are big enough to hit', async ({ page }, testInfo) => {
     const budget = BUDGETS[testInfo.project.name];
     await goTo(page, STATES.short);

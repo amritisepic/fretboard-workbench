@@ -780,6 +780,13 @@ button[aria-disabled='true'] {
   overflow: hidden;
 }
 
+/* A progression too long to fit at a readable size stays at the floor and scrolls instead; see
+   useFitToFrame. The canvas is scaled with a transform, and a transformed box contributes its scaled
+   size to what the frame can scroll, so the scroll ends where the last row does. */
+.canvas-frame.is-viewing[data-paged] {
+  overflow: auto;
+}
+
 .canvas-frame.is-viewing > .canvas {
   position: absolute;
   top: 0;
