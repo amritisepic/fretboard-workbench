@@ -85,6 +85,117 @@ button[aria-disabled='true'] {
   outline-offset: 2px;
 }
 
+/* ---- Buttons ------------------------------------------------------------ */
+
+/*
+ * Three levels of button, and only three, told apart by how much ink each one carries:
+ *
+ *  - Primary (`.button.is-primary`): solid ink. The action a screen or a dialog is there for, one to a
+ *    group so the eye has one place to land: Save while there is something to save, Next in the tour,
+ *    Download in the export, the answer a confirmation is asking for.
+ *  - Secondary (`.button`, the default): an outline. An ordinary action, beside the primary one or
+ *    among equals: Cancel, Back, Find key, Display, New preset.
+ *  - Tertiary (`.button.is-tertiary`): a ghost, with no fill and no outline until it is pointed at.
+ *    For the controls that are always on screen and seldom the point — the top bar's Presets, Guide,
+ *    Export and Settings, a card's remove, End tour — where an outline on every one would drown out
+ *    the button that matters.
+ *
+ * Danger is a tone, not a fourth level (`.is-danger`). How loudly a button speaks and what it does
+ * are separate questions: deleting a preset is the whole point of the dialog that confirms it, so
+ * there it is primary, while removing a box is one small mark on every card, so there it is tertiary.
+ * A danger level would have to pick one of those and be wrong about the other. The tone swaps the ink
+ * the level is drawn in for the danger color, so a primary danger button is solid red and a secondary
+ * one is outlined in red. A tertiary one turns red when it is pointed at or focused, the moment before
+ * it acts; at rest it is as quiet as any other ghost, so thirty cards do not carry thirty red crosses.
+ *
+ * Two sizes, both over the WCAG 2.2 minimum of 24px: 34px by default, and 30px with `.is-compact` for
+ * toolbars and dense panels. `.is-icon` squares either one off, for a button that is a glyph and an
+ * `aria-label`.
+ *
+ * Defined before the layout so that a one-class rule placing a particular button (`.sidebar-close`
+ * hiding itself, `.box-remove` pinning itself to a corner) comes later in the file and wins.
+ */
+.button {
+  /* The ink the level is drawn in, and the one thing `.is-danger` changes. */
+  --button-ink: var(--ink);
+  display: inline-flex;
+  /* Never squeezed below its size by a flex parent that has run out of room. The sidebar's Done was
+     a 30px button drawn 20px tall, because the sidebar is a scrolling column and its content is
+     taller than it is. Across a row this changes nothing: the label does not wrap, so a button could
+     not get narrower than its text anyway. */
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--button-ink);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    border-color var(--motion) ease,
+    background-color var(--motion) ease,
+    color var(--motion) ease;
+}
+
+.button.is-danger {
+  --button-ink: var(--danger);
+}
+
+.button:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--button-ink);
+}
+
+.button.is-primary {
+  border-color: var(--button-ink);
+  background: var(--button-ink);
+  color: var(--paper);
+}
+
+.button.is-tertiary {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+/* Focus as well as hover, so a keyboard user sees a tertiary danger button's tone before pressing it,
+   as a pointer user does. */
+.button.is-tertiary:is(:hover, :focus-visible):not(:disabled, [aria-disabled='true']) {
+  border-color: transparent;
+  background: var(--paper-sunk);
+  color: var(--button-ink);
+}
+
+/* A button whose panel is open looks pressed for as long as it is. This is what the top bar's tabs
+   were for, said the way any button that opens something can say it. */
+.button[aria-expanded='true'] {
+  border-color: var(--button-ink);
+  background: var(--paper-sunk);
+}
+
+.button.is-tertiary[aria-expanded='true'] {
+  border-color: transparent;
+  color: var(--ink);
+}
+
+.button.is-compact {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+.button.is-icon {
+  width: 34px;
+  padding: 0;
+}
+
+.button.is-icon.is-compact {
+  width: 30px;
+}
+
 /* ---- Layout ---------------------------------------------------------- */
 
 /* The column may shrink below its content, so wide necks and the toolbar scroll inside the page
@@ -105,33 +216,34 @@ button[aria-disabled='true'] {
   }
 }
 
+/*
+ * The tool switch, Save and Presets on the left, the preset's name in the middle, and the rest on the
+ * right. The outer columns share what is left over equally, which keeps the name in the middle of the
+ * screen, but they never go below what they hold: when they were allowed to (`minmax(0, 1fr)`) the
+ * left one shrank under its own buttons between 761px and 910px, they spilled across the name and
+ * the mode switch, and a tap on View opened Presets. Now the name is what gives way, down to nothing
+ * if it must, and the tablet rules below see to it that it never must.
+ */
 .topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: end;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
+  align-items: center;
   gap: 16px;
   height: var(--topbar-height);
   padding: 0 20px;
   border-bottom: 1px solid var(--rule-strong);
 }
 
-.topbar-left {
+.topbar-left,
+.topbar-right,
+.topbar-tools {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
-  height: 100%;
 }
 
 .topbar-right {
-  display: flex;
-  align-items: flex-end;
   justify-content: flex-end;
-  gap: 14px;
-  height: 100%;
-}
-
-.mode-switch {
-  align-self: center;
 }
 
 .mode-switch .segmented button {
@@ -139,31 +251,17 @@ button[aria-disabled='true'] {
   font-size: 12.5px;
 }
 
-.save-button {
-  align-self: center;
-  height: 32px;
-  padding: 0 14px;
-  border: 1px solid var(--ink);
-  border-radius: 9px;
-  background: var(--paper);
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.save-button.has-changes {
-  background: var(--ink);
-  color: var(--paper);
-}
-
 .preset-name {
   display: flex;
   align-items: center;
-  align-self: center;
   gap: 8px;
   min-width: 0;
 }
 
+/* Free to shrink below the width its `size` asks for, so a narrow bar shortens the name rather than
+   pushing the columns beside it. */
 .preset-name-input {
+  min-width: 0;
   max-width: 40vw;
   padding: 5px 8px;
   border: 1px solid transparent;
@@ -192,32 +290,6 @@ button[aria-disabled='true'] {
 
 .preset-status.is-edited {
   color: var(--notice);
-}
-
-.topbar-tab {
-  position: relative;
-  z-index: 21;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: -1px;
-  padding: 9px 16px 11px;
-  border: 1px solid transparent;
-  border-bottom: 0;
-  border-radius: 10px 10px 0 0;
-  background: transparent;
-  color: var(--ink-soft);
-  font-weight: 500;
-}
-
-.topbar-tab:hover {
-  color: var(--ink);
-}
-
-.topbar-tab.is-open {
-  border-color: var(--rule-strong);
-  background: var(--paper);
-  color: var(--ink);
 }
 
 .main {
@@ -273,21 +345,12 @@ button[aria-disabled='true'] {
 
 /* Appends a chord at the end of the row of boxes. The empty workbench shows a card rather than a
    lone circle now, so this is the only size it comes in. */
-.add-button {
-  display: grid;
-  place-items: center;
+/* A secondary icon button (see Buttons), drawn round and larger than the rest because it stands on
+   its own at the end of the row rather than in a bar of other controls. */
+.button.add-button {
   width: 52px;
   height: 52px;
-  padding: 0;
-  border: 1.5px solid var(--ink);
   border-radius: 50%;
-  background: transparent;
-  color: var(--ink);
-  transition: background-color var(--motion) ease;
-}
-
-.add-button:hover {
-  background: var(--paper-sunk);
 }
 
 .add-button svg {
@@ -383,7 +446,7 @@ button[aria-disabled='true'] {
 
 /* A name on the left, the control it names on the right, so the controls line up down the panel. */
 .toolbar-display-row,
-.toolbar-display-panel .toolbar-switch {
+.toolbar-display-panel .switch {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -635,39 +698,11 @@ button[aria-disabled='true'] {
   padding-right: 0;
 }
 
+/* A tertiary danger icon button (see Buttons); this only pins it to the card's corner. */
 .box-remove {
   position: absolute;
   top: 14px;
   right: 14px;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink-faint);
-  transition:
-    color var(--motion) ease,
-    border-color var(--motion) ease,
-    background-color var(--motion) ease;
-}
-
-.box-remove svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-width: 1.6;
-}
-
-.box-remove:hover,
-.box-remove:focus-visible {
-  border-color: var(--danger);
-  background: var(--paper);
-  color: var(--danger);
 }
 
 /*
@@ -793,22 +828,7 @@ button[aria-disabled='true'] {
   margin-bottom: -14px;
 }
 
-/* ---- Toolbar switches and view mode ---------------------------------- */
-
-.toolbar-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* A switch's own name, as ordinary text. The uppercase `toolbar-label` treatment is reserved for the
-   headings that group several controls. */
-.toolbar-switch-label {
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  white-space: nowrap;
-}
+/* ---- View mode ------------------------------------------------------- */
 
 .workspace.is-viewing {
   display: flex;
@@ -1761,23 +1781,47 @@ button.key-choice:hover {
   margin: 0 0 8px;
 }
 
-/* ---- Fill switch ----------------------------------------------------- */
+/* ---- Switch ---------------------------------------------------------- */
 
-.fill-head {
+/* The one on/off control (Switch.tsx). The name on the left and the track on the right, pushed apart
+   when the row has room, so the tracks in a column of switches line up down its right-hand edge. */
+.switch {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  gap: 8px;
 }
 
-.fill-head .field-label {
+/* The name is the track's label, so pressing it works too. */
+.switch > label {
+  cursor: pointer;
+}
+
+/* A switch's own name, as ordinary text: the uppercase treatment marks a heading that groups several
+   controls, and a switch's name is only a heading where its section has nothing else in it. */
+.switch-label {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.switch .field-label {
   margin: 0;
 }
 
-.toggle {
+/* A key hint sits beside the name it belongs to, not out beside the track. */
+.switch > .shortcut {
+  margin: 0 auto 0 0;
+}
+
+/* 24px tall, the WCAG 2.2 minimum for a target, where the four hand-written copies it replaced were
+   22px. The width grows with it so the knob travels as far as it did. */
+.switch-track {
   position: relative;
-  width: 38px;
-  height: 22px;
+  flex: none;
+  width: 40px;
+  height: 24px;
   padding: 0;
   border: 1.5px solid var(--ink);
   border-radius: 999px;
@@ -1785,12 +1829,12 @@ button.key-choice:hover {
   transition: background-color var(--motion) ease;
 }
 
-.toggle-knob {
+.switch-knob {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   background: var(--ink);
   transition:
@@ -1798,74 +1842,20 @@ button.key-choice:hover {
     background-color var(--motion) ease;
 }
 
-.toggle[aria-checked='true'] {
+.switch-track[aria-checked='true'] {
   background: var(--ink);
 }
 
-.toggle[aria-checked='true'] .toggle-knob {
+.switch-track[aria-checked='true'] .switch-knob {
   background: var(--paper);
   transform: translateX(16px);
 }
 
-.fill-switch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
+/* ---- Fill ------------------------------------------------------------ */
 
-.fill-option {
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink-faint);
-  font-size: 13.5px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.fill-option[aria-checked='true'] {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-/* A span rather than a button (see FillSwitch), so it needs the block box and the pointer a button
-   came with. */
-.fill-track {
-  position: relative;
-  display: block;
-  flex: none;
-  width: 50px;
-  height: 26px;
-  padding: 0;
-  border: 1.5px solid var(--ink);
-  border-radius: 999px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.fill-knob {
-  position: absolute;
-  top: 3.5px;
-  left: 4px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--ink);
-  transition: transform var(--motion) ease;
-}
-
-.fill-track[data-mode='scale'] .fill-knob {
-  transform: translateX(23px);
-}
-
-.fill:not(.is-on) .fill-switch {
-  opacity: 0.55;
-}
-
-.fill:not(.is-on) .fill-knob {
-  background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--ink);
+.fill-field {
+  display: grid;
+  gap: 14px;
 }
 
 .hint {
@@ -1892,12 +1882,6 @@ kbd {
   margin-top: 8px;
 }
 
-.fill-head .shortcut {
-  margin-top: 0;
-  margin-right: auto;
-  margin-left: 8px;
-}
-
 /* ---- Settings panel -------------------------------------------------- */
 
 /* Opening the panel puts focus on it so its name is read out, the way .tour-card takes focus. It is
@@ -1912,7 +1896,7 @@ kbd {
   overflow: auto;
   padding: 22px;
   border: 1px solid var(--rule-strong);
-  border-radius: 14px 0 14px 14px;
+  border-radius: 14px;
   background: var(--paper);
   outline: none;
 }
@@ -2056,12 +2040,6 @@ kbd {
 .explorer-actions {
   display: flex;
   gap: 6px;
-}
-
-.button.is-compact {
-  height: 30px;
-  padding: 0 10px;
-  font-size: 12.5px;
 }
 
 .explorer-notice {
@@ -2265,13 +2243,6 @@ kbd {
   gap: 6px;
 }
 
-.button.is-primary,
-.button.is-primary:hover {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--paper);
-}
-
 /* ---- Dialog ---------------------------------------------------------- */
 
 .dialog-backdrop {
@@ -2308,31 +2279,7 @@ kbd {
   margin-top: 20px;
 }
 
-.button {
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 9px;
-  background: var(--paper);
-  font-weight: 500;
-}
-
-.button:hover {
-  border-color: var(--ink);
-}
-
-.button-danger,
-.button-danger:hover {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: #fff;
-}
-
 /* ---- Tool switch --------------------------------------------------------- */
-
-.app-switch {
-  align-self: center;
-}
 
 .app-switch .segmented button {
   padding: 4px 12px;
@@ -2341,7 +2288,6 @@ kbd {
 }
 
 .topbar-title {
-  align-self: center;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -2544,47 +2490,6 @@ kbd {
   min-width: 2.3em;
 }
 
-/* ---- Top bar tools ------------------------------------------------------- */
-
-.topbar-tools {
-  display: flex;
-  align-items: center;
-  align-self: center;
-  gap: 6px;
-}
-
-.topbar-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 9px;
-  background: var(--paper);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.topbar-button:hover:not(:disabled) {
-  border-color: var(--ink);
-}
-
-.link-button {
-  padding: 0 2px;
-  border: 0;
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: 12.5px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.link-button:hover {
-  color: var(--ink);
-}
-
 /* ---- Export ---------------------------------------------------------------- */
 
 .export-dialog {
@@ -2609,10 +2514,6 @@ kbd {
 .export-dialog-head h2 {
   font-size: 17px;
   font-weight: 600;
-}
-
-.export-close {
-  position: static;
 }
 
 .export-dialog-body {
@@ -2916,7 +2817,7 @@ kbd {
   margin-top: 16px;
 }
 
-.tour-actions .link-button {
+.tour-actions .tour-end {
   margin-right: auto;
 }
 
@@ -2946,6 +2847,24 @@ kbd {
   .canvas-toolbar {
     gap: 10px 22px;
   }
+
+  /* The top bar holds the same controls here in less width, and with their names written out they
+     need about 1050px. So the four tertiary buttons drop to their icons, which leaves room for the
+     preset's name down to the narrowest tablet. Each keeps its name for a screen reader, clipped
+     rather than removed (the same technique as .visually-hidden), and shows it on hover as a title. */
+  .topbar .button.is-tertiary {
+    width: 34px;
+    padding: 0;
+  }
+
+  .topbar .button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 /* ---- Phones ------------------------------------------------------------ */
@@ -2962,11 +2881,6 @@ kbd {
     justify-content: center;
   }
 
-  .topbar-tab {
-    padding: 9px 10px 11px;
-  }
-
-  .topbar-tab-label,
   .preset-status {
     display: none;
   }
@@ -2976,10 +2890,6 @@ kbd {
     min-width: 0;
     max-width: none;
     font-size: 14px;
-  }
-
-  .topbar-right {
-    gap: 6px;
   }
 
   .mode-switch .segmented button {
@@ -3103,8 +3013,9 @@ kbd {
     max-width: none;
   }
 
-  /* Two rows on the workbench: the tool switch and Save above, then the presets tab, name, mode and
-     settings tab, so both tabs still open onto their panels. The scale wizard fits one row. */
+  /* Two rows on the workbench: the tool switch, Guide, Export and Save above, then Presets, the name,
+     the mode and Settings, so each panel button sits at the side its panel opens from. The scale
+     wizard fits one row. */
   .app {
     --topbar-height: 96px;
   }
@@ -3142,11 +3053,11 @@ kbd {
     padding: 4px 10px;
   }
 
-  .save-button {
+  .topbar-save {
     grid-area: save;
   }
 
-  .topbar-tab[data-explorer-tab] {
+  .topbar-presets {
     grid-area: presets;
   }
 
@@ -3170,10 +3081,6 @@ kbd {
   .topbar-tools {
     grid-area: tools;
     justify-self: end;
-  }
-
-  .topbar-button {
-    padding: 0 9px;
   }
 
   .export-dialog {

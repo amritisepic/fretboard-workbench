@@ -6,6 +6,7 @@ import { planFoundKey } from './findKeyModel';
 import { usePopoverLayer } from './focusLayer';
 import { ScaleSelects } from './ScaleSelects';
 import { Segmented, type SegmentedOption } from './Segmented';
+import { Switch } from './Switch';
 
 const LABEL_OPTIONS: readonly SegmentedOption<LabelMode>[] = [
   { value: 'names', label: 'Names' },
@@ -185,18 +186,8 @@ function DisplayPanel({ id, onClose }: { readonly id: string; readonly onClose: 
         <span className="toolbar-label" id={stripsLabelId}>
           Between boxes
         </span>
-        <ToolbarSwitch
-          id={`${labels}-common-tones`}
-          label="Common tones"
-          checked={strips.commonTones}
-          onChange={(commonTones) => setStrips({ commonTones })}
-        />
-        <ToolbarSwitch
-          id={`${labels}-voice-leading`}
-          label="Voice leading"
-          checked={strips.voiceLeading}
-          onChange={(voiceLeading) => setStrips({ voiceLeading })}
-        />
+        <Switch label="Common tones" checked={strips.commonTones} onChange={(commonTones) => setStrips({ commonTones })} />
+        <Switch label="Voice leading" checked={strips.voiceLeading} onChange={(voiceLeading) => setStrips({ voiceLeading })} />
         {/* Only worth showing once there are lines to label. Appearing here adds a row to the foot of
             a section the user is already looking at, rather than shoving the controls beside it
             sideways as it did when it sat in the bar itself. */}
@@ -213,12 +204,7 @@ function DisplayPanel({ id, onClose }: { readonly id: string; readonly onClose: 
         )}
       </div>
       <div className="toolbar-display-section">
-        <ToolbarSwitch
-          id={`${labels}-analysis`}
-          label="Harmonic analysis"
-          checked={strips.analysis}
-          onChange={(analysis) => setStrips({ analysis })}
-        />
+        <Switch label="Harmonic analysis" checked={strips.analysis} onChange={(analysis) => setStrips({ analysis })} />
         {/* Last in the panel on purpose: switching harmonic analysis on used to inject this control
             into the middle of the bar and move every control to its right, so the thing the user was
             reaching for was no longer under their finger. Here there is nothing below it to move. */}
@@ -235,37 +221,5 @@ function DisplayPanel({ id, onClose }: { readonly id: string; readonly onClose: 
         )}
       </div>
     </div>
-  );
-}
-
-export function ToolbarSwitch({
-  id,
-  label,
-  checked,
-  onChange,
-}: {
-  readonly id: string;
-  readonly label: string;
-  readonly checked: boolean;
-  readonly onChange: (checked: boolean) => void;
-}) {
-  return (
-    <span className="toolbar-switch">
-      {/* Not `toolbar-label`: that treatment marks a group heading ("Key", "Neck", "Board"), and a
-          switch's own name is not a heading. */}
-      <span className="toolbar-switch-label" id={id}>
-        {label}
-      </span>
-      <button
-        type="button"
-        role="switch"
-        className="toggle"
-        aria-checked={checked}
-        aria-labelledby={id}
-        onClick={() => onChange(!checked)}
-      >
-        <span className="toggle-knob" />
-      </button>
-    </span>
   );
 }

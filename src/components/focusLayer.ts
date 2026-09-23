@@ -4,7 +4,7 @@ import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type RefOb
  * Focus and Escape for the app's overlay surfaces, which are not all the same kind of thing.
  *
  * Three of them are modal: the confirmation, the export dialog and the guided tour block the app and
- * demand an answer. Two are not: the settings and preset panels hang off a top-bar tab with the
+ * demand an answer. Two are not: the settings and preset panels open from a top-bar button with the
  * canvas behind them still live, still clickable and still worth reading, which is why they close on
  * a press outside. `useModalLayer` and `usePopoverLayer` differ over exactly that — one makes the
  * page behind inert and keeps Tab inside, the other leaves the page alone — and agree on what every
@@ -116,10 +116,10 @@ export function useModalLayer<T extends HTMLElement>({
 }
 
 /**
- * A non-modal popover hanging off a top-bar tab: focus moves in when it opens and back to the tab
- * when it closes, Escape closes it, and so does a press anywhere outside it. The page behind stays
- * live and stays in the accessibility tree, which is the whole difference from a modal layer, so
- * there is no trap here and no `aria-modal` to go with the `role="dialog"`.
+ * A non-modal popover opened from a top-bar button: focus moves in when it opens and back to the
+ * button when it closes, Escape closes it, and so does a press anywhere outside it. The page behind
+ * stays live and stays in the accessibility tree, which is the whole difference from a modal layer,
+ * so there is no trap here and no `aria-modal` to go with the `role="dialog"`.
  */
 export function usePopoverLayer<T extends HTMLElement>({
   trigger,

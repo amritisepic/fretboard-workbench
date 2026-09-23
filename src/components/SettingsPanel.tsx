@@ -16,6 +16,7 @@ import {
   toMidi,
 } from '../theory';
 import { usePopoverLayer } from './focusLayer';
+import { Switch } from './Switch';
 
 const OCTAVES = [0, 1, 2, 3, 4, 5, 6, 7];
 
@@ -24,10 +25,10 @@ const sameTuning = (a: readonly number[], b: readonly number[]) =>
 
 /**
  * The settings panel, which is not a modal dialog and does not claim to be one: it hangs off the
- * top bar's Settings tab with the canvas behind it still live, still clickable and still worth
+ * top bar's Settings button with the canvas behind it still live, still clickable and still worth
  * reading, which is exactly why a press outside closes it. So there is no `aria-modal` here and no
  * focus trap — only what a non-modal `role="dialog"` still owes: focus moves in when it opens,
- * Escape closes it, and focus goes back to the tab when it does.
+ * Escape closes it, and focus goes back to the button when it does.
  */
 export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
   const { ref: panelRef, onKeyDown } = usePopoverLayer<HTMLDivElement>({ trigger: '[data-settings-tab]', onClose });
@@ -142,21 +143,7 @@ function DeleteWarningsField() {
 
   return (
     <section className="settings-section">
-      <div className="settings-row">
-        <span className="field-label" id="delete-warnings-label">
-          Show delete warnings
-        </span>
-        <button
-          type="button"
-          role="switch"
-          className="toggle"
-          aria-checked={deleteWarnings}
-          aria-labelledby="delete-warnings-label"
-          onClick={() => setDeleteWarnings(!deleteWarnings)}
-        >
-          <span className="toggle-knob" />
-        </button>
-      </div>
+      <Switch label="Show delete warnings" labelClassName="field-label" checked={deleteWarnings} onChange={setDeleteWarnings} />
       <p className="hint">
         Ask before removing a box. Kept on this device rather than in the preset. Deleting presets and folders always asks.
       </p>
@@ -170,21 +157,7 @@ function FretMarkersField() {
 
   return (
     <section className="settings-section">
-      <div className="settings-row">
-        <span className="field-label" id="fret-markers-label">
-          Fret markers
-        </span>
-        <button
-          type="button"
-          role="switch"
-          className="toggle"
-          aria-checked={fretMarkers}
-          aria-labelledby="fret-markers-label"
-          onClick={() => setFretMarkers(!fretMarkers)}
-        >
-          <span className="toggle-knob" />
-        </button>
-      </div>
+      <Switch label="Fret markers" labelClassName="field-label" checked={fretMarkers} onChange={setFretMarkers} />
       <p className="hint">Light grey dots at frets 3, 5, 7, 9 and 12, repeating up the neck.</p>
     </section>
   );

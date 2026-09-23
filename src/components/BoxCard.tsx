@@ -110,7 +110,7 @@ export function BoxCard({
       {!viewing && (
         <button
           type="button"
-          className="box-remove"
+          className="button is-tertiary is-danger is-icon is-compact box-remove"
           aria-label={`Remove ${view.title || 'this box'}`}
           title="Remove box"
           onClick={(event) => {
@@ -118,7 +118,7 @@ export function BoxCard({
             onRequestRemove(box.id);
           }}
         >
-          <svg viewBox="0 0 16 16" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
             <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
           </svg>
         </button>

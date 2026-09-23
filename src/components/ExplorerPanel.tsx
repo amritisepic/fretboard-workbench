@@ -47,9 +47,9 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 
 /**
  * The preset explorer: saved presets in nested folders, with create, rename, move, delete, export and
- * import. Like the settings panel it is a non-modal popover hanging off a top-bar tab, not a modal
+ * import. Like the settings panel it is a non-modal popover opened from a top-bar button, not a modal
  * dialog: the canvas behind stays live and a press outside closes it, so there is no `aria-modal`
- * and no focus trap — only focus in on open, Escape to close, and focus back to the tab afterwards.
+ * and no focus trap — only focus in on open, Escape to close, and focus back to the button afterwards.
  */
 export function ExplorerPanel({ onClose }: { readonly onClose: () => void }) {
   const ids = useId();

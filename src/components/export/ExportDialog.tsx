@@ -461,8 +461,8 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
       >
         <header className="export-dialog-head">
           <h2 id={`${ids}title`}>Export {workbench ? 'preset' : 'scale'}</h2>
-          <button type="button" className="box-remove export-close" aria-label="Close export" onClick={onClose}>
-            <svg viewBox="0 0 16 16" aria-hidden="true">
+          <button type="button" className="button is-tertiary is-icon is-compact" aria-label="Close export" onClick={onClose}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
               <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" />
             </svg>
           </button>
@@ -501,10 +501,10 @@ export function ExportDialog({ screen, onClose }: { readonly screen: Screen; rea
                       Chords ({chosenCount} of {boxes.length})
                     </span>
                     <span className="export-links">
-                      <button type="button" className="link-button" onClick={() => setBoxIds(new Set(boxes.map((b) => b.id)))}>
+                      <button type="button" className="button is-tertiary is-compact" onClick={() => setBoxIds(new Set(boxes.map((b) => b.id)))}>
                         All
                       </button>
-                      <button type="button" className="link-button" onClick={() => setBoxIds(new Set())}>
+                      <button type="button" className="button is-tertiary is-compact" onClick={() => setBoxIds(new Set())}>
                         None
                       </button>
                     </span>

@@ -230,7 +230,7 @@ export function GuidedTour({ onPanel, onClose }: { readonly onPanel: (panel: Tou
           ) : (
             <>
               {!last && (
-                <button type="button" className="link-button" onClick={finish}>
+                <button type="button" className="button is-tertiary tour-end" onClick={finish}>
                   End tour
                 </button>
               )}
