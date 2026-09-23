@@ -263,6 +263,7 @@ button[aria-disabled='true'] {
 .preset-name-input {
   min-width: 0;
   max-width: 40vw;
+  text-overflow: ellipsis;
   padding: 5px 8px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -2875,6 +2876,20 @@ kbd {
 /* ---- Tablets: the sidebar slides over the canvas ------------------------ */
 
 @media (max-width: 1024px) {
+  /* Below the laptop width the bar has no room for both the preset's name and the words saying
+     whether it is saved, and the name is the one that says what is on screen: at 768px it was cut
+     to "Autum". The Save button already carries the state — solid while there is something to save —
+     so the words step out of sight but stay in the accessibility tree, which `display: none`, as the
+     phone rule used to do, did not. */
+  .preset-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .sidebar {
     position: absolute;
     z-index: 10;
@@ -2926,9 +2941,6 @@ kbd {
     justify-content: center;
   }
 
-  .preset-status {
-    display: none;
-  }
 
   .preset-name-input {
     width: 100%;
