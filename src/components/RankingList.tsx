@@ -47,7 +47,12 @@ function RankRows({
   readonly onSelect: (scale: ScaleRef) => void;
 }) {
   const chordInk = labelInk(color);
+  // What the "Suggested" chip means used to live in a native `title`, which never fires on a touch
+  // screen and was not in the row's name either, so on a phone the word appeared with no way at all
+  // to find out what it marked. One line of visible text under the rows answers it for everyone.
+  const anySuggested = rows.some((row) => row.suggested);
   return (
+    <>
     <ol className="rank-rows">
       {rows.map((row) => (
         <li key={row.key}>
@@ -55,16 +60,14 @@ function RankRows({
             type="button"
             className={row.selected ? 'rank-row is-selected' : 'rank-row'}
             aria-pressed={row.selected}
-            aria-label={`${row.scale.name}${row.missingNote ? `, ${row.missingNote}` : ''}: ${row.cells.map((c) => c.label).join(' ')}`}
+            aria-label={`${row.scale.name}${row.suggested ? ', suggested' : ''}${row.missingNote ? `, ${row.missingNote}` : ''}: ${row.cells
+              .map((c) => c.label)
+              .join(' ')}`}
             onClick={() => onSelect(row.scale.ref)}
           >
             <span className="rank-name">
               {row.scale.name}
-              {row.suggested && (
-                <span className="rank-suggested" title="The scale this chord's function suggests">
-                  Suggested
-                </span>
-              )}
+              {row.suggested && <span className="rank-suggested">Suggested</span>}
               {row.missingNote && <span className="rank-missing">{row.missingNote}</span>}
             </span>
             <span className="rank-strip" aria-hidden="true">
@@ -82,5 +85,7 @@ function RankRows({
         </li>
       ))}
     </ol>
+      {anySuggested && <p className="hint rank-legend">Suggested: the scale this chord's function points to.</p>}
+    </>
   );
 }

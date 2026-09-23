@@ -1639,6 +1639,12 @@ button.key-choice:hover {
   font-weight: 500;
 }
 
+/* The one line under a ranked list that says what the Suggested chip marks. It replaced a native
+   tooltip, which a touch screen never shows. */
+.rank-legend {
+  margin-top: 6px;
+}
+
 .rank-suggested {
   margin-left: auto;
   padding: 0 6px;
