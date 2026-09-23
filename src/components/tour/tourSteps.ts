@@ -101,8 +101,11 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: 'What the canvas shows',
-    body: 'Draw the necks vertically like chord charts or horizontally like tab, show each chord in a window around its shape or on the whole neck, and switch common tones, voice leading and harmonic analysis on or off.',
-    target: '[data-tour="neck"], [data-tour="board"], [data-tour="strips"], [data-tour="analysis"]',
+    body: 'Display holds how the music is drawn: necks vertical like chord charts or horizontal like tab, each chord in a window around its shape or on the whole neck, and common tones, voice leading and harmonic analysis on or off.',
+    // The button, not the controls themselves: they are inside the popover it opens, and the tour
+    // makes the page behind its card inert, so a step pointing into a closed popover would ring
+    // nothing the user can see.
+    target: '[data-tour="display"]',
     screen: 'workbench',
   },
   {
