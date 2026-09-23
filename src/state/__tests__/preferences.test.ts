@@ -6,13 +6,25 @@ import { DEFAULT_SCALE_WIZARD, parseScaleWizard } from '../scaleWizard';
 describe('device preferences', () => {
   it('reads stored preferences and keeps defaults for anything missing or malformed', () => {
     expect(parsePreferences(null)).toEqual(DEFAULT_PREFERENCES);
-    expect(parsePreferences({ screen: 'scales', deleteWarnings: false, tourSeen: true })).toEqual({
+    expect(parsePreferences({ screen: 'scales', deleteWarnings: false, tourSeen: true, theme: 'dark' })).toEqual({
       screen: 'scales',
       deleteWarnings: false,
       tourSeen: true,
+      theme: 'dark',
     });
-    expect(parsePreferences({ screen: 'somewhere', deleteWarnings: 'no', tourSeen: 1 })).toEqual(DEFAULT_PREFERENCES);
+    expect(parsePreferences({ screen: 'somewhere', deleteWarnings: 'no', tourSeen: 1, theme: 'sepia' })).toEqual(
+      DEFAULT_PREFERENCES,
+    );
     expect(parsePreferences([1, 2])).toEqual(DEFAULT_PREFERENCES);
+  });
+
+  it('follows the system until a theme is chosen, including for preferences stored before there was one', () => {
+    expect(DEFAULT_PREFERENCES.theme).toBe('system');
+    // What every device that used the app before the dark theme has stored.
+    const stored = { screen: 'workbench', deleteWarnings: true, tourSeen: true };
+    expect(parsePreferences(stored)).toEqual({ ...stored, theme: 'system' });
+    expect(parsePreferences({ ...stored, theme: 'light' }).theme).toBe('light');
+    expect(parsePreferences({ ...stored, theme: null }).theme).toBe('system');
   });
 
   it('reads stored scale wizard settings, falling back per field', () => {

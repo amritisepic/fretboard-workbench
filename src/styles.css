@@ -1,22 +1,121 @@
-:root {
-  --paper: #faf9f7;
-  --paper-sunk: #f2f0ec;
-  --ink: #3a3a3a;
-  --ink-soft: #66635d;
+/*
+ * Every color, font size and spacing value in this file is one of the tokens below. The tests in
+ * `src/design/__tests__/` hold it to that: a font size or a spacing value that is not a token fails
+ * the build, and so does a color written anywhere but here. The few exceptions are listed there, each
+ * with its reason beside it here.
+ *
+ * Each color is written once, as its light value and its dark value side by side, and `light-dark()`
+ * chooses between them by `color-scheme`. So a theme is that one property: the blocks after this one
+ * switch the page to dark. A copy of the palette per theme would have been two lists to keep in step.
+ *
+ * The export is the one thing that stays light, because a PDF or a PNG is printed on white paper
+ * whatever the screen was showing when it was made. That is why the tokens are declared on two more
+ * elements than the root: the off-screen stage the export sheet is laid out in, and the root that
+ * `export/rasterize.ts` wraps a copy of the sheet in to draw it. Declaring `color-scheme: light` on
+ * the stage alone would not do, because the build rewrites `light-dark()` for browsers without it
+ * into custom properties that are resolved where they are declared; a token resolved dark on the
+ * page's root arrives at the stage already dark. Declared here, each token is resolved again, light,
+ * on the stage and on the export's root.
+ */
+:root,
+.export-stage,
+.export-root {
+  color-scheme: light;
+
+  /* The dark theme is for rehearsal rooms and stages, so its page is a warm near-black rather than
+     black, and its ink stops short of white: full white on black glows at the edges of each letter
+     in a dark room, and at 14:1 this is still further from the page than the light theme's ink
+     (10.8:1). Every pairing both themes use is checked in contrast.test.ts, dark and light alike. */
+  --paper: light-dark(#faf9f7, #1b1a18);
+  /* Behind hovered rows, pressed buttons and the export preview. In the dark theme it is lighter
+     than the page rather than darker: a surface that stands out in the dark is one lit a little
+     more, and a hover that darkened a near-black page would not show. */
+  --paper-sunk: light-dark(#f2f0ec, #252421);
+  --ink: light-dark(#3a3a3a, #ebe8e3);
+  --ink-soft: light-dark(#66635d, #aca79e);
   /* The quietest text there is, and still text: fret numbers, string names, hints, the save status,
-     all at 10.5–11.5px. So it clears 4.5:1 on the sunk panels (4.59) as well as on paper (4.96),
-     which leaves it close to --ink-soft; size and weight say the rest. It was #9b978f, at 2.76:1. */
-  --ink-faint: #706c64;
+     all at --text-xs and --text-sm. So it clears 4.5:1 on the sunk panels as well as on paper, which
+     leaves it close to --ink-soft; size and weight say the rest. It was #9b978f, at 2.76:1. */
+  --ink-faint: light-dark(#706c64, #948f86);
   /* Three weights of line. --rule is a hairline inside a surface. --rule-mid outlines what is only
      there to group things, like a chord card, a table's head or an inlay, and WCAG 1.4.11 leaves
      that alone. --rule-strong is the edge of something to operate or a panel that floats over the
-     page, where the edge is how you find it, so it clears 3:1 on paper (3.1); it was #cfcbc3, at
-     1.53:1, which --rule-mid keeps. */
-  --rule: #e6e3dd;
-  --rule-mid: #cfcbc3;
-  --rule-strong: #928e86;
-  --danger: #a83228;
-  --notice: #8a5a1f;
+     page, where the edge is how you find it, so it clears 3:1 on paper; it was #cfcbc3, at 1.53:1,
+     which --rule-mid keeps. */
+  --rule: light-dark(#e6e3dd, #2e2c29);
+  --rule-mid: light-dark(#cfcbc3, #454240);
+  --rule-strong: light-dark(#928e86, #75716a);
+  --danger: light-dark(#a83228, #ec8074);
+  --notice: light-dark(#8a5a1f, #d69b52);
+
+  /* The fills behind the key bars, one per key. They are what tells one key region from the next at
+     a glance, so every pair is at least ΔE 15 apart (CIE76), where the beiges they replaced came as
+     close as 3. All eight share one lightness and one chroma (21.5), with their hues spaced evenly
+     round the circle, so no bar reads heavier than another; the bar names its key in words as well,
+     which is why the hues stop at the separation the eye needs and go no further towards saturated
+     blocks. The order is the order keys are met in, and each key after the first takes the hue
+     furthest from the ones before it (see KEY_REGION_COLORS in components/color.ts).
+
+     The dark set keeps each hue and the chroma and moves the lightness from L* 85 to L* 32, which
+     keeps the pairs as far apart; the test holds both sets to ΔE 15. Left pale, eight bright bars
+     would have been the brightest things on a dark stage, which is what the dark theme exists to
+     stop, and the band ink on them is light for the same reason. */
+  --region-1: light-dark(#e8d2ac, #594929);
+  --region-2: light-dark(#b9d7fc, #2e4e6d);
+  --region-3: light-dark(#a7e0d0, #1d5448);
+  --region-4: light-dark(#fbc6d8, #6a3e4f);
+  --region-5: light-dark(#c6dbb5, #3e5131);
+  --region-6: light-dark(#e0cdf3, #544565);
+  --region-7: light-dark(#9fdfee, #005360);
+  --region-8: light-dark(#fdc9bb, #6a4136);
+  /* The ink on the key bars and on the scale bands beside them, which are tinted with the box's own
+     color (see bandShade). The soft one is a rival reading's scale on a scale band. */
+  --band-ink: light-dark(#56524a, #e3dfd8);
+  --band-ink-soft: light-dark(#625e56, #c2bdb3);
+  /* The tonic in the scale wizard's chromatic grid, matching the tonic's dots on its fretboard, which
+     are drawn in the default box color. That red clears 3:1 on both pages, so the dark theme keeps
+     it as it is (see dotColorIn). */
+  --tonic: #c8372d;
+  --on-tonic: #ffffff;
+  /* The paper an export prints on, white in both themes. */
+  --sheet: #ffffff;
+  /* Shadows darken whatever is under them, so the dark theme's are black; a shadow in the light
+     theme's ink would glow on a dark page. */
+  --shade: light-dark(rgb(58 58 58 / 0.34), rgb(0 0 0 / 0.55));
+  --shadow: light-dark(rgb(58 58 58 / 0.25), rgb(0 0 0 / 0.6));
+  --shadow-faint: light-dark(rgb(58 58 58 / 0.14), rgb(0 0 0 / 0.45));
+  /* An image cannot take a color from the page, so the select's chevron is drawn once per theme, in
+     that theme's ink; the dark one is in the blocks below. */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%233a3a3a' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  /* Six sizes of type. There were fifteen, five of them half pixels, each nudged until it looked
+     right on its own. Labels and the fretboard's own text are --text-xs, which is also the export's
+     print floor (SMALLEST_SHEET_TEXT_PX); small print and compact controls --text-sm; everything
+     read as body text --text-md; panel and dialog titles --text-lg; chord and scale names
+     --text-xl; and the two display figures, the root box's note and an export's title, --text-2xl. */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  /* Body leading, which suits every size up to --text-xl, and a tighter one for --text-2xl, where the
+     same ratio would open a wrapped title up like double spacing and stand the root box's note taller
+     than the box. */
+  --leading: 1.45;
+  --leading-tight: 1.15;
+
+  /* Seven steps of space, for every padding, margin and gap. Anything between two steps was moved to
+     one of them rather than given a step of its own. Hairlines, radii and the heights of controls are
+     not space and are not on this scale. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
   --radius-lg: 16px;
   --radius: 12px;
   --radius-sm: 8px;
@@ -26,7 +125,27 @@
   --motion: 150ms;
   --font: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
-  color-scheme: light;
+}
+
+/*
+ * The dark theme, for anyone whose system asks for it and has not chosen light in Settings, and for
+ * anyone who has chosen dark. `index.html` sets `data-theme` before the first paint from the stored
+ * choice, so the page never flashes white first; no attribute means "follow the system".
+ *
+ * CSS cannot say "this media query or that selector" in one block, so the two are written out; the
+ * colors themselves are in `:root` above, which leaves each block two lines long, and a test holds the
+ * two to being identical.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23ebe8e3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23ebe8e3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* Someone who has asked their system to reduce motion is telling every app to stop moving things,
@@ -57,8 +176,8 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: var(--text-md);
+  line-height: var(--leading);
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
@@ -135,9 +254,9 @@ button[aria-disabled='true'] {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-2);
   height: 34px;
-  padding: 0 14px;
+  padding: 0 var(--space-3);
   border: 1px solid var(--rule-strong);
   border-radius: 9px;
   background: var(--paper);
@@ -192,8 +311,8 @@ button[aria-disabled='true'] {
 
 .button.is-compact {
   height: 30px;
-  padding: 0 10px;
-  font-size: 12.5px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .button.is-icon {
@@ -237,9 +356,9 @@ button[aria-disabled='true'] {
   display: grid;
   grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   height: var(--topbar-height);
-  padding: 0 20px;
+  padding: 0 var(--space-4);
   /* A divider between the bar and the canvas, not the edge of a control, so the decorative rule. */
   border-bottom: 1px solid var(--rule-mid);
 }
@@ -249,7 +368,7 @@ button[aria-disabled='true'] {
 .topbar-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .topbar-right {
@@ -257,14 +376,13 @@ button[aria-disabled='true'] {
 }
 
 .mode-switch .segmented button {
-  padding: 4px 12px;
-  font-size: 12.5px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .preset-name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -274,11 +392,11 @@ button[aria-disabled='true'] {
   min-width: 0;
   max-width: 40vw;
   text-overflow: ellipsis;
-  padding: 5px 8px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.01em;
   text-align: center;
@@ -295,7 +413,7 @@ button[aria-disabled='true'] {
 
 .preset-status {
   color: var(--ink-faint);
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
@@ -312,7 +430,7 @@ button[aria-disabled='true'] {
   flex: 1;
   min-width: 0;
   overflow: auto;
-  padding: 28px;
+  padding: var(--space-5);
 }
 
 /* Centred in the workspace and no wider than its own text, so an empty workbench reads as a short
@@ -327,31 +445,31 @@ button[aria-disabled='true'] {
 .empty-card {
   display: grid;
   justify-items: center;
-  gap: 10px;
+  gap: var(--space-3);
   width: min(420px, 100%);
-  padding: 26px 28px 24px;
+  padding: var(--space-5) var(--space-6);
   border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
   text-align: center;
 }
 
 .empty-title {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .empty-body {
   color: var(--ink-soft);
-  font-size: 13.5px;
+  font-size: var(--text-md);
 }
 
 .empty-actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 /* Appends a chord at the end of the row of boxes. The empty workbench shows a card rather than a
@@ -376,7 +494,7 @@ button[aria-disabled='true'] {
   position: sticky;
   z-index: 5;
   /* Sticky offsets count from inside the workspace's padding, so this cancels it. */
-  top: -28px;
+  top: calc(-1 * var(--space-5));
   display: flex;
   /* The bar is meant to fit one row at every width, and does. Wrapping is kept as the way it gives
      when a translation or a text-size setting makes a control wider than it is here: a second row
@@ -384,9 +502,9 @@ button[aria-disabled='true'] {
      with nothing to say it had gone, which is the failure this replaced. */
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 20px;
-  margin: -28px -28px 22px;
-  padding: 14px 28px;
+  gap: var(--space-3) var(--space-5);
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-5);
+  padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--rule);
   background: var(--paper);
 }
@@ -395,12 +513,12 @@ button[aria-disabled='true'] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: var(--space-2);
 }
 
 .toolbar-label {
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -408,7 +526,7 @@ button[aria-disabled='true'] {
 
 .canvas-toolbar .scale-selects {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 /* Sized to the chosen name, so long scale names show in full. */
@@ -418,8 +536,7 @@ button[aria-disabled='true'] {
 }
 
 .canvas-toolbar .segmented button {
-  padding: 5px 11px;
-  font-size: 12.5px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .canvas-toolbar .stepper button {
@@ -442,13 +559,13 @@ button[aria-disabled='true'] {
 .toolbar-display-panel {
   position: absolute;
   z-index: 20;
-  top: calc(100% + 8px);
+  top: calc(100% + var(--space-2));
   right: 0;
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   width: max-content;
   max-width: min(320px, calc(100vw - 32px));
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--rule-strong);
   border-radius: 12px;
   background: var(--paper);
@@ -461,13 +578,13 @@ button[aria-disabled='true'] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .toolbar-display-section {
   display: grid;
-  gap: 12px;
-  padding-top: 12px;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--rule);
 }
 
@@ -475,7 +592,7 @@ button[aria-disabled='true'] {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  row-gap: 30px;
+  row-gap: var(--space-6);
 }
 
 /* Strip in the first column, card in the second, and the bar over the second column alone. The bar
@@ -527,10 +644,11 @@ button[aria-disabled='true'] {
 .key-band {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-1);
   height: 24px;
-  margin-bottom: 6px;
-  padding: 0 10px;
+  margin-bottom: var(--space-1);
+  /* The scale's pill ends the bar, inset from its end about as far as from its top and bottom. */
+  padding: 0 var(--space-1) 0 var(--space-2);
   border-radius: 8px;
   background: var(--rule);
   contain: inline-size;
@@ -543,8 +661,8 @@ button[aria-disabled='true'] {
   flex-shrink: 0;
   min-width: 0;
   overflow: hidden;
-  color: #56524a;
-  font-size: 11.5px;
+  color: var(--band-ink);
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -553,7 +671,7 @@ button[aria-disabled='true'] {
 /* A bar carrying on a key region rather than starting one. The bars no longer touch, so the lighter
    weight is what now says "same key as the one before" that a joined bar said by running on, along
    with the bar's color, which only a key change alters. The name used to be faded as well, to 70%,
-   which put it at 3.1:1 on its bar; it is 11.5px text and needs 4.5, so the weight does it alone. */
+   which put it at 3.1:1 on its bar; it is small text and needs 4.5, so the weight does it alone. */
 .key-band-label.is-continued {
   font-weight: 500;
 }
@@ -564,12 +682,13 @@ button[aria-disabled='true'] {
   flex: 0 1 auto;
   min-width: 3em;
   margin-left: auto;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border-radius: 7px;
   overflow: hidden;
-  color: #56524a;
-  font-size: 11.5px;
+  color: var(--band-ink);
+  font-size: var(--text-sm);
   font-weight: 600;
+  /* The pill's own height, which leaves 3px of the 24px bar showing above and below it. */
   line-height: 18px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -577,18 +696,18 @@ button[aria-disabled='true'] {
 
 .box-spacer {
   flex: none;
-  width: 28px;
+  width: var(--space-5);
 }
 
 .add-slot {
   display: flex;
   align-items: center;
-  padding: 34px 0 0 28px;
+  padding: var(--space-6) 0 0 var(--space-5);
 }
 
 /* ---- Voice-leading strip --------------------------------------------- */
 
-/* About a third of a chord card (226px at desktop widths). The strip carries a handful of short
+/* About a third of a chord card (214px at desktop widths). The strip carries a handful of short
    labels; anything wider spends the canvas on white space between chords that a player wants to
    compare side by side. */
 .strip {
@@ -597,14 +716,14 @@ button[aria-disabled='true'] {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: var(--space-1);
   width: 76px;
-  padding: 0 6px;
+  padding: 0 var(--space-1);
 }
 
 .strip-wrap {
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 
 /* The names wrap rather than ellipsize: in a strip this narrow a clipped "Cm…" would be worse than
@@ -612,11 +731,11 @@ button[aria-disabled='true'] {
 .strip-title {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 4px;
+  gap: 0 var(--space-1);
   justify-content: center;
   max-width: 100%;
   color: var(--ink-soft);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-align: center;
 }
@@ -637,7 +756,7 @@ button[aria-disabled='true'] {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-1);
   max-width: 100%;
 }
 
@@ -645,8 +764,8 @@ button[aria-disabled='true'] {
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: 3px;
-  padding-top: 4px;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
 }
 
 .strip-dot {
@@ -659,7 +778,6 @@ button[aria-disabled='true'] {
 .strip-moves {
   display: flex;
   flex-direction: column;
-  gap: 2px;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -668,7 +786,7 @@ button[aria-disabled='true'] {
 
 .strip-move {
   display: flex;
-  gap: 2px;
+  gap: var(--space-1);
   align-items: baseline;
   white-space: nowrap;
 }
@@ -676,18 +794,18 @@ button[aria-disabled='true'] {
 /* The note names are the fact the row exists to carry, so they take the strongest ink. */
 .strip-note {
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
 .strip-glyph {
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .strip-step {
   color: var(--ink-soft);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 
@@ -699,7 +817,7 @@ button[aria-disabled='true'] {
   flex-direction: column;
   align-items: center;
   color: var(--ink-soft);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -720,7 +838,7 @@ button[aria-disabled='true'] {
   display: flex;
   flex-direction: column;
   max-width: 100%;
-  padding: 18px 22px 10px;
+  padding: var(--space-4) var(--space-4) var(--space-2);
   border: 1px solid var(--rule-mid);
   border-radius: var(--radius-lg);
   background: var(--paper);
@@ -741,8 +859,8 @@ button[aria-disabled='true'] {
   display: flex;
   align-items: baseline;
   min-height: 30px;
-  margin: 0 0 10px 2px;
-  padding-right: 26px;
+  margin: 0 0 var(--space-2);
+  padding-right: var(--space-6);
   contain: inline-size;
 }
 
@@ -753,8 +871,8 @@ button[aria-disabled='true'] {
 /* A tertiary danger icon button (see Buttons); this only pins it to the card's corner. */
 .box-remove {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: var(--space-4);
+  right: var(--space-3);
 }
 
 /*
@@ -771,7 +889,7 @@ button[aria-disabled='true'] {
 .box-body {
   display: flex;
   flex: 1 0 auto;
-  gap: 10px 14px;
+  gap: var(--space-2) var(--space-3);
 }
 
 .box-body.is-vertical {
@@ -855,38 +973,38 @@ button[aria-disabled='true'] {
   top: 100%;
   right: 0;
   left: 0;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--paper);
   color: var(--notice);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 
 .box-title {
-  font-size: 21px;
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 
 .box-title.is-placeholder {
   color: var(--ink-faint);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 400;
   letter-spacing: 0;
 }
 
 .degree-basis {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .degree-basis .hint {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .sidebar-close {
   display: none;
   align-self: flex-end;
-  margin-bottom: -14px;
+  margin-bottom: calc(-1 * var(--space-3));
 }
 
 /* ---- View mode ------------------------------------------------------- */
@@ -937,7 +1055,7 @@ button[aria-disabled='true'] {
 
 .empty-note {
   color: var(--ink-faint);
-  font-size: 15px;
+  font-size: var(--text-md);
 }
 
 /* ---- Fretboard ------------------------------------------------------- */
@@ -981,7 +1099,7 @@ button[aria-disabled='true'] {
 .fretboard .string-name,
 .fretboard .fret-number {
   fill: var(--ink-faint);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 
@@ -994,7 +1112,7 @@ button[aria-disabled='true'] {
    neck the shape is. It is read before anything else on the board and is weighted to match. */
 .fretboard .fret-number.is-position {
   fill: var(--ink);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -1089,7 +1207,7 @@ button[aria-disabled='true'] {
    label is ever smaller than this (see LABEL_MAX_WIDTH in Fretboard.tsx). */
 .fretboard .dot-label {
   pointer-events: none;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-anchor: middle;
   dominant-baseline: central;
@@ -1107,7 +1225,6 @@ button[aria-disabled='true'] {
 }
 
 .tentative-mark {
-  margin-left: 1px;
   color: var(--ink-faint);
 }
 
@@ -1117,13 +1234,17 @@ button[aria-disabled='true'] {
 .function-tag {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  /* A one-letter numeral (I, V) made a chip 22px wide, the one control on an ordinary progression
+     under the WCAG 2.2 minimum of 24; the letter is centred in the width it gets. */
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 24px;
   max-width: 100%;
-  padding: 2px 8px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--rule-strong);
   border-radius: 7px;
   background: var(--paper);
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   text-align: left;
 }
@@ -1144,6 +1265,10 @@ button.function-tag[aria-expanded='true'] {
   white-space: nowrap;
 }
 
+/* The one exception to the type scale. A figure is set in proportion to the numeral it annotates, as a
+   superscript is, and even the smallest size on the scale is four fifths of the numeral: two figures
+   stacked at that size (⁶₅) would stand taller than the line they sit on and push the chip open. The
+   scale test names these two rules and allows no other size off the scale. */
 .function-text .figure {
   font-size: 0.68em;
   line-height: 0;
@@ -1153,7 +1278,6 @@ button.function-tag[aria-expanded='true'] {
 .function-text .figures {
   display: inline-flex;
   flex-direction: column;
-  margin: 0 1px;
   font-size: 0.62em;
   line-height: 0.95;
   vertical-align: -0.35em;
@@ -1161,7 +1285,7 @@ button.function-tag[aria-expanded='true'] {
 
 .function-note {
   color: var(--ink-soft);
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -1176,19 +1300,18 @@ button.function-tag[aria-expanded='true'] {
 .info-explanation {
   position: absolute;
   z-index: 6;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--space-2));
   left: 0;
   display: block;
   width: max-content;
   max-width: min(300px, 80vw);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--ink);
   border-radius: 10px;
   background: var(--paper);
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
   font-weight: 400;
-  line-height: 1.4;
   text-align: left;
 }
 
@@ -1201,7 +1324,7 @@ button.function-tag[aria-expanded='true'] {
  */
 .box-body.is-vertical .info-explanation {
   top: auto;
-  bottom: calc(100% + 6px);
+  bottom: calc(100% + var(--space-2));
 }
 
 .box-body.is-horizontal .info-explanation {
@@ -1216,7 +1339,7 @@ button.function-tag[aria-expanded='true'] {
   .box-body.is-horizontal .info-explanation {
     top: auto;
     right: auto;
-    bottom: calc(100% + 6px);
+    bottom: calc(100% + var(--space-2));
     left: 0;
   }
 }
@@ -1224,14 +1347,14 @@ button.function-tag[aria-expanded='true'] {
 .key-band-label.is-split {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .key-choice {
-  padding: 0 2px;
+  padding: 0 var(--space-1);
   border: 0;
   background: transparent;
-  color: #56524a;
+  color: var(--band-ink);
   font: inherit;
   font-weight: 500;
   white-space: nowrap;
@@ -1257,9 +1380,9 @@ button.key-choice:hover {
 }
 
 /* A shade lighter than the band ink beside it, and still 4.5:1 on a scale band in any of the dot
-   colors (4.62 at worst, on graphite). It was #7a756c, at 3.27. */
+   colors, in either theme. It was #7a756c, at 3.27. */
 .scale-alternative {
-  color: #625e56;
+  color: var(--band-ink-soft);
   font-weight: 500;
 }
 
@@ -1267,13 +1390,13 @@ button.key-choice:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
   max-width: 100%;
 }
 
 .strip-pattern {
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-style: italic;
   font-weight: 600;
   text-align: center;
@@ -1294,7 +1417,7 @@ button.key-choice:hover {
 
 .strip-relation-label {
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-align: center;
 }
@@ -1318,7 +1441,7 @@ button.key-choice:hover {
 
 .reading-list {
   display: grid;
-  gap: 4px;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1326,9 +1449,9 @@ button.key-choice:hover {
 
 .reading-option {
   display: grid;
-  gap: 3px;
+  gap: var(--space-1);
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
@@ -1347,29 +1470,29 @@ button.key-choice:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-2);
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .reading-key {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
 }
 
 .reading-explanation {
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .harmony-field .hint {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .key-pin {
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 .key-pin-head {
@@ -1377,8 +1500,8 @@ button.key-choice:hover {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 /* ---- Sidebar --------------------------------------------------------- */
@@ -1390,35 +1513,35 @@ button.key-choice:hover {
   width: 344px;
   border-left: 1px solid var(--rule-strong);
   background: var(--paper);
-  box-shadow: -8px 0 20px -18px rgba(58, 58, 58, 0.25);
+  box-shadow: -8px 0 20px -18px var(--shadow);
 }
 
 .sidebar-body {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 26px;
+  gap: var(--space-5);
   overflow: auto;
-  padding: 24px 22px;
+  padding: var(--space-5);
 }
 
 .sidebar-footer {
-  padding: 20px 22px 24px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
   border-top: 1px solid var(--rule);
 }
 
 .field-label {
   display: block;
-  margin-bottom: 9px;
+  margin-bottom: var(--space-2);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .field-value {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 500;
 }
 
@@ -1426,19 +1549,18 @@ button.key-choice:hover {
   display: grid;
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
-  gap: 2px;
-  padding: 3px;
+  padding: var(--space-1);
   border: 1px solid var(--rule-strong);
   border-radius: 11px;
 }
 
 .segmented button {
-  padding: 6px 10px;
+  padding: var(--space-1) var(--space-3);
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -1457,7 +1579,7 @@ button.key-choice:hover {
 
 .field-note {
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 /* ---- Root box -------------------------------------------------------- */
@@ -1512,21 +1634,21 @@ button.key-choice:hover {
 
 .root-label {
   color: var(--ink-faint);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .root-name {
-  font-size: 26px;
+  font-size: var(--text-2xl);
   font-weight: 600;
   letter-spacing: -0.01em;
-  line-height: 1.15;
+  line-height: var(--leading-tight);
 }
 
 .root-box + .hint {
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 /* ---- Scale picker and mode slider ------------------------------------ */
@@ -1534,7 +1656,7 @@ button.key-choice:hover {
 .scale-selects {
   display: grid;
   grid-template-columns: 78px minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .scale-selects .select {
@@ -1543,27 +1665,27 @@ button.key-choice:hover {
 }
 
 .mode-slider {
-  margin-top: 18px;
+  margin-top: var(--space-4);
 }
 
 .mode-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .mode-label {
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .mode-name {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   text-align: right;
 }
@@ -1607,19 +1729,21 @@ button.key-choice:hover {
   background: var(--paper);
 }
 
+/* As tall as the stops in it. A stop's padding went from 1px, which is not on the space scale, to 4px,
+   which makes a stop about 24px tall where it was 18px. */
 .mode-stops {
   position: relative;
-  height: 20px;
+  height: 24px;
 }
 
 .mode-stop {
   position: absolute;
   top: 0;
-  padding: 1px 2px;
+  padding: var(--space-1);
   border: 0;
   background: transparent;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 500;
   transform: translateX(-50%);
   white-space: nowrap;
@@ -1642,13 +1766,13 @@ button.key-choice:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 9px;
+  gap: var(--space-2);
 }
 
 .swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: var(--space-2);
 }
 
 .swatch {
@@ -1690,7 +1814,7 @@ button.key-choice:hover {
   background: var(--paper);
   color: var(--ink-soft);
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
@@ -1712,16 +1836,16 @@ button.key-choice:hover {
 .ranking {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .rank-section-title {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-2);
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -1732,7 +1856,7 @@ button.key-choice:hover {
 
 .rank-rows {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1741,8 +1865,8 @@ button.key-choice:hover {
 .rank-row {
   display: grid;
   width: 100%;
-  gap: 6px;
-  padding: 8px 9px;
+  gap: var(--space-1);
+  padding: var(--space-2);
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
@@ -1761,37 +1885,37 @@ button.key-choice:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--space-2);
+  font-size: var(--text-md);
   font-weight: 500;
 }
 
 /* The one line under a ranked list that says what the Suggested chip marks. It replaced a native
    tooltip, which a touch screen never shows. */
 .rank-legend {
-  margin-top: 6px;
+  margin-top: var(--space-2);
 }
 
 .rank-suggested {
   margin-left: auto;
-  padding: 0 6px;
+  padding: 0 var(--space-1);
   border: 1px solid var(--rule-mid);
   border-radius: 6px;
   color: var(--ink-soft);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .rank-missing {
   color: var(--notice);
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
 .rank-strip {
   display: flex;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .rank-cell {
@@ -1804,7 +1928,7 @@ button.key-choice:hover {
   border: 1px solid var(--rule-mid);
   border-radius: 5px;
   color: var(--ink-soft);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1820,7 +1944,7 @@ button.key-choice:hover {
 
 .rank-distant summary::before {
   content: '▸';
-  margin-right: 6px;
+  margin-right: var(--space-1);
   color: var(--ink-faint);
 }
 
@@ -1837,7 +1961,7 @@ button.key-choice:hover {
 }
 
 .rank-distant .hint {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
 }
 
 /* ---- Switch ---------------------------------------------------------- */
@@ -1848,7 +1972,7 @@ button.key-choice:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 /* The name is the track's label, so pressing it works too. */
@@ -1860,7 +1984,7 @@ button.key-choice:hover {
    controls, and a switch's name is only a heading where its section has nothing else in it. */
 .switch-label {
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1914,22 +2038,22 @@ button.key-choice:hover {
 
 .fill-field {
   display: grid;
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .hint {
-  margin-top: 14px;
+  margin-top: var(--space-3);
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 kbd {
-  padding: 1px 5px;
+  padding: 0 var(--space-1);
   border: 1px solid var(--rule-mid);
   border-radius: 5px;
   color: var(--ink-soft);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 
 /* The keys that also work on a control, shown beside it instead of spelled out in a sentence. The
@@ -1937,8 +2061,8 @@ kbd {
    technology. */
 .shortcut {
   display: inline-flex;
-  gap: 4px;
-  margin-top: 8px;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
 }
 
 /* ---- Settings panel -------------------------------------------------- */
@@ -1949,11 +2073,11 @@ kbd {
   position: absolute;
   z-index: 20;
   top: calc(var(--topbar-height) - 1px);
-  right: 20px;
+  right: var(--space-4);
   width: 360px;
   max-height: calc(100% - var(--topbar-height) - 19px);
   overflow: auto;
-  padding: 22px;
+  padding: var(--space-5);
   border: 1px solid var(--rule-strong);
   border-radius: 14px;
   background: var(--paper);
@@ -1961,8 +2085,8 @@ kbd {
 }
 
 .settings-section + .settings-section {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
 }
 
@@ -1979,7 +2103,7 @@ kbd {
 .select,
 .number-input {
   height: 34px;
-  padding: 0 10px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-sm);
   background-color: var(--paper);
@@ -1987,9 +2111,9 @@ kbd {
 
 .select {
   appearance: none;
-  padding-right: 28px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%233a3a3a' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-position: right 10px center;
+  padding-right: var(--space-5);
+  background-image: var(--select-arrow);
+  background-position: right var(--space-2) center;
   background-repeat: no-repeat;
 }
 
@@ -2003,9 +2127,9 @@ kbd {
 }
 
 .tuning-string {
-  margin-top: 10px;
+  margin-top: var(--space-2);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-sm);
   letter-spacing: 0.02em;
 }
 
@@ -2021,20 +2145,20 @@ kbd {
   height: 32px;
   border: 0;
   background: transparent;
-  font-size: 16px;
+  font-size: var(--text-lg);
 }
 
 .stepper output {
   min-width: 24px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   font-weight: 600;
   text-align: center;
 }
 
 .string-list {
   display: grid;
-  gap: 8px;
-  margin: 16px 0 0;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -2043,12 +2167,12 @@ kbd {
   display: grid;
   grid-template-columns: 24px 1fr 76px;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .string-number {
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -2057,9 +2181,9 @@ kbd {
 }
 
 .inline-message {
-  margin-top: 8px;
+  margin-top: var(--space-2);
   color: var(--notice);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 
 /* ---- Preset explorer ------------------------------------------------- */
@@ -2070,12 +2194,12 @@ kbd {
   position: absolute;
   z-index: 20;
   top: calc(var(--topbar-height) - 1px);
-  left: 20px;
+  left: var(--space-4);
   width: 420px;
   max-width: calc(100% - 40px);
   max-height: calc(100% - var(--topbar-height) - 19px);
   overflow: auto;
-  padding: 18px 14px 14px;
+  padding: var(--space-4) var(--space-3) var(--space-3);
   border: 1px solid var(--rule-strong);
   border-radius: 14px;
   background: var(--paper);
@@ -2087,24 +2211,24 @@ kbd {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin: 0 4px 12px;
+  gap: var(--space-2);
+  margin: 0 var(--space-1) var(--space-3);
 }
 
 .explorer-title {
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
 .explorer-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .explorer-notice {
-  margin: 0 4px 10px;
+  margin: 0 var(--space-1) var(--space-2);
   color: var(--ink-soft);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 
 .explorer-notice.is-error {
@@ -2112,9 +2236,9 @@ kbd {
 }
 
 .explorer-empty {
-  margin: 18px 4px 8px;
+  margin: var(--space-4) var(--space-1) var(--space-2);
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .explorer-list {
@@ -2126,9 +2250,9 @@ kbd {
 .explorer-row {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-1);
   min-height: 34px;
-  padding-right: 4px;
+  padding-right: var(--space-1);
   border-radius: 8px;
 }
 
@@ -2148,19 +2272,19 @@ kbd {
   border: 0;
   background: transparent;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 
 .explorer-name {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
-  padding: 6px 4px;
+  padding: var(--space-1);
   border: 0;
   background: transparent;
-  font-size: 13.5px;
+  font-size: var(--text-md);
   text-align: left;
 }
 
@@ -2179,9 +2303,9 @@ kbd {
 
 .explorer-meta {
   flex: none;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   color: var(--ink-faint);
-  font-size: 11.5px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 
@@ -2194,7 +2318,7 @@ kbd {
   border-radius: 7px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 15px;
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
@@ -2209,26 +2333,26 @@ kbd {
   flex: 1;
   min-width: 0;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 var(--space-2);
   border: 1px solid var(--ink);
   border-radius: 7px;
   background: var(--paper);
-  font-size: 13.5px;
+  font-size: var(--text-md);
 }
 
 .explorer-menu {
   width: 210px;
-  margin: 2px 4px 8px auto;
-  padding: 4px;
+  margin: var(--space-1) var(--space-1) var(--space-2) auto;
+  padding: var(--space-1);
   border: 1px solid var(--rule-strong);
   border-radius: 10px;
   background: var(--paper);
 }
 
 .explorer-menu-title {
-  margin: 4px 10px;
+  margin: var(--space-1) var(--space-3);
   color: var(--ink-faint);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2237,11 +2361,11 @@ kbd {
 .explorer-menu-item {
   display: block;
   width: 100%;
-  padding: 7px 10px;
+  padding: var(--space-2) var(--space-3);
   border: 0;
   border-radius: 7px;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--text-md);
   text-align: left;
 }
 
@@ -2254,28 +2378,28 @@ kbd {
 }
 
 .explorer-empty-folder {
-  padding-top: 4px;
-  padding-bottom: 8px;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-2);
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 
 .explorer-examples {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
 }
 
 .explorer-section-title {
-  margin: 0 4px 2px;
-  font-size: 13.5px;
+  margin: 0 var(--space-1);
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .explorer-section-note {
-  margin: 0 4px 8px;
+  margin: 0 var(--space-1) var(--space-2);
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 /* ---- Offline and update notice --------------------------------------- */
@@ -2283,23 +2407,23 @@ kbd {
 .update-notice {
   position: fixed;
   z-index: 40;
-  bottom: 20px;
-  left: 20px;
+  bottom: var(--space-4);
+  left: var(--space-4);
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3);
   max-width: min(440px, calc(100vw - 40px));
-  padding: 10px 10px 10px 16px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
   border: 1px solid var(--ink);
   border-radius: 12px;
   background: var(--paper);
-  font-size: 13.5px;
+  font-size: var(--text-md);
 }
 
 .update-actions {
   display: flex;
   flex: none;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 /* ---- Dialog ---------------------------------------------------------- */
@@ -2310,44 +2434,43 @@ kbd {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(250, 249, 247, 0.72);
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
 }
 
 .dialog {
   width: min(360px, calc(100vw - 40px));
-  padding: 22px 22px 18px;
+  padding: var(--space-5) var(--space-5) var(--space-4);
   border: 1px solid var(--ink);
   border-radius: var(--radius-lg);
   background: var(--paper);
 }
 
 .dialog h2 {
-  font-size: 17px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
 .dialog p {
-  margin-top: 6px;
+  margin-top: var(--space-2);
   color: var(--ink-soft);
 }
 
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
 }
 
 /* ---- Tool switch --------------------------------------------------------- */
 
 .app-switch .segmented button {
-  padding: 4px 12px;
-  font-size: 12.5px;
+  padding: var(--space-1) var(--space-3);
   white-space: nowrap;
 }
 
 .topbar-title {
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.01em;
   text-align: center;
@@ -2359,13 +2482,13 @@ kbd {
 .wizard-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 22px;
+  gap: var(--space-5);
   max-width: 1080px;
 }
 
 .wizard-section {
   min-width: 0;
-  padding: 18px 22px 20px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
   border: 1px solid var(--rule-mid);
   border-radius: var(--radius-lg);
   background: var(--paper);
@@ -2376,8 +2499,8 @@ kbd {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 28px;
-  margin-bottom: 16px;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .wizard-section-head.is-alone {
@@ -2388,31 +2511,30 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: var(--space-2) var(--space-4);
 }
 
 .wizard-section .segmented button {
-  padding: 5px 11px;
-  font-size: 12.5px;
+  padding: var(--space-1) var(--space-3);
 }
 
 .scale-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 14px;
-  margin-bottom: 14px;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .scale-title {
-  font-size: 21px;
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 
 .scale-summary {
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 .chromatic-scroll,
@@ -2427,9 +2549,9 @@ kbd {
 }
 
 .chromatic th {
-  padding-right: 8px;
+  padding-right: var(--space-2);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-align: left;
@@ -2440,10 +2562,10 @@ kbd {
 .chromatic td {
   min-width: 46px;
   height: 40px;
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border: 1px solid var(--rule);
   border-radius: 9px;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 500;
   text-align: center;
   white-space: nowrap;
@@ -2462,9 +2584,9 @@ kbd {
 
 /* The tonic matches the tonic's dots on the fretboard. */
 .chromatic .note-cell.is-tonic {
-  border-color: #c8372d;
-  background: #c8372d;
-  color: #fff;
+  border-color: var(--tonic);
+  background: var(--tonic);
+  color: var(--on-tonic);
 }
 
 .chromatic .degree-cell {
@@ -2498,14 +2620,14 @@ kbd {
 .chord-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .chord-table thead th {
-  padding: 0 14px 8px;
+  padding: 0 var(--space-3) var(--space-2);
   border-bottom: 1px solid var(--rule-mid);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-align: left;
@@ -2515,7 +2637,7 @@ kbd {
 
 .chord-table td,
 .chord-table tbody th {
-  padding: 9px 14px;
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--rule);
   text-align: left;
   white-space: nowrap;
@@ -2528,7 +2650,7 @@ kbd {
 
 .chord-table thead th:first-child,
 .chord-table td:first-child {
-  padding-left: 2px;
+  padding-left: 0;
 }
 
 .chord-numeral {
@@ -2536,13 +2658,13 @@ kbd {
 }
 
 .chord-table .chord-name {
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
 .chord-tones {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .chord-tone {
@@ -2566,12 +2688,12 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 14px 22px;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--rule);
 }
 
 .export-dialog-head h2 {
-  font-size: 17px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
@@ -2585,9 +2707,9 @@ kbd {
 .export-options {
   display: grid;
   align-content: start;
-  gap: 20px;
+  gap: var(--space-5);
   overflow: auto;
-  padding: 18px 22px 22px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
   border-right: 1px solid var(--rule);
   /* A control cut in half at the scroll fold, with nothing to say the column scrolls, is how this
      column used to end. The two radial gradients are painted in the scrollport rather than on the
@@ -2595,19 +2717,19 @@ kbd {
      something is hidden and goes when nothing is. The two linear gradients scroll with the content
      and cover the shadow at the ends. */
   background:
-    linear-gradient(var(--paper) 40%, rgb(250 249 247 / 0)) top / 100% 22px no-repeat local,
-    linear-gradient(rgb(250 249 247 / 0), var(--paper) 60%) bottom / 100% 22px no-repeat local,
-    radial-gradient(farthest-side at 50% 0, rgb(58 58 58 / 0.14), rgb(58 58 58 / 0)) top / 100% 9px no-repeat scroll,
-    radial-gradient(farthest-side at 50% 100%, rgb(58 58 58 / 0.14), rgb(58 58 58 / 0)) bottom / 100% 9px no-repeat scroll;
+    linear-gradient(var(--paper) 40%, transparent) top / 100% 22px no-repeat local,
+    linear-gradient(transparent, var(--paper) 60%) bottom / 100% 22px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, var(--shadow-faint), transparent) top / 100% 9px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, var(--shadow-faint), transparent) bottom / 100% 9px no-repeat scroll;
   /* Tabbing to a control the column has to scroll to must not leave it flush against the fold. */
-  scroll-padding-block: 22px;
+  scroll-padding-block: var(--space-5);
 }
 
 /* Everything past the format, which is mounted only while "More options" is open. */
 .export-advanced {
   display: grid;
   align-content: start;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .export-more {
@@ -2616,7 +2738,7 @@ kbd {
 
 .export-group {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .export-group .field-label {
@@ -2631,27 +2753,27 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .export-links {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .export-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .export-boxes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 2px 12px;
+  gap: 0 var(--space-3);
   max-height: 168px;
   overflow: auto;
-  padding: 6px 8px;
+  padding: var(--space-2);
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
 }
@@ -2659,16 +2781,16 @@ kbd {
 .export-features {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 12px;
+  gap: var(--space-1) var(--space-3);
 }
 
 .export-check {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
   min-width: 0;
-  padding: 3px 0;
-  font-size: 13px;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -2686,7 +2808,7 @@ kbd {
 
 .export-index {
   color: var(--ink-faint);
-  font-size: 11.5px;
+  font-size: var(--text-xs);
 }
 
 .export-value {
@@ -2697,21 +2819,21 @@ kbd {
 
 .export-preview {
   overflow: auto;
-  padding: 18px 22px 24px;
+  padding: var(--space-4) var(--space-5) var(--space-5);
   background: var(--paper-sunk);
 }
 
 .export-summary,
 .export-empty {
-  margin-bottom: 14px;
+  margin-bottom: var(--space-4);
   color: var(--ink-soft);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 
 .export-pages {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 18px;
+  gap: var(--space-4);
   align-items: start;
 }
 
@@ -2724,7 +2846,7 @@ kbd {
   width: 100%;
   height: auto;
   border: 1px solid var(--rule-mid);
-  background: #fff;
+  background: var(--sheet);
 }
 
 .export-page.is-image {
@@ -2740,15 +2862,15 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 22px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--rule);
 }
 
 .export-status {
   margin-right: auto;
   color: var(--ink-soft);
-  font-size: 12.5px;
+  font-size: var(--text-sm);
 }
 
 .export-status.is-error {
@@ -2763,9 +2885,14 @@ kbd {
   pointer-events: none;
 }
 
+/* Printed on white paper whatever the screen is showing, so the sheet is laid out in the light theme's
+   colors in either theme: the stage around it declares them (see the tokens at the top of the file).
+   `color` is set again here rather than inherited, because what the body passes down is the page's
+   ink already resolved for the page's theme. */
 .export-sheet {
   position: relative;
   background: var(--paper);
+  color: var(--ink);
 }
 
 .export-sheet .box-group,
@@ -2790,29 +2917,30 @@ kbd {
 }
 
 .export-header {
-  padding-bottom: 20px;
+  padding-bottom: var(--space-5);
 }
 
 .export-title {
-  font-size: 24px;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
   font-weight: 600;
   letter-spacing: -0.015em;
 }
 
 .export-subtitle {
-  margin-top: 2px;
+  margin-top: var(--space-1);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 .export-scale .export-section + .export-section {
-  margin-top: 26px;
+  margin-top: var(--space-5);
 }
 
 .export-section-title {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2);
   color: var(--ink-soft);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -2828,7 +2956,7 @@ kbd {
 
 .tour-shade {
   position: fixed;
-  background: rgba(58, 58, 58, 0.34);
+  background: var(--shade);
 }
 
 .tour-ring {
@@ -2841,7 +2969,7 @@ kbd {
 .tour-card {
   position: fixed;
   width: min(370px, calc(100vw - 24px));
-  padding: 16px 18px 14px;
+  padding: var(--space-4);
   border: 1px solid var(--ink);
   border-radius: var(--radius-lg);
   background: var(--paper);
@@ -2850,21 +2978,21 @@ kbd {
 
 .tour-count {
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .tour-card h2 {
-  margin-top: 4px;
-  font-size: 17px;
+  margin-top: var(--space-1);
+  font-size: var(--text-lg);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .tour-body {
-  margin-top: 6px;
+  margin-top: var(--space-2);
   color: var(--ink-soft);
 }
 
@@ -2872,8 +3000,8 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
 }
 
 .tour-actions .tour-end {
@@ -2917,10 +3045,6 @@ kbd {
     align-items: center;
   }
 
-  .canvas-toolbar {
-    gap: 10px 22px;
-  }
-
   /* The top bar holds the same controls here in less width, and with their names written out they
      need about 1050px. So the four tertiary buttons drop to their icons, which leaves room for the
      preset's name down to the narrowest tablet. Each keeps its name for a screen reader, clipped
@@ -2946,41 +3070,40 @@ kbd {
   /* The name takes whatever width the buttons leave. */
   .topbar {
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 8px;
-    padding: 0 10px;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
   }
 
   .preset-name {
     justify-content: center;
   }
 
-
   .preset-name-input {
     width: 100%;
     min-width: 0;
     max-width: none;
-    font-size: 14px;
+    font-size: var(--text-md);
   }
 
   .mode-switch .segmented button {
-    padding: 4px 8px;
+    padding: var(--space-1) var(--space-2);
   }
 
   .workspace {
-    padding: 16px;
+    padding: var(--space-4);
   }
 
   /* One row on a 390px phone, which is what the whole bar is sized against below. */
   .canvas-toolbar {
-    top: -16px;
-    gap: 10px;
-    margin: -16px -16px 16px;
-    padding: 10px 12px;
+    top: calc(-1 * var(--space-4));
+    gap: var(--space-2);
+    margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);
+    padding: var(--space-2) var(--space-3);
   }
 
   .toolbar-group {
     flex-wrap: nowrap;
-    gap: 6px;
+    gap: var(--space-1);
   }
 
   /* The Key heading is what the bar can most afford to lose: "Find key" beside the two selects says
@@ -2988,10 +3111,6 @@ kbd {
      heading, because a bare - and + name nothing at all. */
   .toolbar-group[data-tour='key'] > .toolbar-label {
     display: none;
-  }
-
-  .canvas-toolbar > .toolbar-group > .toolbar-label {
-    font-size: 10px;
   }
 
   /* Capped, not just narrowed: `field-sizing: content` sizes a select to the name it is showing, so
@@ -3004,23 +3123,16 @@ kbd {
      it is the chevron's room — without it the name is drawn beneath the arrow. */
   .canvas-toolbar .scale-selects {
     max-width: 136px;
-    gap: 4px;
   }
 
   .canvas-toolbar .scale-selects .select {
     height: 30px;
     min-width: 0;
-    padding: 0 22px 0 8px;
-    background-position: right 7px center;
-    font-size: 12.5px;
+    font-size: var(--text-sm);
   }
 
   .canvas-toolbar .scale-selects .select:first-child {
     flex-shrink: 0;
-  }
-
-  .canvas-toolbar .button.is-compact {
-    padding: 0 8px;
   }
 
   .canvas-toolbar .stepper button {
@@ -3057,11 +3169,11 @@ kbd {
   .strip {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 2px 8px;
+    gap: 0 var(--space-2);
     align-items: baseline;
     justify-content: center;
     width: auto;
-    padding: 4px 0 10px;
+    padding: var(--space-1) 0 var(--space-2);
   }
 
   .strip-voices {
@@ -3085,7 +3197,7 @@ kbd {
   /* The lane joins the same line instead of stacking its own column above it. */
   .strip-analysis {
     flex-direction: row;
-    gap: 8px;
+    gap: var(--space-2);
     align-items: baseline;
   }
 
@@ -3095,10 +3207,6 @@ kbd {
 
   .box-spacer {
     display: none;
-  }
-
-  .box {
-    padding: 14px 14px 8px;
   }
 
   /* Notes keep a finger-sized target: a wide neck scrolls sideways instead of shrinking. */
@@ -3115,7 +3223,7 @@ kbd {
   }
 
   .add-slot {
-    padding: 12px 0 0;
+    padding: var(--space-3) 0 0;
   }
 
   .sidebar {
@@ -3124,8 +3232,8 @@ kbd {
 
   .settings-panel,
   .explorer-panel {
-    right: 10px;
-    left: 10px;
+    right: var(--space-2);
+    left: var(--space-2);
     width: auto;
     max-width: none;
   }
@@ -3147,7 +3255,7 @@ kbd {
     grid-template-areas:
       'switch switch tools save'
       'presets name mode settings';
-    column-gap: 6px;
+    column-gap: var(--space-2);
     row-gap: 0;
   }
 
@@ -3167,7 +3275,7 @@ kbd {
   }
 
   .app-switch .segmented button {
-    padding: 4px 10px;
+    padding: var(--space-1) var(--space-2);
   }
 
   .topbar-save {
@@ -3211,13 +3319,13 @@ kbd {
   }
 
   .export-options {
-    padding: 14px 16px;
+    padding: var(--space-4);
     border-right: 0;
     border-bottom: 1px solid var(--rule);
   }
 
   .export-preview {
-    padding: 14px 16px;
+    padding: var(--space-4);
   }
 
   /* The off-screen sheet keeps the desktop layout the export is drawn with. */
@@ -3247,10 +3355,10 @@ kbd {
   .export-sheet .strip {
     flex-direction: column;
     flex-wrap: nowrap;
-    gap: 5px;
+    gap: var(--space-1);
     align-items: center;
     width: 76px;
-    padding: 0 6px;
+    padding: 0 var(--space-1);
   }
 
   .export-sheet .strip-voices {
@@ -3271,7 +3379,7 @@ kbd {
 
   .export-sheet .strip-analysis {
     flex-direction: column;
-    gap: 3px;
+    gap: var(--space-1);
     align-items: center;
   }
 
@@ -3281,10 +3389,6 @@ kbd {
 
   .export-sheet .box-spacer {
     display: block;
-  }
-
-  .export-sheet .box {
-    padding: 18px 22px 10px;
   }
 
   .export-sheet .fretboard-scroll {

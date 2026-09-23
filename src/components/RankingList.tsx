@@ -1,5 +1,5 @@
 import type { ScaleRef } from '../theory';
-import { labelInk } from './color';
+import { dotColor, dotInk } from './color';
 import type { RankingRow, RankingView } from './rankingModel';
 
 export function RankingList({
@@ -46,7 +46,9 @@ function RankRows({
   readonly color: string;
   readonly onSelect: (scale: ScaleRef) => void;
 }) {
-  const chordInk = labelInk(color);
+  // Drawn as the box's notes are, so a chord tone here matches its note on the board in either theme.
+  const chordFill = dotColor(color);
+  const chordInk = dotInk(color);
   // What the "Suggested" chip means used to live in a native `title`, which never fires on a touch
   // screen and was not in the row's name either, so on a phone the word appeared with no way at all
   // to find out what it marked. One line of visible text under the rows answers it for everyone.
@@ -75,7 +77,7 @@ function RankRows({
                 <span
                   key={i}
                   className={cell.chordTone ? 'rank-cell is-chord' : 'rank-cell'}
-                  style={cell.chordTone ? { backgroundColor: color, borderColor: color, color: chordInk } : undefined}
+                  style={cell.chordTone ? { backgroundColor: chordFill, borderColor: chordFill, color: chordInk } : undefined}
                 >
                   {cell.label}
                 </span>

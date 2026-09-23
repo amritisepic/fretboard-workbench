@@ -14,6 +14,8 @@ export const MINIMUM = {
   largeText: 3,
   /** The edge of an input, button or panel: what tells you the control is there. */
   controlBoundary: 3,
+  /** A graphic that carries meaning against what is behind it (1.4.11), such as a note on a board. */
+  graphic: 3,
 } as const;
 
 export type Rgb = readonly [number, number, number];
@@ -45,17 +47,29 @@ export function contrast(a: string, b: string): number {
 /** Rounded the way a report reads it, so a 4.4999 never looks like a pass. */
 export const ratio = (a: string, b: string): number => Math.floor(contrast(a, b) * 100) / 100;
 
+/** The stylesheet's two themes. */
+export type ThemeName = 'light' | 'dark';
+
+const HEX = /^#[0-9a-f]{3,8}$/i;
+const LIGHT_DARK = /^light-dark\(\s*(#[0-9a-f]{3,8})\s*,\s*(#[0-9a-f]{3,8})\s*\)$/i;
+
 /**
- * The custom properties declared on `:root` in a stylesheet, by name without the leading dashes.
- * Only color values are kept; radii, fonts and the like are ignored.
+ * The color custom properties declared on `:root` in a stylesheet, by name without the leading
+ * dashes, as one theme resolves them: the first rule whose selector list includes `:root`. A token
+ * written `light-dark(a, b)` is `a` in the light theme and `b` in the dark one; a plain hex color is
+ * the same in both. Radii, fonts, colors with alpha and the like are left out, since none of them is
+ * text or an edge that a contrast minimum applies to.
  */
-export function rootColorTokens(css: string): Readonly<Record<string, string>> {
-  const block = /:root\s*\{([^}]*)\}/.exec(css);
+export function rootColorTokens(css: string, theme: ThemeName): Readonly<Record<string, string>> {
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]*)\{([^{}]*)\}/g);
+  const block = [...rules].find(([, selector]) => selector.split(',').some((part) => part.trim() === ':root'));
   if (!block) throw new Error('No :root block in the stylesheet');
   const tokens: Record<string, string> = {};
-  for (const [, name, value] of block[1].matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
-    const color = value.trim();
-    if (/^#[0-9a-f]{3,8}$/i.test(color)) tokens[name] = color;
+  for (const [, name, raw] of block[2].matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
+    const value = raw.trim();
+    const pair = LIGHT_DARK.exec(value);
+    if (pair) tokens[name] = theme === 'light' ? pair[1] : pair[2];
+    else if (HEX.test(value)) tokens[name] = value;
   }
   return tokens;
 }

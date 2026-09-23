@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TUNING_PRESETS } from '../data/tunings';
-import { usePreferences } from '../state/preferences';
+import { usePreferences, type ThemeChoice } from '../state/preferences';
 import { useWorkbench } from '../state/workbench';
 import {
   MAX_CAPO,
@@ -16,9 +16,16 @@ import {
   toMidi,
 } from '../theory';
 import { usePopoverLayer } from './focusLayer';
+import { Segmented, type SegmentedOption } from './Segmented';
 import { Switch } from './Switch';
 
 const OCTAVES = [0, 1, 2, 3, 4, 5, 6, 7];
+
+const THEME_OPTIONS: readonly SegmentedOption<ThemeChoice>[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 const sameTuning = (a: readonly number[], b: readonly number[]) =>
   a.length === b.length && a.every((midi, i) => midi === b[i]);
@@ -132,6 +139,7 @@ export function SettingsPanel({ onClose }: { readonly onClose: () => void }) {
       <FretCountField />
       <FretMarkersField />
       <DeleteWarningsField />
+      <ThemeField />
     </div>
   );
 }
@@ -147,6 +155,24 @@ function DeleteWarningsField() {
       <p className="hint">
         Ask before removing a box. Kept on this device rather than in the preset. Deleting presets and folders always asks.
       </p>
+    </section>
+  );
+}
+
+/**
+ * Light or dark, or whichever the device is set to. A device setting like the delete warnings, and
+ * beside them for that reason: a rehearsal room and a stage want the dark theme whichever preset is
+ * open.
+ */
+function ThemeField() {
+  const theme = usePreferences((s) => s.theme);
+  const setTheme = usePreferences((s) => s.setTheme);
+
+  return (
+    <section className="settings-section">
+      <span className="field-label">Theme</span>
+      <Segmented label="Theme" options={THEME_OPTIONS} value={theme} onChange={setTheme} />
+      <p className="hint">System follows this device's light or dark setting. Kept on this device rather than in the preset.</p>
     </section>
   );
 }

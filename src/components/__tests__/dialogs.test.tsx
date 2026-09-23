@@ -218,6 +218,20 @@ describe('SettingsPanel', () => {
     expect(usePreferences.getState().deleteWarnings).toBe(!was);
   });
 
+  it('offers the theme as System, Light and Dark, following the system until one is chosen', () => {
+    render(<SettingsPanel onClose={vi.fn()} />);
+    const theme = screen.getByRole('radiogroup', { name: 'Theme' });
+    const options = within(theme).getAllByRole('radio');
+    expect(options.map((option) => option.textContent)).toEqual(['System', 'Light', 'Dark']);
+    expect(within(theme).getByRole('radio', { checked: true }).textContent).toBe('System');
+
+    fireEvent.click(within(theme).getByRole('radio', { name: 'Dark' }));
+    expect(usePreferences.getState().theme).toBe('dark');
+    expect(within(theme).getByRole('radio', { checked: true }).textContent).toBe('Dark');
+    // One tab stop for the group, on the choice, as every Segmented has.
+    expect(options.filter((option) => option.tabIndex === 0).map((option) => option.textContent)).toEqual(['Dark']);
+  });
+
   it('closes on a pointer press outside itself', () => {
     const onClose = vi.fn();
     render(<SettingsPanel onClose={onClose} />);
