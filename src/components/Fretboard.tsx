@@ -60,6 +60,22 @@ export interface FretboardProps {
 const RING_GAP = 2.5;
 
 /**
+ * The widest a note's label may run, in CSS px. Every label is drawn at the stylesheet's one size,
+ * 10.5px, where the three glyphs of a double accidental (G♯♯, ♭♭7) measure up to 18px and sit inside
+ * the 25px note with room to spare. A label of more glyphs than that could only come from spelling
+ * past a double accidental; it is narrowed to this width rather than shrunk, so it keeps its height
+ * and still ends inside the note. Shrinking, which is what the board used to do past two glyphs, took
+ * a label down to 8.5px: smaller than anything else in the app, and under the print floor.
+ */
+const LABEL_MAX_WIDTH = 20;
+const LABEL_FULL_WIDTH_GLYPHS = 3;
+
+const labelFit = (label: string) =>
+  label.length > LABEL_FULL_WIDTH_GLYPHS
+    ? { textLength: LABEL_MAX_WIDTH, lengthAdjust: 'spacingAndGlyphs' as const }
+    : {};
+
+/**
  * What turns a position into a toggle button. Spelled out rather than taken from `SVGProps`,
  * because a position is a group on one cell and a rect on the next and the two element types share
  * no `SVGProps` shape — the `ref` on each is typed to its own element.
@@ -328,10 +344,16 @@ export const Fretboard = memo(function Fretboard({
       aria-label={`Fretboard, ${stringCount} strings, ${fretCount} frets${capo > 0 ? `, capo at fret ${capo}` : ''}${cropped ? showing : ''}`}
     >
       <defs>
-        <radialGradient id={coreFill} cx="0.35" cy="0.3" r="0.8">
-          <stop offset="0" stopColor={mix(color, '#FFFFFF', 0.45)} />
-          <stop offset="0.55" stopColor={color} />
-          <stop offset="1" stopColor={mix(color, '#1E1E1E', 0.7)} />
+        {/* Lit from above: a small highlight at the top edge that has faded into the box color
+            before it reaches the label, because the label's ink is chosen against the box color.
+            The highlight used to be large and centred up and to the left, where it fell across the
+            label's first letter: behind a white label on red it measured 2.1:1 at its lightest. A
+            shade round the lower rim darkened the label's other end as well. A label's box, 13px
+            tall, starts 0.19 of the way out from the centre of this gradient at the top of the
+            note, and the highlight is gone by 0.17, so every pixel behind a label is the box color. */}
+        <radialGradient id={coreFill} cx="0.5" cy="0.06" r="0.94">
+          <stop offset="0" stopColor={mix(color, '#FFFFFF', 0.25)} />
+          <stop offset="0.17" stopColor={color} />
         </radialGradient>
       </defs>
       {capo > 0 && atNut && (
@@ -422,7 +444,7 @@ export const Fretboard = memo(function Fretboard({
             <g key={key} data-position={key} className="position position-strong is-clicked" {...controlProps(dot)}>
               <circle className="dot-ring" cx={cx} cy={cy} r={ringRadius} stroke={color} />
               <circle className="dot-core" cx={cx} cy={cy} r={DOT_RADIUS} fill={`url(#${coreFill})`} />
-              <text className={dot.label.length > 2 ? 'dot-label is-long' : 'dot-label'} x={cx} y={cy} fill={strongInk}>
+              <text className="dot-label" x={cx} y={cy} fill={strongInk} {...labelFit(dot.label)}>
                 {dot.label}
               </text>
             </g>
@@ -447,10 +469,11 @@ export const Fretboard = memo(function Fretboard({
           <g key={key} data-position={key} className={`position position-${dot.kind}`} {...controlProps(dot)}>
             <circle cx={cx} cy={cy} r={DOT_RADIUS} fill={dot.kind === 'strong' ? color : weak} />
             <text
-              className={dot.label.length > 2 ? 'dot-label is-long' : 'dot-label'}
+              className="dot-label"
               x={cx}
               y={cy}
               fill={dot.kind === 'strong' ? strongInk : weakInk}
+              {...labelFit(dot.label)}
             >
               {dot.label}
             </text>

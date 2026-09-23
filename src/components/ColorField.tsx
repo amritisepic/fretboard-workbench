@@ -1,13 +1,23 @@
 import { useWorkbench, type Box } from '../state/workbench';
 import { rovingRadioGroup } from './rovingRadioGroup';
 
-/** The dot colors offered in the sidebar. Exported so the contrast tests can check them. */
+/**
+ * The dot colors offered in the sidebar. Exported so the contrast tests can check them.
+ *
+ * Every one is dark enough to carry a white label at 5:1 or better. Orange, ochre, green and teal
+ * used to be lighter, at the same hues: the first three sat where neither white nor the house ink
+ * reaches 4.5:1, and teal cleared it by 0.03. They were darkened rather than given black labels,
+ * which WCAG would have passed, because white reads better on a saturated mid-tone (APCA puts it
+ * well ahead on all four) and one label ink across the palette keeps the dots looking like a set.
+ * A box saved in one of the old values keeps it, shows as a custom color, and gets whichever label
+ * `labelInk` finds readable on it.
+ */
 export const SWATCHES = [
   { name: 'Red', value: '#C8372D' },
-  { name: 'Orange', value: '#C9672A' },
-  { name: 'Ochre', value: '#B08A1E' },
-  { name: 'Green', value: '#3E8750' },
-  { name: 'Teal', value: '#23828A' },
+  { name: 'Orange', value: '#B25417' },
+  { name: 'Ochre', value: '#8A6A00' },
+  { name: 'Green', value: '#347D47' },
+  { name: 'Teal', value: '#187B83' },
   { name: 'Blue', value: '#2F5FB3' },
   { name: 'Violet', value: '#6D4AAE' },
   { name: 'Graphite', value: '#3A3A3A' },
