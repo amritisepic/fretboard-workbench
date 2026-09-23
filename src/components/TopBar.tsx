@@ -18,6 +18,16 @@ const SCREEN_OPTIONS: readonly SegmentedOption<Screen>[] = [
   { value: 'scales', label: 'Scale wizard' },
 ];
 
+/**
+ * The bar across the top, drawn in the same vocabulary as every other control in the app: the two
+ * choices between named options (which tool, edit or view) are `Segmented`, Save is the one button
+ * with a level of its own, and Presets, Guide, Export and Settings are tertiary buttons.
+ *
+ * Presets and Settings used to be tabs attached to the panels they open, with Guide and Export as
+ * free-standing pills beside them: five treatments in one bar, for controls that differ only in
+ * what they open. An open panel is now shown the way any button shows the thing it controls is
+ * open, through `aria-expanded`.
+ */
 export function TopBar({
   settingsOpen,
   explorerOpen,
@@ -51,20 +61,18 @@ export function TopBar({
             <SaveButton />
             <button
               type="button"
-              className={explorerOpen ? 'topbar-tab is-open' : 'topbar-tab'}
+              className="button is-tertiary topbar-presets"
               aria-expanded={explorerOpen}
               aria-haspopup="dialog"
               data-explorer-tab=""
               data-tour="presets"
+              title="Presets and examples"
               onClick={onToggleExplorer}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden="true">
                 <path d="M2 4.5v8h12V6H7.5L6 4.5z" />
               </svg>
-              <span className="topbar-tab-label">Presets</span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M2.5 4l2.5 2.5L7.5 4" />
-              </svg>
+              <span className="button-label">Presets</span>
             </button>
           </>
         )}
@@ -73,17 +81,17 @@ export function TopBar({
       <div className="topbar-right">
         {workbench && <ModeSwitch />}
         <div className="topbar-tools">
-          <button type="button" className="topbar-button" data-tour="guide" title="Take the guided tour" onClick={onStartTour}>
+          <button type="button" className="button is-tertiary" data-tour="guide" title="Take the guided tour" onClick={onStartTour}>
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
               <circle cx="8" cy="8" r="6.2" />
               <path d="M6.3 6.2a1.8 1.8 0 1 1 2.5 1.7c-.5.2-.8.6-.8 1.1v.4" />
               <circle cx="8" cy="11.6" r="0.4" fill="currentColor" />
             </svg>
-            <span className="topbar-tab-label">Guide</span>
+            <span className="button-label">Guide</span>
           </button>
           <button
             type="button"
-            className="topbar-button"
+            className="button is-tertiary"
             data-tour="export"
             // `aria-disabled` rather than `disabled`, so the button keeps its place in the tab order
             // and the reason below can reach a keyboard or screen-reader user. A `disabled` button
@@ -96,7 +104,7 @@ export function TopBar({
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M8 2.5v8M4.8 7.5L8 10.7l3.2-3.2M3 13.5h10" />
             </svg>
-            <span className="topbar-tab-label">Export</span>
+            <span className="button-label">Export</span>
           </button>
           {!canExport && (
             <span className="visually-hidden" id={exportReasonId}>
@@ -106,11 +114,12 @@ export function TopBar({
         </div>
         <button
           type="button"
-          className={settingsOpen ? 'topbar-tab topbar-settings is-open' : 'topbar-tab topbar-settings'}
+          className="button is-tertiary topbar-settings"
           aria-expanded={settingsOpen}
           aria-haspopup="dialog"
           data-settings-tab=""
           data-tour="settings"
+          title="Settings"
           onClick={onToggleSettings}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
@@ -118,7 +127,7 @@ export function TopBar({
             <circle cx="10.5" cy="4" r="1.5" />
             <circle cx="5.5" cy="12" r="1.5" />
           </svg>
-          <span className="topbar-tab-label">Settings</span>
+          <span className="button-label">Settings</span>
         </button>
       </div>
     </header>
@@ -157,10 +166,14 @@ function SaveButton() {
             ? 'Saved'
             : 'Save';
 
+  // Primary while there is something to save, and secondary once there is not: the same button at
+  // two levels, so the one solid button in the bar is the one that has work to do.
+  const unsaved = feedback === 'idle' && status !== 'saved';
+
   return (
     <button
       type="button"
-      className={feedback === 'idle' && status !== 'saved' ? 'save-button has-changes' : 'save-button'}
+      className={unsaved ? 'button is-primary topbar-save' : 'button topbar-save'}
       disabled={feedback === 'saving'}
       aria-keyshortcuts="Control+S Meta+S"
       title="Save preset (Ctrl+S)"

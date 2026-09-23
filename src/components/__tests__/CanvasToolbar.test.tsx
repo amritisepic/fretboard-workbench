@@ -167,6 +167,16 @@ describe('CanvasToolbar', () => {
       expect(screen.getByRole('dialog', { name: 'Display' })).toBe(dialog);
     });
 
+    it('draws its on/off settings with the one Switch and its two-way choices with Segmented', () => {
+      const { trigger } = renderToolbar({ commonTones: true, analysis: true });
+      const dialog = openDisplay(trigger);
+      const switches = within(dialog).getAllByRole('switch');
+      expect(switches.map((control) => control.className)).toEqual(['switch-track', 'switch-track', 'switch-track']);
+      for (const group of within(dialog).getAllByRole('radiogroup')) {
+        expect(group.classList.contains('segmented'), group.getAttribute('aria-label') ?? '').toBe(true);
+      }
+    });
+
     it('shows the label and notation choices only when there is something for them to change', () => {
       const { trigger } = renderToolbar({ commonTones: false, voiceLeading: false, analysis: false });
       const dialog = openDisplay(trigger);

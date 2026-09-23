@@ -1,10 +1,10 @@
 import { useScaleWizard } from '../state/scaleWizard';
 import { useWorkbench, type HarmonyNotation, type LabelMode, type Orientation } from '../state/workbench';
 import { TOP_VOICES, maxTopVoice, scaleNotes, scaleRefName, type TopVoice } from '../theory';
-import { ToolbarSwitch } from './CanvasToolbar';
 import { ScaleSelects } from './ScaleSelects';
 import { ChordTable, ChromaticGrid, ScaleBoard, ScaleHeading, TOP_VOICE_NAMES } from './ScaleSheet';
 import { Segmented, type SegmentedOption } from './Segmented';
+import { Switch } from './Switch';
 
 const LABEL_OPTIONS: readonly SegmentedOption<LabelMode>[] = [
   { value: 'names', label: 'Notes' },
@@ -52,7 +52,7 @@ export function ScaleWizard() {
         <section className="wizard-section" aria-label="Fretboard" data-tour="wizard-board">
           <div className={wizard.showScale ? 'wizard-section-head' : 'wizard-section-head is-alone'}>
             <div className="wizard-section-controls">
-              <ToolbarSwitch id="show-scale-label" label="Show scale" checked={wizard.showScale} onChange={wizard.setShowScale} />
+              <Switch label="Show scale" checked={wizard.showScale} onChange={wizard.setShowScale} />
               {wizard.showScale && (
                 <>
                   <Segmented label="Fretboard labels" options={LABEL_OPTIONS} value={wizard.labelMode} onChange={wizard.setLabelMode} />

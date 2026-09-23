@@ -151,17 +151,7 @@ test.describe('layout budgets', () => {
     expect(m.boardWaste, 'share of a board that is empty grid').toBeLessThanOrEqual(budget.boardWasteOnLong);
   });
 
-  test('every control in the top bar can be clicked', async ({ page }, testInfo) => {
-    // Known gap. `.topbar` is a three-column grid whose outer columns are minmax(0, 1fr), so the
-    // left column shrinks below its content and spills over the ones beside it. The Presets tab
-    // carries z-index: 21 and ends up on top, which between 761px and 910px leaves Save, the preset
-    // name field and the Edit/View switch covered: a tap on View opens Presets instead. Phones
-    // (760px and below) use a different grid and are fine, as is 920px and up.
-    //
-    // Plan item 21 (Phase 3) rebuilds the top bar; when it lands this passes on every width and the
-    // `test.fail` below comes off.
-    test.fail(testInfo.project.name === 'tablet');
-
+  test('every control in the top bar can be clicked', async ({ page }) => {
     await goTo(page, STATES.short);
     const covered = await page.evaluate(() =>
       [...document.querySelectorAll('.topbar button, .topbar [role="radio"], .topbar input')]
