@@ -100,6 +100,58 @@ describe('voice-leading strip', () => {
     ]);
   });
 
+  it('splits the voices into the ones that move and the ones that are held', () => {
+    const view = strip(box(C_E_G, C_MAJOR), box(F_A_C, F_LYDIAN));
+    expect(view.moves.map((v) => [v.from, v.to, v.interval])).toEqual([
+      ['G', 'A', '+2'],
+      ['E', 'F', '+1'],
+    ]);
+    expect(view.held.map((v) => v.from)).toEqual(['C']);
+    expect(view.heldLabels).toEqual(['C']);
+    // Every voice belongs to exactly one of the two, so nothing is drawn twice or lost.
+    expect(view.moves.length + view.held.length).toBe(view.voices.length);
+  });
+
+  /**
+   * The case the compressed strip exists for: G7 → Gm7 holds three voices and moves one. Drawing
+   * four arrows gave the single fact in the transition a quarter of the strip's attention.
+   */
+  it('gives a 3-held, 1-moving transition one arrow and three marks, not four arrows', () => {
+    const G7 = [{ string: 0, fret: 3 }, { string: 1, fret: 2 }, { string: 2, fret: 0 }, { string: 3, fret: 10 }]; // G B D F
+    const Gm7 = [{ string: 0, fret: 3 }, { string: 1, fret: 1 }, { string: 2, fret: 0 }, { string: 3, fret: 10 }]; // G B♭ D F
+    const view = strip(box(G7, C_MAJOR), box(Gm7, C_MAJOR));
+
+    expect(view.moves).toHaveLength(1);
+    expect(view.held).toHaveLength(3);
+    expect(view.moves.map((v) => [v.from, v.to, v.interval])).toEqual([['B', 'B♭', '−1']]);
+    expect([...view.heldLabels].sort()).toEqual(['D', 'F', 'G']);
+    expect(view.commonTones).toBe(3);
+    expect(view.totalMotion).toBe(1);
+    expect(view.summary).toBe('1 semitone · 3 common');
+    expect(view.summaryParts).toEqual(['1 semitone', '3 common']);
+  });
+
+  it('counts an added or dropped tone as a move, since something has to change under the hand', () => {
+    const dropped = strip(box(G_B_D_F, C_MAJOR), box(C_E_G, C_MAJOR));
+    expect(dropped.moves.map((v) => v.kind)).toContain('dropped');
+    expect(dropped.held.every((v) => v.kind === 'common')).toBe(true);
+
+    const added = strip(box(C_E_G, C_MAJOR), box(G_B_D_F, C_MAJOR));
+    expect(added.moves.map((v) => v.kind)).toContain('added');
+  });
+
+  it('follows the strip settings: hiding common tones empties the held marks, not the arrows', () => {
+    const movingOnly = strip(box(C_E_G, C_MAJOR), box(F_A_C, F_LYDIAN), { ...names, commonTones: false });
+    expect(movingOnly.held).toEqual([]);
+    expect(movingOnly.heldLabels).toEqual([]);
+    expect(movingOnly.moves).toHaveLength(2);
+    expect(movingOnly.summaryParts).toEqual(['3 semitones']);
+
+    const commonOnly = strip(box(C_E_G, C_MAJOR), box(F_A_C, F_LYDIAN), { ...names, voiceLeading: false });
+    expect(commonOnly.moves).toEqual([]);
+    expect(commonOnly.held.map((v) => v.from)).toEqual(['C']);
+  });
+
   it('handles boxes with no notes', () => {
     const view = strip(box([], C_MAJOR), box([], C_MAJOR));
     expect(view.voices).toEqual([]);

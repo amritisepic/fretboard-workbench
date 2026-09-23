@@ -505,15 +505,18 @@ button[aria-disabled='true'] {
 
 /* ---- Voice-leading strip --------------------------------------------- */
 
+/* About a third of a chord card (226px at desktop widths). The strip carries a handful of short
+   labels; anything wider spends the canvas on white space between chords that a player wants to
+   compare side by side. */
 .strip {
   display: flex;
   flex: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 200px;
-  padding: 0 16px;
+  gap: 5px;
+  width: 76px;
+  padding: 0 6px;
 }
 
 .strip-wrap {
@@ -521,13 +524,18 @@ button[aria-disabled='true'] {
   font-size: 11px;
 }
 
+/* The names wrap rather than ellipsize: in a strip this narrow a clipped "Cm…" would be worse than
+   a second line, and the strip has vertical room to spare now that the arrows are gone. */
 .strip-title {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  justify-content: center;
   max-width: 100%;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 600;
+  text-align: center;
 }
 
 .strip-title span {
@@ -536,68 +544,89 @@ button[aria-disabled='true'] {
   white-space: nowrap;
 }
 
-.strip-svg {
-  display: block;
-  overflow: visible;
-}
-
-.strip-svg line {
-  stroke: var(--ink);
-  stroke-width: 1.3;
-}
-
-.strip-common line {
-  stroke-opacity: 0.5;
-}
-
-.strip-leap line {
-  stroke-dasharray: 3 3;
-}
-
 .strip-arrowhead {
   fill: var(--ink);
 }
 
-.strip-pill rect {
-  fill: var(--paper);
-  stroke: var(--rule-strong);
+/* The held marks in their own narrow column beside the moving voices, so the count reads at a
+   glance without the eye having to separate held rows from moving ones. */
+.strip-voices {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
 }
 
-.strip-pill.is-dashed rect {
-  stroke: var(--ink-faint);
-  stroke-dasharray: 3 2;
+.strip-held {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 4px;
 }
 
-.strip-pill text,
-.strip-interval,
-.strip-marker {
-  dominant-baseline: central;
-  fill: var(--ink);
-  font-size: 10.5px;
+.strip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+
+.strip-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strip-move {
+  display: flex;
+  gap: 2px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+/* The note names are the fact the row exists to carry, so they take the strongest ink. */
+.strip-note {
+  color: var(--ink);
+  font-size: 11px;
   font-weight: 600;
-  text-anchor: middle;
 }
 
-.strip-interval {
-  fill: var(--ink-soft);
+.strip-glyph {
+  color: var(--ink-soft);
   font-size: 10px;
 }
 
-.strip-marker {
-  fill: var(--ink-faint);
+.strip-step {
+  color: var(--ink-soft);
   font-size: 10px;
   font-weight: 500;
-  text-anchor: start;
 }
 
-.strip-marker.is-end {
-  text-anchor: end;
+/* On a phone this line is the whole strip, so it takes label ink rather than the faint hint ink.
+   In the narrow desktop strip the facts stack one per line, which is where they would wrap anyway,
+   and the separator goes: left in, it would start the second line. */
+.strip-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  text-align: center;
 }
 
-.strip-summary,
-.strip-empty {
-  color: var(--ink-faint);
-  font-size: 11px;
+.strip-fact {
+  white-space: nowrap;
+}
+
+.strip-sep {
+  display: none;
+  white-space: pre;
 }
 
 /* ---- Boxes ----------------------------------------------------------- */
@@ -1211,18 +1240,14 @@ button.key-choice:hover {
 
 .strip-relation-label {
   color: var(--ink);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   text-align: center;
 }
 
-.strip-relation-label.is-none {
-  color: var(--ink-faint);
-  font-weight: 400;
-}
-
 .strip-mark {
   display: block;
+  width: 100%;
   overflow: visible;
 }
 
@@ -3061,9 +3086,47 @@ kbd {
     grid-row: 3;
   }
 
+  /* Stacked above its box, a strip can no longer read as the move between two chords: it is a
+     banner over one card, not a bridge between two. A column of arrows pretending otherwise costs a
+     screen of height and misleads, so on a phone the strip states the move in one line and the
+     boards stay adjacent enough to compare. */
   .strip {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    align-items: baseline;
+    justify-content: center;
     width: auto;
-    padding: 4px 0 12px;
+    padding: 4px 0 10px;
+  }
+
+  .strip-voices {
+    display: none;
+  }
+
+  /* Every group is its own row on a phone, so "from the row above" would be printed on every strip
+     and tell the reader nothing. */
+  .strip-wrap {
+    display: none;
+  }
+
+  .strip-summary {
+    flex-direction: row;
+  }
+
+  .strip-sep {
+    display: inline;
+  }
+
+  /* The lane joins the same line instead of stacking its own column above it. */
+  .strip-analysis {
+    flex-direction: row;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  .strip-mark {
+    display: none;
   }
 
   .box-spacer {
@@ -3217,9 +3280,42 @@ kbd {
     grid-row: 2;
   }
 
+  /* A PDF or PNG has no viewport, so the sheet must not pick up the phone's one-line strip just
+     because the browser drawing it happens to be narrow. Everything the phone collapses is put
+     back here. */
   .export-sheet .strip {
-    width: 200px;
-    padding: 0 16px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 5px;
+    align-items: center;
+    width: 76px;
+    padding: 0 6px;
+  }
+
+  .export-sheet .strip-voices {
+    display: flex;
+  }
+
+  .export-sheet .strip-wrap {
+    display: block;
+  }
+
+  .export-sheet .strip-summary {
+    flex-direction: column;
+  }
+
+  .export-sheet .strip-sep {
+    display: none;
+  }
+
+  .export-sheet .strip-analysis {
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+  }
+
+  .export-sheet .strip-mark {
+    display: block;
   }
 
   .export-sheet .box-spacer {
